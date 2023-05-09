@@ -1,12 +1,13 @@
 <template>
-  <div id="graph" @plotly_click="(event) => console.log(event)"></div>
+  <div id="graph"></div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, type PropType } from 'vue'
-import { useStreamlit } from './streamlit/use-streamlit'
+import { defineComponent } from 'vue'
 import Plotly from 'plotly.js-dist-min'
-import type { ArrowTable, Theme } from 'streamlit-component-lib'
+import { Streamlit, type RenderData } from 'streamlit-component-lib'
+import type { Theme } from 'streamlit-component-lib'
+import { useStreamlitDataStore } from '@/stores/streamlit-data'
 
 type Arguments = {
   title: string
@@ -18,28 +19,32 @@ type Arguments = {
 
 export default defineComponent({
   name: 'PlotlyHeatmap',
-  props: {
-    args: {
-      type: Object as PropType<Arguments>,
-      required: true
-    },
-    theme: {
-      type: Object as PropType<Theme>,
-      required: true
-    }
-  },
   setup() {
-    useStreamlit()
+    const streamlitDataStore = useStreamlitDataStore()
+
+    return { streamlitDataStore }
   },
   mounted() {
     this.graph()
   },
+  updated() {
+    Streamlit.setFrameHeight()
+  },
   watch: {
-    theme() {
+    renderData() {
       this.graph()
     }
   },
   computed: {
+    renderData(): RenderData | null {
+      return this.streamlitDataStore.renderData
+    },
+    args(): Arguments {
+      return this.streamlitDataStore.args
+    },
+    theme(): Theme | undefined {
+      return this.streamlitDataStore.theme
+    },
     data(): Plotly.Data[] {
       return [
         {
@@ -73,11 +78,11 @@ export default defineComponent({
             }
           }
         },
-        paper_bgcolor: this.theme.backgroundColor,
-        plot_bgcolor: this.theme.secondaryBackgroundColor,
+        paper_bgcolor: this.theme?.backgroundColor,
+        plot_bgcolor: this.theme?.secondaryBackgroundColor,
         font: {
-          color: this.theme.textColor,
-          family: this.theme.font
+          color: this.theme?.textColor,
+          family: this.theme?.font
         }
       }
     }
@@ -85,6 +90,7 @@ export default defineComponent({
   methods: {
     graph() {
       Plotly.newPlot('graph', this.data, this.layout)
+      Streamlit.setFrameHeight()
     }
   }
 })
