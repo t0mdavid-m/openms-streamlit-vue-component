@@ -9,9 +9,11 @@ import Plotly from 'plotly.js-dist-min'
 import type { ArrowTable, Theme } from 'streamlit-component-lib'
 
 type Arguments = {
+  title: string
   x: number[]
   y: number[]
   intensity: number[]
+  show_legend: boolean
 }
 
 export default defineComponent({
@@ -56,8 +58,8 @@ export default defineComponent({
     },
     layout(): Partial<Plotly.Layout> {
       return {
-        title: 'Plot',
-        showlegend: true,
+        title: this.args.title,
+        showlegend: this.args.show_legend,
         xaxis: {
           title: 'Retention Time'
         },
@@ -65,7 +67,11 @@ export default defineComponent({
           title: 'Monoisotopic Mass'
         },
         coloraxis: {
-          title: 'Intensity'
+          colorbar: {
+            title: {
+              text: 'Intensity'
+            }
+          }
         },
         paper_bgcolor: this.theme.backgroundColor,
         plot_bgcolor: this.theme.secondaryBackgroundColor,
