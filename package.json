@@ -16,6 +16,7 @@
     "pinia": "^2.0.32",
     "plotly.js-dist-min": "^2.22.0",
     "streamlit-component-lib": "1.4.0",
+    "uuid": "^9.0.0",
     "vue": "^3.2.47",
     "vue-router": "^4.1.6"
   },

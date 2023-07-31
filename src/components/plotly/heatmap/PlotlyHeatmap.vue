@@ -1,34 +1,38 @@
 <template>
-  <div id="graph"></div>
+  <div :id="id" style="height: 100%; width: 100%;"></div>
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
+import { defineComponent, type PropType } from 'vue'
 import Plotly from 'plotly.js-dist-min'
-import { Streamlit, type RenderData } from 'streamlit-component-lib'
-import type { Theme } from 'streamlit-component-lib'
+import { v4 as uuid } from 'uuid'
+import type { Theme, RenderData } from 'streamlit-component-lib'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
-
-type Arguments = {
-  title: string
-  x: number[]
-  y: number[]
-  intensity: number[]
-  show_legend: boolean
-}
+import type { PlotlyHeatmapArguments } from './plotly-heatmap'
 
 export default defineComponent({
   name: 'PlotlyHeatmap',
+  props: {
+    args: {
+      type: Object as PropType<PlotlyHeatmapArguments>,
+      required: true
+    }
+  },
+  data() {
+    return {
+      id: 'graph' as string 
+    }
+  },
   setup() {
     const streamlitDataStore = useStreamlitDataStore()
 
     return { streamlitDataStore }
   },
+  created() {
+    this.id = uuid()
+  },
   mounted() {
     this.graph()
-  },
-  updated() {
-    Streamlit.setFrameHeight()
   },
   watch: {
     renderData() {
@@ -38,9 +42,6 @@ export default defineComponent({
   computed: {
     renderData(): RenderData | null {
       return this.streamlitDataStore.renderData
-    },
-    args(): Arguments {
-      return this.streamlitDataStore.args
     },
     theme(): Theme | undefined {
       return this.streamlitDataStore.theme
@@ -64,19 +65,12 @@ export default defineComponent({
     layout(): Partial<Plotly.Layout> {
       return {
         title: this.args.title,
-        showlegend: this.args.show_legend,
+        showlegend: this.args.showLegend,
         xaxis: {
           title: 'Retention Time'
         },
         yaxis: {
           title: 'Monoisotopic Mass'
-        },
-        coloraxis: {
-          colorbar: {
-            title: {
-              text: 'Intensity'
-            }
-          }
         },
         paper_bgcolor: this.theme?.backgroundColor,
         plot_bgcolor: this.theme?.secondaryBackgroundColor,
@@ -88,9 +82,8 @@ export default defineComponent({
     }
   },
   methods: {
-    graph() {
-      Plotly.newPlot('graph', this.data, this.layout)
-      Streamlit.setFrameHeight()
+    async graph() {
+      await Plotly.newPlot(this.id, this.data, this.layout, { responsive: true })
     }
   }
 })
