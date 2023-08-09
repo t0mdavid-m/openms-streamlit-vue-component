@@ -11,6 +11,4 @@
       "path": "./tsconfig.vitest.json"
     }
   ],
-  "plotly.js-dist-min": ["node_modules/@types/plotly.js"],
-  "uuid": ["node_modules/@types/uuid.js"]
 }
