@@ -2,6 +2,8 @@
   <div :style="gridStyles" v-if="streamlitDataStore.args">
     <div v-for="component in components" :style="componentGridStyles(component.componentLayout)">
       <PlotlyHeatmap v-if="component.componentArgs.componentName === 'PlotlyHeatmap'" :args="component.componentArgs" />
+      <TabulatorTable v-else-if="component.componentArgs.componentName === 'TabulatorTable'"
+        :args="component.componentArgs" />
     </div>
   </div>
 </template>
@@ -12,11 +14,14 @@ import PlotlyHeatmap from './components/plotly/heatmap/PlotlyHeatmap.vue'
 import { useStreamlitDataStore } from './stores/streamlit-data'
 import { Streamlit, type RenderData } from 'streamlit-component-lib'
 import type { ComponentLayout } from './types/component-layout'
+import type { FlashViewerComponent } from './types/grid-layout'
+import TabulatorTable from './components/tabulator/TabulatorTable.vue'
 
 export default defineComponent({
   name: 'App',
   components: {
-    PlotlyHeatmap
+    PlotlyHeatmap,
+    TabulatorTable
   },
   setup() {
     const streamlitDataStore = useStreamlitDataStore()
@@ -24,7 +29,7 @@ export default defineComponent({
     return { streamlitDataStore }
   },
   computed: {
-    components() {
+    components(): FlashViewerComponent[] {
       return this.streamlitDataStore.args?.components
     },
     gridStyles() {
@@ -52,7 +57,7 @@ export default defineComponent({
     componentGridStyles(componentLayout?: ComponentLayout) {
       return {
         'grid-column': `auto / span ${componentLayout?.width ?? 1}`,
-        'grid-row': `auto / span ${componentLayout?.height ?? 1}`,
+        'grid-row': `auto / span ${componentLayout?.height ?? 1}`
       }
     }
   }
