@@ -67,3 +67,24 @@ plotly-heatmap-args:
       type: boolean
       required: false
       default: false
+tabulator-table-args:
+  name: TabulatorTableArgs
+  type: object
+  fields:
+    componentName:
+      value: 'TabulatorTable'
+    data:
+      type: array<object>
+      required: true
+      fields:
+        customEntriesAllowed: true
+        keyType: string
+        valueType: any
+        id:
+          type: string
+          required: true
+          note: Tabulator requires a unique `id` per row
+    columns:
+      type: array<ColumnDefinition>
+      required: true
+      note: https://tabulator.info/docs/5.5/columns

@@ -1,5 +1,5 @@
 <template>
-  <div :id="id" style="height: 100%; width: 100%;"></div>
+  <div :id="id" style="height: 100%; width: 100%"></div>
 </template>
 
 <script lang="ts">
@@ -16,20 +16,16 @@ export default defineComponent({
     args: {
       type: Object as PropType<PlotlyHeatmapArguments>,
       required: true
-    }
-  },
-  data() {
-    return {
-      id: 'graph' as string 
+    },
+    index: {
+      type: Number,
+      required: true
     }
   },
   setup() {
     const streamlitDataStore = useStreamlitDataStore()
 
     return { streamlitDataStore }
-  },
-  created() {
-    this.id = uuid()
   },
   mounted() {
     this.graph()
@@ -40,6 +36,9 @@ export default defineComponent({
     }
   },
   computed: {
+    id(): string {
+      return `graph-${this.index}`
+    },
     renderData(): RenderData | null {
       return this.streamlitDataStore.renderData
     },
