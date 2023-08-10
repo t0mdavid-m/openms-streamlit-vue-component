@@ -5,7 +5,8 @@
         :index="index" />
       <TabulatorTable v-else-if="component.componentArgs.componentName === 'TabulatorTable'"
         :args="component.componentArgs" :index="index" />
-      <PlotlyLineplot v-if="component.componentArgs.componentName === 'PlotlyLineplot'" :args="component.componentArgs" />
+      <PlotlyLineplot v-if="component.componentArgs.componentName === 'PlotlyLineplot'" :args="component.componentArgs"
+                      :index="index"/>
     </div>
   </div>
 </template>

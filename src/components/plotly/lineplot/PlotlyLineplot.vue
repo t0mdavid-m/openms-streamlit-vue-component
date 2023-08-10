@@ -16,11 +16,10 @@ export default defineComponent({
     args: {
       type: Object as PropType<PlotlyLineArguments>,
       required: true
-    }
-  },
-  data() {
-    return {
-      id: 'graph' as string
+    },
+    index: {
+      type: Number,
+      required: true
     }
   },
   setup() {
@@ -39,6 +38,9 @@ export default defineComponent({
     }
   },
   computed: {
+    id(): string {
+      return `graph-${this.index}`
+    },
     renderData(): RenderData | null {
       return this.streamlitDataStore.renderData
     },
