@@ -1,9 +1,9 @@
 <template>
   <div :style="gridStyles" v-if="streamlitDataStore.args">
-    <div v-for="component in components" :style="componentGridStyles(component.componentLayout)">
+    <div v-for="(component, index) in components" :style="componentGridStyles(component.componentLayout)">
       <PlotlyHeatmap v-if="component.componentArgs.componentName === 'PlotlyHeatmap'" :args="component.componentArgs" />
       <TabulatorTable v-else-if="component.componentArgs.componentName === 'TabulatorTable'"
-        :args="component.componentArgs" />
+        :args="component.componentArgs" :index="index" />
     </div>
   </div>
 </template>

@@ -1,5 +1,5 @@
 <template>
-  <div id="table" :class="tableClasses" @click="logSelected"></div>
+  <div :id="id" :class="tableClasses" @click="logSelected"></div>
 </template>
 
 <script lang="ts">
@@ -7,6 +7,7 @@ import { defineComponent, type PropType } from 'vue'
 import { TabulatorFull as Tabulator, type ColumnDefinition } from 'tabulator-tables'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
 import type { TabulatorTableArguments } from './tabulator-table'
+import {v4 as uuid} from "uuid";
 
 export default defineComponent({
   name: 'TabulatorTable',
@@ -19,9 +20,16 @@ export default defineComponent({
     args: {
       type: Object as PropType<TabulatorTableArguments>,
       required: true
+    },
+    index: {
+      type: Number,
+      required: true
     }
   },
   computed: {
+    id(): string {
+      return `table${this.index}`
+    },
     tableClasses(): Record<string, boolean> {
       return {
         'table-dark': this.streamlitDataStore.theme?.base === 'dark',
@@ -36,9 +44,12 @@ export default defineComponent({
     const streamlitDataStore = useStreamlitDataStore()
     return { streamlitDataStore }
   },
+  created() {
+    this.id = uuid()
+  },
   mounted() {
     console.log(this.args);
-    this.tabulator = new Tabulator('#table', {
+    this.tabulator = new Tabulator(`#${this.id}`, {
       data: JSON.parse(this.args.data),
       index: 'index',
       maxHeight: '440px',
