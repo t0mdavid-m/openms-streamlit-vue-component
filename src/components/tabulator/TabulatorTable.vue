@@ -4,7 +4,7 @@
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
-import { TabulatorFull as Tabulator } from 'tabulator-tables'
+import { TabulatorFull as Tabulator, type ColumnDefinition } from 'tabulator-tables'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
 import type { TabulatorTableArguments } from './tabulator-table'
 
@@ -37,13 +37,15 @@ export default defineComponent({
     return { streamlitDataStore }
   },
   mounted() {
+    console.log(this.args);
     this.tabulator = new Tabulator('#table', {
-      data: this.args.data,
-      maxHeight: '450px',
+      data: JSON.parse(this.args.data),
+      index: 'index',
+      maxHeight: '440px',
       layout: 'fitColumns',
       selectable: 1,
       reactiveData: true,
-      columns: this.args.columns
+      columns: this.args.columns.map(column => JSON.parse(column))
     })
   },
   methods: {
