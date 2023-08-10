@@ -1,7 +1,8 @@
 <template>
   <div :style="gridStyles" v-if="streamlitDataStore.args">
-    <div v-for="(component, index) in components" :style="componentGridStyles(component.componentLayout)">
-      <PlotlyHeatmap v-if="component.componentArgs.componentName === 'PlotlyHeatmap'" :args="component.componentArgs" />
+    <div v-for="(component, index) in components" :style="componentGridStyles(component.componentLayout)" :key="index">
+      <PlotlyHeatmap v-if="component.componentArgs.componentName === 'PlotlyHeatmap'" :args="component.componentArgs"
+        :index="index" />
       <TabulatorTable v-else-if="component.componentArgs.componentName === 'TabulatorTable'"
         :args="component.componentArgs" :index="index" />
     </div>
@@ -64,8 +65,9 @@ export default defineComponent({
 })
 </script>
 
-<style scoped>
+<style>
 body {
   margin: 0;
+  font-family: "Source Sans Pro", sans-serif;
 }
 </style>
