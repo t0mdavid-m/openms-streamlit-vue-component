@@ -5,7 +5,10 @@
         :index="index" />
       <TabulatorTable v-else-if="component.componentArgs.componentName === 'TabulatorTable'"
         :args="component.componentArgs" :index="index" />
-      <PlotlyLineplot v-if="component.componentArgs.componentName === 'PlotlyLineplot'" :args="component.componentArgs" />
+      <PlotlyLineplot v-if="component.componentArgs.componentName === 'PlotlyLineplot'" :args="component.componentArgs"
+                      :index="index"/>
+      <Plotly3Dplot v-if="component.componentArgs.componentName === 'Plotly3Dplot'" :args="component.componentArgs"
+                      :index="index"/>
     </div>
   </div>
 </template>
@@ -19,10 +22,12 @@ import type { ComponentLayout } from './types/component-layout'
 import type { FlashViewerComponent } from './types/grid-layout'
 import TabulatorTable from './components/tabulator/TabulatorTable.vue'
 import PlotlyLineplot from "@/components/plotly/lineplot/PlotlyLineplot.vue";
+import Plotly3Dplot from "@/components/plotly/3Dplot/plotly-3Dplot.vue";
 
 export default defineComponent({
   name: 'App',
   components: {
+    Plotly3Dplot,
     PlotlyHeatmap,
     TabulatorTable,
     PlotlyLineplot
