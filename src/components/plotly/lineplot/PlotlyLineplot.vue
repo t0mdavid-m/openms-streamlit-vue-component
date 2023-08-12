@@ -3,59 +3,89 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, type PropType } from "vue"
+import { defineComponent, type PropType } from 'vue'
 import Plotly from 'plotly.js-dist-min'
-import { v4 as uuid } from 'uuid'
-import type { Theme, RenderData } from 'streamlit-component-lib'
+import type { Theme } from 'streamlit-component-lib'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
 import type { PlotlyLineArguments } from './plotly-lineplot'
+import { useSelectionStore } from '@/stores/selection'
 
 export default defineComponent({
   name: 'PlotlyLineplot',
   props: {
     args: {
       type: Object as PropType<PlotlyLineArguments>,
-      required: true
+      required: true,
     },
     index: {
       type: Number,
-      required: true
-    }
+      required: true,
+    },
   },
   setup() {
     const streamlitDataStore = useStreamlitDataStore()
-    return { streamlitDataStore }
-  },
-  created() {
-    this.id = uuid()
-  },
-  mounted() {
-    this.graph()
-  },
-  watch: {
-    renderData() {
-      this.graph()
-    }
+    const selectionStore = useSelectionStore()
+    return { streamlitDataStore, selectionStore }
   },
   computed: {
     id(): string {
       return `graph-${this.index}`
     },
-    renderData(): RenderData | null {
-      return this.streamlitDataStore.renderData
-    },
     theme(): Theme | undefined {
       return this.streamlitDataStore.theme
+    },
+    selectedRow(): number | undefined {
+      return this.selectionStore.selectedRowIndex
+    },
+    xColmun(): string {
+      switch (this.args.title) {
+        case 'Annotated spectrum':
+          return 'MonoMass_Anno'
+        case 'Deconvolved spectrum':
+          return 'MonoMass'
+        default:
+          return ''
+      }
+    },
+    xValues(): number[] {
+      if (!this.selectedRow) return []
+      return (
+        this.streamlitDataStore.allDataframes.per_scan_data[this.selectedRow][this.xColmun] as number[]
+      )
+        .map((num) => {
+          return [num, num, num]
+        })
+        .reduce((accumulator, current) => accumulator.concat(current))
+    },
+    yColmun(): string {
+      switch (this.args.title) {
+        case 'Annotated spectrum':
+          return 'SumIntensity_Anno'
+        case 'Deconvolved spectrum':
+          return 'SumIntensity'
+        default:
+          return ''
+      }
+    },
+    yValues(): number[] {
+      if (!this.selectedRow) return []
+      return (
+        this.streamlitDataStore.allDataframes.per_scan_data[this.selectedRow][this.yColmun] as number[]
+      )
+        .map((num) => {
+          return [-10000000, num, -10000000]
+        })
+        .reduce((accumulator, current) => accumulator.concat(current))
     },
     data(): Plotly.Data[] {
       return [
         {
-          x: this.args.x,
-          y: this.args.y,
+          x: this.xValues,
+          y: this.yValues,
           mode: 'lines',
           type: 'scatter',
-          connectgaps: false
-        }
+          connectgaps: false,
+        },
       ]
     },
     layout(): Partial<Plotly.Layout> {
@@ -65,28 +95,39 @@ export default defineComponent({
         height: 400,
         xaxis: {
           title: 'Monoisotopic Mass',
-          showgrid: false
+          showgrid: false,
         },
         yaxis: {
           title: 'Intensity',
           showgrid: true,
           gridcolor: this.theme?.secondaryBackgroundColor,
-          rangemode: "nonnegative",
+          rangemode: 'nonnegative',
           fixedrange: true,
         },
         paper_bgcolor: this.theme?.backgroundColor,
         plot_bgcolor: this.theme?.backgroundColor,
         font: {
           color: this.theme?.textColor,
-          family: this.theme?.font
+          family: this.theme?.font,
         },
       }
-    }
+    },
+  },
+  watch: {
+    selectedRow() {
+      console.log(this.args.title)
+      console.log(this.xValues)
+      console.log(this.yValues)
+      this.graph()
+    },
+  },
+  mounted() {
+    this.graph()
   },
   methods: {
     async graph() {
       await Plotly.newPlot(this.id, this.data, this.layout, { responsive: true })
-    }
-  }
+    },
+  },
 })
 </script>

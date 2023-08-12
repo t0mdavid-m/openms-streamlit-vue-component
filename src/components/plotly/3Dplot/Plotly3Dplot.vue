@@ -5,7 +5,6 @@
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
 import Plotly from 'plotly.js-dist-min'
-import { v4 as uuid } from 'uuid'
 import type { Theme, RenderData } from 'streamlit-component-lib'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
 import type { Plotly3DplotArguments } from './plotly-3Dplot'
@@ -15,25 +14,17 @@ export default defineComponent({
   props: {
     args: {
       type: Object as PropType<Plotly3DplotArguments>,
-      required: true
+      required: true,
     },
     index: {
       type: Number,
-      required: true
-    }
+      required: true,
+    },
   },
   setup() {
     const streamlitDataStore = useStreamlitDataStore()
 
     return { streamlitDataStore }
-  },
-  mounted() {
-    this.graph()
-  },
-  watch: {
-    renderData() {
-      this.graph()
-    }
   },
   computed: {
     id(): string {
@@ -55,50 +46,59 @@ export default defineComponent({
           y: this.args.signal_y,
           z: this.args.signal_z,
           line: {
-            color: '#3366CC'
+            color: '#3366CC',
           },
         },
         {
-          name: "Noise",
+          name: 'Noise',
           type: 'scatter3d',
           mode: 'lines',
           x: this.args.noise_x,
           y: this.args.noise_y,
           z: this.args.noise_z,
           line: {
-            color: '#DC3912'
+            color: '#DC3912',
           },
-        }
+        },
       ]
     },
     layout(): Partial<Plotly.Layout> {
-      const maxZ = this.args.signal_z.concat(this.args.noise_z).reduce((a, b)=>Math.max(a, b), -Infinity)
+      const maxZ = this.args.signal_z
+        .concat(this.args.noise_z)
+        .reduce((a, b) => Math.max(a, b), -Infinity)
       return {
         title: this.args.title,
-        height: 800,
         paper_bgcolor: this.theme?.backgroundColor,
         plot_bgcolor: this.theme?.secondaryBackgroundColor,
         font: {
           color: this.theme?.textColor,
-          family: this.theme?.font
+          family: this.theme?.font,
         },
         scene: {
-          xaxis: {title: 'Charge'},
-          yaxis: {title: 'Mass'},
-          zaxis: {title: 'Intensity', range: [0, maxZ]},
+          xaxis: { title: 'Charge' },
+          yaxis: { title: 'Mass' },
+          zaxis: { title: 'Intensity', range: [0, maxZ] },
           camera: {
             // initial view of the plot: mass-intensity plane
-            eye: {x: 2.5, y: 0, z: 0.2}
-          }
+            eye: { x: 2.5, y: 0, z: 0.2 },
+          },
         },
         showlegend: true,
       }
-    }
+    },
+  },
+  watch: {
+    renderData() {
+      this.graph()
+    },
+  },
+  mounted() {
+    this.graph()
   },
   methods: {
     async graph() {
       await Plotly.newPlot(this.id, this.data, this.layout, { responsive: true })
-    }
-  }
+    },
+  },
 })
 </script>
