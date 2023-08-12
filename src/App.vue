@@ -22,7 +22,7 @@ import type { ComponentLayout } from './types/component-layout'
 import type { FlashViewerComponent } from './types/grid-layout'
 import TabulatorTable from './components/tabulator/TabulatorTable.vue'
 import PlotlyLineplot from "@/components/plotly/lineplot/PlotlyLineplot.vue";
-import Plotly3Dplot from "@/components/plotly/3Dplot/plotly-3Dplot.vue";
+import Plotly3Dplot from '@/components/plotly/3Dplot/Plotly3Dplot.vue'
 
 export default defineComponent({
   name: 'App',
