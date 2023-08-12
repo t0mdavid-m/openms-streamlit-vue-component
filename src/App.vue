@@ -1,14 +1,16 @@
 <template>
-  <div :style="gridStyles" v-if="streamlitDataStore.args">
-    <div v-for="(component, index) in components" :style="componentGridStyles(component.componentLayout)" :key="index">
+  <div v-if="streamlitDataStore.args" :style="gridStyles">
+    <div v-for="(component, index) in components" :key="index" :style="componentGridStyles(component.componentLayout)">
       <PlotlyHeatmap v-if="component.componentArgs.componentName === 'PlotlyHeatmap'" :args="component.componentArgs"
         :index="index" />
-      <TabulatorTable v-else-if="component.componentArgs.componentName === 'TabulatorTable'"
+      <TabulatorScanTable v-else-if="component.componentArgs.componentName === 'TabulatorScanTable'"
+        :args="component.componentArgs" :index="index" />
+      <TabulatorMassTable v-else-if="component.componentArgs.componentName === 'TabulatorMassTable'"
         :args="component.componentArgs" :index="index" />
       <PlotlyLineplot v-if="component.componentArgs.componentName === 'PlotlyLineplot'" :args="component.componentArgs"
-                      :index="index"/>
+        :index="index" />
       <Plotly3Dplot v-if="component.componentArgs.componentName === 'Plotly3Dplot'" :args="component.componentArgs"
-                      :index="index"/>
+        :index="index" />
     </div>
   </div>
 </template>
@@ -20,17 +22,19 @@ import { useStreamlitDataStore } from './stores/streamlit-data'
 import { Streamlit, type RenderData } from 'streamlit-component-lib'
 import type { ComponentLayout } from './types/component-layout'
 import type { FlashViewerComponent } from './types/grid-layout'
-import TabulatorTable from './components/tabulator/TabulatorTable.vue'
-import PlotlyLineplot from "@/components/plotly/lineplot/PlotlyLineplot.vue";
+import TabulatorScanTable from './components/tabulator/TabulatorScanTable.vue'
+import PlotlyLineplot from '@/components/plotly/lineplot/PlotlyLineplot.vue'
 import Plotly3Dplot from '@/components/plotly/3Dplot/Plotly3Dplot.vue'
+import TabulatorMassTable from './components/tabulator/TabulatorMassTable.vue'
 
 export default defineComponent({
   name: 'App',
   components: {
     Plotly3Dplot,
     PlotlyHeatmap,
-    TabulatorTable,
-    PlotlyLineplot
+    TabulatorScanTable,
+    PlotlyLineplot,
+    TabulatorMassTable,
   },
   setup() {
     const streamlitDataStore = useStreamlitDataStore()
@@ -45,7 +49,7 @@ export default defineComponent({
       return {
         display: 'grid',
         'grid-template-columns': `repeat(${this.streamlitDataStore.args.columns ?? 1}, 1fr)`,
-        'grid-template-rows': `repeat(${this.streamlitDataStore.args.rows ?? 1}, 1fr)`
+        'grid-template-rows': `repeat(${this.streamlitDataStore.args.rows ?? 1}, 1fr)`,
       }
     },
   },
@@ -66,16 +70,19 @@ export default defineComponent({
     componentGridStyles(componentLayout?: ComponentLayout) {
       return {
         'grid-column': `auto / span ${componentLayout?.width ?? 1}`,
-        'grid-row': `auto / span ${componentLayout?.height ?? 1}`
+        'grid-row': `auto / span ${componentLayout?.height ?? 1}`,
       }
-    }
-  }
+    },
+    setFrameHeight() {
+      Streamlit.setFrameHeight()
+    },
+  },
 })
 </script>
 
 <style>
 body {
   margin: 0;
-  font-family: "Source Sans Pro", sans-serif;
+  font-family: 'Source Sans Pro', sans-serif;
 }
 </style>

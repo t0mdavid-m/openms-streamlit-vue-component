@@ -1,9 +1,9 @@
 <template>
-  <div style="padding: 8px;">
-    <div v-if="args.title" :style="containerStyles">
-      <h4>{{ args.title }}</h4>
+  <div style="padding: 8px">
+    <div v-if="title" :style="containerStyles">
+      <h4>{{ title }}</h4>
     </div>
-    <div :id="id" :class="tableClasses" @click="logSelected"></div>
+    <div :id="id" :class="tableClasses" @click="onTableClick"></div>
   </div>
 </template>
 
@@ -11,24 +11,35 @@
 import { defineComponent, type PropType } from 'vue'
 import { TabulatorFull as Tabulator, type ColumnDefinition } from 'tabulator-tables'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
-import type { TabulatorTableArguments } from './tabulator-table'
-import { v4 as uuid } from "uuid";
 
 export default defineComponent({
   name: 'TabulatorTable',
-  data() {
-    return {
-      tabulator: undefined as Tabulator | undefined
-    }
-  },
   props: {
-    args: {
-      type: Object as PropType<TabulatorTableArguments>,
-      required: true
+    tableData: {
+      type: Object as PropType<Record<string, unknown>[]>,
+      required: true,
+    },
+    columnDefinitions: {
+      type: Object as PropType<ColumnDefinition[]>,
+      required: true,
+    },
+    title: {
+      type: String,
+      required: false
     },
     index: {
       type: Number,
-      required: true
+      required: true,
+    },
+  },
+  emits: ['rowSelected'],
+  setup() {
+    const streamlitDataStore = useStreamlitDataStore()
+    return { streamlitDataStore }
+  },
+  data() {
+    return {
+      tabulator: undefined as Tabulator | undefined,
     }
   },
   computed: {
@@ -37,7 +48,7 @@ export default defineComponent({
     },
     containerStyles(): Record<string, any> {
       return {
-        'display': 'flex',
+        display: 'flex',
         'flex-direction': 'column',
         'align-items': 'center',
       }
@@ -46,38 +57,36 @@ export default defineComponent({
       return {
         'table-dark': this.streamlitDataStore.theme?.base === 'dark',
         'table-light': this.streamlitDataStore.theme?.base === 'light',
-        'table-striped': true,
+        'table-striped': false,
         'table-bordered': true,
-        'table-sm': true
+        'table-sm': true,
       }
     },
   },
-  setup() {
-    const streamlitDataStore = useStreamlitDataStore()
-    return { streamlitDataStore }
-  },
-  created() {
-    this.id = uuid()
+  watch: {
+    tableData() {
+      this.drawTable()
+    }
   },
   mounted() {
-    console.log(this.args);
-    this.tabulator = new Tabulator(`#${this.id}`, {
-      data: JSON.parse(this.args.data),
-      index: 'index',
-      minHeight: 50,
-      maxHeight: this.args.title ? 440 : 430,
-      layout: 'fitColumns',
-      selectable: 1,
-      reactiveData: true,
-      columns: this.args.columns.map(column => JSON.parse(column))
-    })
+    this.drawTable()
   },
   methods: {
-    logSelected() {
-      // TODO handle row selection better. This style will also trigger on non-row clicks inside the div!
-      console.log(this.tabulator?.getSelectedRows()[0].getIndex())
-    }
-  }
+    drawTable() {
+      this.tabulator = new Tabulator(`#${this.id}`, {
+        data: this.tableData,
+        minHeight: 50,
+        maxHeight: this.title ? 440 : 430,
+        layout: 'fitColumns',
+        selectable: 1,
+        columns: this.columnDefinitions,
+      })
+    },
+    onTableClick() {
+      const selectedRow = this.tabulator?.getSelectedRows()[0].getIndex()
+      if (selectedRow) this.$emit('rowSelected', selectedRow)
+    },
+  },
 })
 </script>
 

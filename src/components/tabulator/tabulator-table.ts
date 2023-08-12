@@ -1,8 +1,6 @@
-import type { ColumnDefinition } from "tabulator-tables"
-
 export type TabulatorTableArguments = {
-  componentName: 'TabulatorTable'
+  componentName: 'TabulatorScanTable' | 'TabulatorMassTable'
   title?: string
-  data: string
+  data: Record<string, unknown>[]
   columns: string[]
 }
