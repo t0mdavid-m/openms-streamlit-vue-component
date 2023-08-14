@@ -1,6 +1,6 @@
 <template>
   <TabulatorTable :table-data="tableData" :column-definitions="columnDefinitions" :title="args.title" :index="index"
-    @row-selected.capture />
+    @row-selected="updateSelectedMass" />
 </template>
 
 <script lang="ts">
@@ -87,5 +87,12 @@ export default defineComponent({
       return tableData
     }
   },
+  methods: {
+    updateSelectedMass(selectedRow?: number) {
+      if (selectedRow) {
+        this.selectionStore.updateSelectedMass(selectedRow)
+      }
+    },
+  }
 })
 </script>
