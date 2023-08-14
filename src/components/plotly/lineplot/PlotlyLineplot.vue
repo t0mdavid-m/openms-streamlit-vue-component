@@ -35,7 +35,7 @@ export default defineComponent({
       return this.streamlitDataStore.theme
     },
     selectedRow(): number | undefined {
-      return this.selectionStore.selectedRowIndex
+      return this.selectionStore.selectedScanIndex
     },
     xColmun(): string {
       switch (this.args.title) {

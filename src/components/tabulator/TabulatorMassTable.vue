@@ -1,6 +1,6 @@
 <template>
   <TabulatorTable :table-data="tableData" :column-definitions="columnDefinitions" :title="args.title" :index="index"
-    @row-selected.capture />
+    @row-selected="updateSelectedMass" />
 </template>
 
 <script lang="ts">
@@ -26,6 +26,22 @@ export default defineComponent({
       required: true,
     },
   },
+  data() {
+    return {
+      columnDefinitions: [
+        {title: 'Index', field: 'id'},
+        {title: 'Monoisotopic mass', field: 'MonoMass'},
+        {title: 'Sum intensity', field: 'SumIntensity'},
+        {title: 'Min charge', field: 'MinCharges'},
+        {title: 'Max charge', field: 'MaxCharges'},
+        {title: 'Min isotope', field: 'MinIsotopes'},
+        {title: 'Max isotope', field: 'MaxIsotopes'},
+        {title: 'Cosine score', field: 'CosineScore'},
+        {title: 'SNR', field: 'SNR'},
+        {title: 'QScore', field: 'QScore'}
+      ] as ColumnDefinition[]
+    }
+  },
   setup() {
     const streamlitDataStore = useStreamlitDataStore()
     const selectionStore = useSelectionStore()
@@ -33,7 +49,7 @@ export default defineComponent({
   },
   computed: {
     selectedRow(): number | undefined {
-      return this.selectionStore.selectedRowIndex
+      return this.selectionStore.selectedScanIndex
     },
     tableData(): Record<string, unknown>[] {
       if (!this.selectedRow) return []
@@ -69,10 +85,14 @@ export default defineComponent({
       tableData.map((entry, index) => entry['id'] = index)
 
       return tableData
-    },
-    columnDefinitions(): ColumnDefinition[] {
-      return this.args.columns.map((column) => JSON.parse(column))
-    },
+    }
   },
+  methods: {
+    updateSelectedMass(selectedRow?: number) {
+      if (selectedRow) {
+        this.selectionStore.updateSelectedMass(selectedRow)
+      }
+    },
+  }
 })
 </script>

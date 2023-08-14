@@ -1,6 +1,6 @@
 <template>
   <TabulatorTable :table-data="tableData" :column-definitions="columnDefinitions" :title="args.title" :index="index"
-    @row-selected="updateSelectedRow" />
+    @row-selected="updateSelectedScan" />
 </template>
 
 <script lang="ts">
@@ -26,6 +26,18 @@ export default defineComponent({
       required: true,
     },
   },
+  data() {
+    return {
+      columnDefinitions: [
+        {title: 'Index', field: 'id'},
+        {title: 'Scan Number', field: 'Scan'},
+        {title: 'MS Level', field: 'MSLevel'},
+        {title: 'Retention time', field: 'RT'},
+        {title: 'Precursor Mass', field: 'PrecursorMass'},
+        {title: '#Masses', field: '#Masses'}
+      ] as ColumnDefinition[]
+    }
+  },
   setup() {
     const streamlitDataStore = useStreamlitDataStore()
     const selectionStore = useSelectionStore()
@@ -37,14 +49,11 @@ export default defineComponent({
       rows.forEach(row => row['id'] = row['index'])
       return rows
     },
-    columnDefinitions(): ColumnDefinition[] {
-      return this.args.columns.map((column) => JSON.parse(column))
-    },
   },
   methods: {
-    updateSelectedRow(selectedRow?: number) {
+    updateSelectedScan(selectedRow?: number) {
       if (selectedRow) {
-        this.selectionStore.updateSelectedRow(selectedRow)
+        this.selectionStore.updateSelectedScan(selectedRow)
       }
     },
   },

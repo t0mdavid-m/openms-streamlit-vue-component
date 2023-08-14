@@ -1,16 +1,16 @@
 <template>
   <div v-if="streamlitDataStore.args" :style="gridStyles">
     <div v-for="(component, index) in components" :key="index" :style="componentGridStyles(component.componentLayout)">
-      <PlotlyHeatmap v-if="component.componentArgs.componentName === 'PlotlyHeatmap'" :args="component.componentArgs"
-        :index="index" />
+      <PlotlyHeatmap v-if="component.componentArgs.componentName === 'PlotlyHeatmap'"
+                     :args="component.componentArgs" :index="index" />
       <TabulatorScanTable v-else-if="component.componentArgs.componentName === 'TabulatorScanTable'"
-        :args="component.componentArgs" :index="index" />
+                          :args="component.componentArgs" :index="index" />
       <TabulatorMassTable v-else-if="component.componentArgs.componentName === 'TabulatorMassTable'"
-        :args="component.componentArgs" :index="index" />
-      <PlotlyLineplot v-if="component.componentArgs.componentName === 'PlotlyLineplot'" :args="component.componentArgs"
-        :index="index" />
-      <Plotly3Dplot v-if="component.componentArgs.componentName === 'Plotly3Dplot'" :args="component.componentArgs"
-        :index="index" />
+                          :args="component.componentArgs" :index="index" />
+      <PlotlyLineplot v-if="component.componentArgs.componentName === 'PlotlyLineplot'"
+                      :args="component.componentArgs" :index="index" />
+      <Plotly3Dplot v-if="component.componentArgs.componentName === 'Plotly3Dplot'"
+                    :args="component.componentArgs" :index="index" />
     </div>
   </div>
 </template>

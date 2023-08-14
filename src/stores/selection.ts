@@ -2,14 +2,19 @@ import { defineStore } from 'pinia'
 
 export const useSelectionStore = defineStore('selection', {
   state: () => ({
-    rowIndex: undefined as number | undefined,
+    scanIndex: undefined as number | undefined,
+    massIndex: undefined as number | undefined,
   }),
   getters: {
-    selectedRowIndex: (state): number | undefined => state.rowIndex,
+    selectedScanIndex: (state): number | undefined => state.scanIndex,
+    selectedMassIndex: (state): number | undefined => state.massIndex,
   },
   actions: {
-    updateSelectedRow(rowIndex: number) {
-      this.rowIndex = rowIndex
+    updateSelectedScan(rowIndex: number) {
+      this.scanIndex = rowIndex
+    },
+    updateSelectedMass(rowIndex: number) {
+      this.massIndex = rowIndex
     },
   },
 })
