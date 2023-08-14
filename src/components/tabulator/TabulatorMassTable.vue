@@ -26,6 +26,22 @@ export default defineComponent({
       required: true,
     },
   },
+  data() {
+    return {
+      columnDefinitions: [
+        {title: 'Index', field: 'id'},
+        {title: 'Monoisotopic mass', field: 'MonoMass'},
+        {title: 'Sum intensity', field: 'SumIntensity'},
+        {title: 'Min charge', field: 'MinCharges'},
+        {title: 'Max charge', field: 'MaxCharges'},
+        {title: 'Min isotope', field: 'MinIsotopes'},
+        {title: 'Max isotope', field: 'MaxIsotopes'},
+        {title: 'Cosine score', field: 'CosineScore'},
+        {title: 'SNR', field: 'SNR'},
+        {title: 'QScore', field: 'QScore'}
+      ] as ColumnDefinition[]
+    }
+  },
   setup() {
     const streamlitDataStore = useStreamlitDataStore()
     const selectionStore = useSelectionStore()
@@ -69,10 +85,7 @@ export default defineComponent({
       tableData.map((entry, index) => entry['id'] = index)
 
       return tableData
-    },
-    columnDefinitions(): ColumnDefinition[] {
-      return this.args.columns.map((column) => JSON.parse(column))
-    },
+    }
   },
 })
 </script>
