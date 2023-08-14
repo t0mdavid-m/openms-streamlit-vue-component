@@ -49,7 +49,7 @@ export default defineComponent({
   },
   computed: {
     selectedRow(): number | undefined {
-      return this.selectionStore.selectedRowIndex
+      return this.selectionStore.selectedScanIndex
     },
     tableData(): Record<string, unknown>[] {
       if (!this.selectedRow) return []

@@ -1,6 +1,6 @@
 <template>
   <TabulatorTable :table-data="tableData" :column-definitions="columnDefinitions" :title="args.title" :index="index"
-    @row-selected="updateSelectedRow" />
+    @row-selected="updateSelectedScan" />
 </template>
 
 <script lang="ts">
@@ -51,9 +51,9 @@ export default defineComponent({
     },
   },
   methods: {
-    updateSelectedRow(selectedRow?: number) {
+    updateSelectedScan(selectedRow?: number) {
       if (selectedRow) {
-        this.selectionStore.updateSelectedRow(selectedRow)
+        this.selectionStore.updateSelectedScan(selectedRow)
       }
     },
   },
