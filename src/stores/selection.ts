@@ -13,7 +13,7 @@ export const useSelectionStore = defineStore('selection', {
     updateSelectedScan(rowIndex: number) {
       this.scanIndex = rowIndex
     },
-    updateSelectedMass(rowIndex: number) {
+    updateSelectedMass(rowIndex?: number) {
       this.massIndex = rowIndex
     },
   },

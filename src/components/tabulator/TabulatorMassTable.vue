@@ -52,7 +52,7 @@ export default defineComponent({
       return this.selectionStore.selectedScanIndex
     },
     tableData(): Record<string, unknown>[] {
-      if (!this.selectedRow) return []
+      if (this.selectedRow === undefined) return []
 
       // Get selected row entry and filter by required columns
       const row = this.streamlitDataStore.allDataframes.per_scan_data[this.selectedRow]
