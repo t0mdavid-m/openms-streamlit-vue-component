@@ -48,14 +48,16 @@ export default defineComponent({
       }
     },
     xValues(): number[] {
-      if (!this.selectedRow) return []
-      return (
-        this.streamlitDataStore.allDataframes.per_scan_data[this.selectedRow][this.xColmun] as number[]
-      )
-        .map((num) => {
-          return [num, num, num]
+      const xValues: number[] = []
+      if (this.selectedRow === undefined) {
+        return xValues
+      }
+      (this.streamlitDataStore.allDataframes.per_scan_data[this.selectedRow][this.xColmun] as number[])
+        .forEach((num) => {
+          xValues.push(num, num, num)
         })
-        .reduce((accumulator, current) => accumulator.concat(current))
+
+      return xValues
     },
     yColmun(): string {
       switch (this.args.title) {
@@ -68,14 +70,17 @@ export default defineComponent({
       }
     },
     yValues(): number[] {
-      if (!this.selectedRow) return []
-      return (
-        this.streamlitDataStore.allDataframes.per_scan_data[this.selectedRow][this.yColmun] as number[]
-      )
-        .map((num) => {
-          return [-10000000, num, -10000000]
+      const yValues: number[] = []
+      if (this.selectedRow === undefined) {
+        return yValues
+      }
+
+      (this.streamlitDataStore.allDataframes.per_scan_data[this.selectedRow][this.yColmun] as number[])
+        .forEach((num) => {
+          yValues.push(-10000000, num, -10000000)
         })
-        .reduce((accumulator, current) => accumulator.concat(current))
+
+      return yValues
     },
     data(): Plotly.Data[] {
       return [

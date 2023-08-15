@@ -83,8 +83,10 @@ export default defineComponent({
       })
     },
     onTableClick() {
-      const selectedRow = this.tabulator?.getSelectedRows()[0].getIndex()
-      if (selectedRow) this.$emit('rowSelected', selectedRow)
+      const selectedRow = this.tabulator?.getSelectedRows()[0]?.getIndex()
+      if (selectedRow !== undefined) {
+        this.$emit('rowSelected', selectedRow)
+      }
     },
   },
 })

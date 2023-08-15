@@ -52,7 +52,7 @@ export default defineComponent({
   },
   methods: {
     updateSelectedScan(selectedRow?: number) {
-      if (selectedRow) {
+      if (selectedRow !== undefined) {
         this.selectionStore.updateSelectedScan(selectedRow)
       }
     },
