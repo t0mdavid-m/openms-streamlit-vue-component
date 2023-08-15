@@ -25,7 +25,7 @@ export default defineComponent({
     },
     title: {
       type: String,
-      required: false
+      required: false,
     },
     index: {
       type: Number,
@@ -66,7 +66,7 @@ export default defineComponent({
   watch: {
     tableData() {
       this.drawTable()
-    }
+    },
   },
   mounted() {
     this.drawTable()
@@ -79,7 +79,7 @@ export default defineComponent({
         maxHeight: this.title ? 320 : 310,
         layout: 'fitColumns',
         selectable: 1,
-        columns: this.columnDefinitions.map(col => {
+        columns: this.columnDefinitions.map((col) => {
           col.headerTooltip = true
           return col
         }),

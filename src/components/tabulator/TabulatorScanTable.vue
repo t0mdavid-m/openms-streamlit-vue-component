@@ -1,6 +1,11 @@
 <template>
-  <TabulatorTable :table-data="tableData" :column-definitions="columnDefinitions" :title="args.title" :index="index"
-    @row-selected="updateSelectedScan" />
+  <TabulatorTable
+    :table-data="tableData"
+    :column-definitions="columnDefinitions"
+    :title="args.title"
+    :index="index"
+    @row-selected="updateSelectedScan"
+  />
 </template>
 
 <script lang="ts">
@@ -14,7 +19,7 @@ import TabulatorTable from './TabulatorTable.vue'
 export default defineComponent({
   name: 'TabulatorScanTable',
   components: {
-    TabulatorTable
+    TabulatorTable,
   },
   props: {
     args: {
@@ -26,6 +31,11 @@ export default defineComponent({
       required: true,
     },
   },
+  setup() {
+    const streamlitDataStore = useStreamlitDataStore()
+    const selectionStore = useSelectionStore()
+    return { streamlitDataStore, selectionStore }
+  },
   data() {
     return {
       columnDefinitions: [
@@ -34,19 +44,14 @@ export default defineComponent({
         { title: 'MS Level', field: 'MSLevel' },
         { title: 'Retention time', field: 'RT' },
         { title: 'Precursor Mass', field: 'PrecursorMass' },
-        { title: '#Masses', field: '#Masses' }
-      ] as ColumnDefinition[]
+        { title: '#Masses', field: '#Masses' },
+      ] as ColumnDefinition[],
     }
-  },
-  setup() {
-    const streamlitDataStore = useStreamlitDataStore()
-    const selectionStore = useSelectionStore()
-    return { streamlitDataStore, selectionStore }
   },
   computed: {
     tableData(): Record<string, unknown>[] {
-      const rows = this.streamlitDataStore.allDataframes.per_scan_data;
-      rows.forEach(row => row['id'] = row['index'])
+      const rows = this.streamlitDataStore.allDataframes.per_scan_data
+      rows.forEach((row) => (row['id'] = row['index']))
       return rows
     },
   },

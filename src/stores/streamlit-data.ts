@@ -21,7 +21,7 @@ export const useStreamlitDataStore = defineStore('streamlit-data', {
 
       // Parse dataframes as streamlit sends them as a string
       const newDataframes = (newData.args as GridLayout).dataframes
-      Object.entries(newDataframes).forEach(df => {
+      Object.entries(newDataframes).forEach((df) => {
         this.dataframes[df[0] as DATAFRAMES] = JSON.parse(df[1])
       })
     },
