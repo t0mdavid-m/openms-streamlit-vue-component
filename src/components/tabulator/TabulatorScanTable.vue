@@ -29,12 +29,12 @@ export default defineComponent({
   data() {
     return {
       columnDefinitions: [
-        {title: 'Index', field: 'id'},
-        {title: 'Scan Number', field: 'Scan'},
-        {title: 'MS Level', field: 'MSLevel'},
-        {title: 'Retention time', field: 'RT'},
-        {title: 'Precursor Mass', field: 'PrecursorMass'},
-        {title: '#Masses', field: '#Masses'}
+        { title: 'Index', field: 'id' },
+        { title: 'Scan Number', field: 'Scan' },
+        { title: 'MS Level', field: 'MSLevel' },
+        { title: 'Retention time', field: 'RT' },
+        { title: 'Precursor Mass', field: 'PrecursorMass' },
+        { title: '#Masses', field: '#Masses' }
       ] as ColumnDefinition[]
     }
   },
@@ -53,6 +53,9 @@ export default defineComponent({
   methods: {
     updateSelectedScan(selectedRow?: number) {
       if (selectedRow !== undefined) {
+        if (selectedRow !== this.selectionStore.selectedScanIndex) {
+          this.selectionStore.updateSelectedMass(undefined)
+        }
         this.selectionStore.updateSelectedScan(selectedRow)
       }
     },

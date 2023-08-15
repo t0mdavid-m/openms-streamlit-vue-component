@@ -8,7 +8,7 @@ import Plotly from 'plotly.js-dist-min'
 import type { Theme } from 'streamlit-component-lib'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
 import type { Plotly3DplotArguments } from './plotly-3Dplot'
-import {useSelectionStore} from "@/stores/selection";
+import { useSelectionStore } from "@/stores/selection";
 
 export default defineComponent({
   name: 'Plotly3Dplot',
@@ -53,15 +53,12 @@ export default defineComponent({
       // get signal & noise array for drawing
       let signals_for_drawing: Record<string, number[]> = {}
 
-      if (this.selectedMassRow === undefined && this.selectedScanRow != undefined) // when scan is selected
-      {
+      if (this.selectedMassRow === undefined && this.selectedScanRow !== undefined) { // when scan is selected
         signals_for_drawing = this.getPrecursorSignal(selected_scan_info)
       }
-      else // when mass is selected
-      {
-        const selected_mass_index = this.selectedMassRow as number
-        signals_for_drawing = this.getSignalNoiseObject((selected_scan_info.SignalPeaks as Array<number[][]>)[selected_mass_index],
-            (selected_scan_info.NoisyPeaks as Array<number[][]>)[selected_mass_index])
+      else if (this.selectedMassRow !== undefined) { // when mass is selected
+        signals_for_drawing = this.getSignalNoiseObject((selected_scan_info.SignalPeaks as Array<number[][]>)[this.selectedMassRow],
+          (selected_scan_info.NoisyPeaks as Array<number[][]>)[this.selectedMassRow])
       }
 
       // if nothing was retrieved for drawing
@@ -69,8 +66,8 @@ export default defineComponent({
 
       // save max z value for layout
       this.maximumIntensity = signals_for_drawing.signal_z
-          .concat(signals_for_drawing.noise_z)
-          .reduce((a, b) => Math.max(a, b), -Infinity)
+        .concat(signals_for_drawing.noise_z)
+        .reduce((a, b) => Math.max(a, b), -Infinity)
 
       return [
         {
@@ -141,19 +138,17 @@ export default defineComponent({
 
       // if this scan is MS2, but doesn't have precursor scan -> not drawing anything
       const precursor_scan = this.streamlitDataStore.allDataframes.per_scan_data.find(row =>
-          row.Scan === selected_scan.PrecursorScan) as Record<string, unknown>
+        row.Scan === selected_scan.PrecursorScan) as Record<string, unknown>
       if (!precursor_scan) return {}
 
       // from the found "Precursor Scan", find if any masses from that scan matches selection's "Precursor Mass"
       const mass_list = precursor_scan.MonoMass as Array<number>
       const target_mass = selected_scan.PrecursorMass as number
-      for (let index = 0, size = mass_list.length; index < size; ++size)
-      {
+      for (let index = 0, size = mass_list.length; index < size; ++index) {
         const mass = mass_list[index]
-        if (Math.abs(mass - target_mass) < 1e-2)
-        {
+        if (Math.abs(mass - target_mass) < 1e-2) {
           return this.getSignalNoiseObject((precursor_scan.SignalPeaks as Array<number[][]>)[index],
-              (precursor_scan.NoisyPeaks as Array<number[][]>)[index])
+            (precursor_scan.NoisyPeaks as Array<number[][]>)[index])
         }
       }
 
@@ -179,7 +174,7 @@ export default defineComponent({
         const y = peaks[i][3] // charge
         ys.push(y, y, y)
       }
-      return is_signal? {'signal_x': xs, 'signal_y': ys, 'signal_z': zs} : {'noise_x': xs, 'noise_y': ys, 'noise_z': zs}
+      return is_signal ? { 'signal_x': xs, 'signal_y': ys, 'signal_z': zs } : { 'noise_x': xs, 'noise_y': ys, 'noise_z': zs }
     }
   },
 })
