@@ -29,16 +29,16 @@ export default defineComponent({
   data() {
     return {
       columnDefinitions: [
-        {title: 'Index', field: 'id'},
-        {title: 'Monoisotopic mass', field: 'MonoMass'},
-        {title: 'Sum intensity', field: 'SumIntensity'},
-        {title: 'Min charge', field: 'MinCharges'},
-        {title: 'Max charge', field: 'MaxCharges'},
-        {title: 'Min isotope', field: 'MinIsotopes'},
-        {title: 'Max isotope', field: 'MaxIsotopes'},
-        {title: 'Cosine score', field: 'CosineScore'},
-        {title: 'SNR', field: 'SNR'},
-        {title: 'QScore', field: 'QScore'}
+        { title: 'Index', field: 'id' },
+        { title: 'Monoisotopic mass', field: 'MonoMass' },
+        { title: 'Sum intensity', field: 'SumIntensity' },
+        { title: 'Min charge', field: 'MinCharges' },
+        { title: 'Max charge', field: 'MaxCharges' },
+        { title: 'Min isotope', field: 'MinIsotopes' },
+        { title: 'Max isotope', field: 'MaxIsotopes' },
+        { title: 'Cosine score', field: 'CosineScore' },
+        { title: 'SNR', field: 'SNR' },
+        { title: 'QScore', field: 'QScore' }
       ] as ColumnDefinition[]
     }
   },
@@ -89,7 +89,7 @@ export default defineComponent({
   },
   methods: {
     updateSelectedMass(selectedRow?: number) {
-      if (selectedRow) {
+      if (selectedRow !== undefined) {
         this.selectionStore.updateSelectedMass(selectedRow)
       }
     },

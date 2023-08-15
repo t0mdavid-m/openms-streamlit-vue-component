@@ -1,5 +1,5 @@
 <template>
-  <div :id="id" style="height: 100%; width: 100%"></div>
+  <div :id="id" style="width: 100%"></div>
 </template>
 
 <script lang="ts">
@@ -99,6 +99,7 @@ export default defineComponent({
         title: this.args.title,
         paper_bgcolor: this.theme?.backgroundColor,
         plot_bgcolor: this.theme?.secondaryBackgroundColor,
+        height: 800,
         font: {
           color: this.theme?.textColor,
           family: this.theme?.font,
