@@ -12,9 +12,11 @@ const app = createApp(App)
 
 app.use(createPinia())
 
-app.use(createVuetify({
+app.use(
+  createVuetify({
     components,
     directives,
-}))
+  })
+)
 
 app.mount('#app')

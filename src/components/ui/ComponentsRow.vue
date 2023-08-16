@@ -29,6 +29,7 @@
       :args="component.componentArgs"
       :index="componentIndex(index)"
     />
+    <SequenceView v-else-if="component.componentArgs.componentName === 'SequenceView'" />
   </div>
 </template>
 
@@ -38,6 +39,7 @@ import TabulatorScanTable from '@/components/tabulator/TabulatorScanTable.vue'
 import PlotlyLineplot from '@/components/plotly/lineplot/PlotlyLineplot.vue'
 import Plotly3Dplot from '@/components/plotly/3Dplot/Plotly3Dplot.vue'
 import TabulatorMassTable from '@/components/tabulator/TabulatorMassTable.vue'
+import SequenceView from '@/components/sequence/SequenceView.vue'
 import { defineComponent, type PropType } from 'vue'
 import type { FlashViewerComponent } from '@/types/grid-layout'
 import type { ComponentLayout } from '@/types/component-layout'
@@ -51,6 +53,7 @@ export default defineComponent({
     TabulatorScanTable,
     PlotlyLineplot,
     TabulatorMassTable,
+    SequenceView,
   },
   props: {
     components: {

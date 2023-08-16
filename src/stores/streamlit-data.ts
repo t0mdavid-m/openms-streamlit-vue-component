@@ -1,4 +1,5 @@
 import type { DATAFRAMES, FlashViewerComponent, GridLayout } from '@/types/grid-layout'
+import type { SequenceData } from '@/types/sequence-data'
 import { defineStore } from 'pinia'
 import type { RenderData, Theme } from 'streamlit-component-lib'
 
@@ -13,6 +14,8 @@ export const useStreamlitDataStore = defineStore('streamlit-data', {
       return this.args.components
     },
     allDataForDrawing: (state) => state.dataForDrawing,
+    sequenceData: (state): SequenceData | undefined =>
+      state.dataForDrawing.sequence_data as unknown as SequenceData | undefined,
     theme: (state): Theme | undefined => state.renderData?.theme,
   },
   actions: {
