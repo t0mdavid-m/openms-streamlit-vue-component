@@ -1,48 +1,41 @@
 <template>
-  <div style="max-width: 95%">
-    <v-slider
-      :ticks="tickLabels"
-      :min="20"
-      :max="40"
-      step="5"
-      show-ticks="always"
-      tick-size="4"
-      v-model="rowWidth"
-    ></v-slider>
+  <div style="max-width: 97%">
+    <div class="d-flex justify-end px-4 mb-4">
+      <div>
+        <v-btn id="settings-button" variant="text" icon="mdi-cog" size="large"></v-btn>
+        <v-menu activator="#settings-button" location="bottom">
+          <v-card min-width="300">
+            <v-list>
+              <v-list-item>
+                <v-list-item-title># amino acids per row</v-list-item-title>
+                <v-slider :ticks="tickLabels" :min="20" :max="40" step="5" show-ticks="always" tick-size="4"
+                  v-model="rowWidth"></v-slider>
+              </v-list-item>
+            </v-list>
+          </v-card>
+        </v-menu>
+      </div>
+    </div>
     <div :class="gridClasses" style="width: 100% max-width: 100%">
       <template v-for="(aminoAcid, index) in sequence" :key="index">
-        <div
-          class="d-flex justify-center align-center sequence-count"
-          v-if="index !== 0 && index % rowWidth === 0"
-        >
+        <div class="d-flex justify-center align-center" v-if="index !== 0 && index % rowWidth === 0">
           {{ index + 1 }}
         </div>
-        <div
-          class="d-flex justify-center align-center rounded-lg protein-terminal"
-          :style="proteinTerminalCellStyles"
-          v-if="index === 0"
-        >
+        <div class="d-flex justify-center align-center rounded-lg protein-terminal" :style="proteinTerminalCellStyles"
+          v-if="index === 0">
           N
           <v-tooltip activator="parent">N</v-tooltip>
         </div>
-        <div
-          class="d-flex justify-center align-center rounded-lg sequence-amino-acid"
-          :style="aminoAcidCellStyles"
-        >
+        <div class="d-flex justify-center align-center rounded-lg sequence-amino-acid" :style="aminoAcidCellStyles">
           {{ aminoAcid }}
           <v-tooltip activator="parent">{{ aminoAcid + (index + 1) }}</v-tooltip>
         </div>
-        <div
-          class="d-flex justify-center align-center sequence-count"
-          v-if="index % rowWidth === rowWidth - 1 && index !== sequence.length - 1"
-        >
+        <div class="d-flex justify-center align-center"
+          v-if="index % rowWidth === rowWidth - 1 && index !== sequence.length - 1">
           {{ index + 1 }}
         </div>
-        <div
-          class="d-flex justify-center align-center rounded-lg protein-terminal"
-          :style="proteinTerminalCellStyles"
-          v-if="index === sequence.length - 1"
-        >
+        <div class="d-flex justify-center align-center rounded-lg protein-terminal" :style="proteinTerminalCellStyles"
+          v-if="index === sequence.length - 1">
           C
           <v-tooltip activator="parent">C</v-tooltip>
         </div>
@@ -114,14 +107,13 @@ export default defineComponent({
   display: grid;
   grid-template-rows: auto;
   gap: 4px 4px;
-}
 
-.sequence-count {
-  aspect-ratio: 1;
+  >div {
+    aspect-ratio: 1;
+  }
 }
 
 .protein-terminal {
-  aspect-ratio: 1;
 
   &:hover {
     background-color: var(--amino-acid-cell-hover-bg-color);
@@ -130,7 +122,6 @@ export default defineComponent({
 }
 
 .sequence-amino-acid {
-  aspect-ratio: 1;
   background-color: var(--amino-acid-cell-bg-color);
   color: var(--amino-acid-cell-color);
 
