@@ -1,4 +1,14 @@
 <template>
+  <div class="d-flex justify-space-evenly">
+    <template v-if="precursorInfo.length != 0">
+      <h3>Precursor</h3>
+      <v-divider vertical></v-divider>
+      <template v-for="(item, index) in precursorInfo" :key="index">
+        {{ item }}
+        <v-divider vertical></v-divider>
+      </template>
+    </template>
+  </div>
   <div style="max-width: 97%">
     <div class="d-flex justify-end px-4 mb-4">
       <div>
@@ -52,15 +62,15 @@ import type { Streamlit, Theme } from 'streamlit-component-lib'
 
 export default defineComponent({
   name: 'SequenceView',
-  data() {
-    return {
-      rowWidth: 25 as number,
-    }
-  },
   setup() {
     const streamlitDataStore = useStreamlitDataStore()
     const selectionStore = useSelectionStore()
     return { streamlitDataStore, selectionStore }
+  },
+  data() {
+    return {
+      rowWidth: 25 as number,
+    }
   },
   computed: {
     theme(): Theme | undefined {
@@ -68,6 +78,9 @@ export default defineComponent({
     },
     sequence(): string[] {
       return this.streamlitDataStore.sequenceData?.sequence ?? []
+    },
+    theoreticalMass(): number {
+      return this.streamlitDataStore.sequenceData?.theoretical_mass ?? 0
     },
     tickLabels(): Record<number, string> {
       return {
@@ -97,6 +110,23 @@ export default defineComponent({
         '--amino-acid-cell-hover-color': '#fff',
         '--amino-acid-cell-hover-bg-color': this.theme?.secondaryBackgroundColor ?? '#000',
       }
+    },
+    precursorInfo(): string[] {
+      let selectedScan = this.selectionStore.selectedScanIndex
+      if (selectedScan == undefined) return [] // if no scan is selected, nothing to show
+
+      const selectedScanInfo = this.streamlitDataStore.allDataForDrawing.per_scan_data[selectedScan]
+      const observedMass = selectedScanInfo.PrecursorMass as number
+      if (observedMass === 0) return [] // if selected scan is not eligible for this view
+
+      const theoreticalMass = this.theoreticalMass
+      const deltaMassDa = Math.abs(theoreticalMass - observedMass)
+
+      return [
+        `Theoretical mass: ${theoreticalMass.toFixed(2)}`,
+        `Observed mass :${observedMass.toFixed(2)}`,
+        `Δ Mass (Da) :${deltaMassDa.toFixed(2)}`,
+      ]
     },
   },
 })
