@@ -1,5 +1,5 @@
 <template>
-  <div :id="id" style="height: 100%; width: 100%"></div>
+  <div :id="id" style="width=100%"></div>
 </template>
 
 <script lang="ts">
@@ -52,10 +52,13 @@ export default defineComponent({
       if (this.selectedRow === undefined) {
         return xValues
       }
-      (this.streamlitDataStore.allDataframes.per_scan_data[this.selectedRow][this.xColmun] as number[])
-        .forEach((num) => {
-          xValues.push(num, num, num)
-        })
+      ;(
+        this.streamlitDataStore.allDataframes.per_scan_data[this.selectedRow][
+          this.xColmun
+        ] as number[]
+      ).forEach((num) => {
+        xValues.push(num, num, num)
+      })
 
       return xValues
     },
@@ -75,10 +78,13 @@ export default defineComponent({
         return yValues
       }
 
-      (this.streamlitDataStore.allDataframes.per_scan_data[this.selectedRow][this.yColmun] as number[])
-        .forEach((num) => {
-          yValues.push(-10000000, num, -10000000)
-        })
+      ;(
+        this.streamlitDataStore.allDataframes.per_scan_data[this.selectedRow][
+          this.yColmun
+        ] as number[]
+      ).forEach((num) => {
+        yValues.push(-10000000, num, -10000000)
+      })
 
       return yValues
     },

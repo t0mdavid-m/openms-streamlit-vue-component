@@ -1,5 +1,5 @@
 <template>
-  <div style="padding: 8px">
+  <div style="padding: 8px; width: 98%">
     <div v-if="title" :style="containerStyles">
       <h4>{{ title }}</h4>
     </div>
@@ -25,7 +25,7 @@ export default defineComponent({
     },
     title: {
       type: String,
-      required: false
+      required: false,
     },
     index: {
       type: Number,
@@ -66,7 +66,7 @@ export default defineComponent({
   watch: {
     tableData() {
       this.drawTable()
-    }
+    },
   },
   mounted() {
     this.drawTable()
@@ -76,10 +76,13 @@ export default defineComponent({
       this.tabulator = new Tabulator(`#${this.id}`, {
         data: this.tableData,
         minHeight: 50,
-        maxHeight: this.title ? 440 : 430,
+        maxHeight: this.title ? 320 : 310,
         layout: 'fitColumns',
         selectable: 1,
-        columns: this.columnDefinitions,
+        columns: this.columnDefinitions.map((col) => {
+          col.headerTooltip = true
+          return col
+        }),
       })
     },
     onTableClick() {

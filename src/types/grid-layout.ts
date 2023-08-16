@@ -9,10 +9,10 @@ export type DATAFRAMES = 'raw_heatmap_df' | 'deconv_heatmap_df' | 'per_scan_data
 export type FlashViewerComponent = {
   componentLayout: ComponentLayout
   componentArgs:
-  | PlotlyHeatmapArguments
-  | TabulatorTableArguments
-  | PlotlyLineArguments
-  | Plotly3DplotArguments
+    | PlotlyHeatmapArguments
+    | TabulatorTableArguments
+    | PlotlyLineArguments
+    | Plotly3DplotArguments
 }
 
 export type GridLayout = {

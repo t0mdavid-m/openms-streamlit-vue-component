@@ -1,5 +1,5 @@
 <template>
-  <div :id="id" style="height: 100%; width: 100%"></div>
+  <div :id="id" style="width: 100%"></div>
 </template>
 
 <script lang="ts">
@@ -8,7 +8,7 @@ import Plotly from 'plotly.js-dist-min'
 import type { Theme } from 'streamlit-component-lib'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
 import type { Plotly3DplotArguments } from './plotly-3Dplot'
-import { useSelectionStore } from "@/stores/selection";
+import { useSelectionStore } from '@/stores/selection'
 
 export default defineComponent({
   name: 'Plotly3Dplot',
@@ -22,15 +22,15 @@ export default defineComponent({
       required: true,
     },
   },
-  data() {
-    return {
-      maximumIntensity: 0 as number
-    }
-  },
   setup() {
     const streamlitDataStore = useStreamlitDataStore()
     const selectionStore = useSelectionStore()
     return { streamlitDataStore, selectionStore }
+  },
+  data() {
+    return {
+      maximumIntensity: 0 as number,
+    }
   },
   computed: {
     id(): string {
@@ -49,16 +49,21 @@ export default defineComponent({
       if (this.selectedMassRow === undefined && this.selectedScanRow === undefined) return []
 
       // Get selected row entry and filter by required columns
-      const selected_scan_info = this.selectedScanRow ? this.streamlitDataStore.allDataframes.per_scan_data[this.selectedScanRow] : {}
+      const selected_scan_info = this.selectedScanRow
+        ? this.streamlitDataStore.allDataframes.per_scan_data[this.selectedScanRow]
+        : {}
       // get signal & noise array for drawing
       let signals_for_drawing: Record<string, number[]> = {}
 
-      if (this.selectedMassRow === undefined && this.selectedScanRow !== undefined) { // when scan is selected
+      if (this.selectedMassRow === undefined && this.selectedScanRow !== undefined) {
+        // when scan is selected
         signals_for_drawing = this.getPrecursorSignal(selected_scan_info)
-      }
-      else if (this.selectedMassRow !== undefined) { // when mass is selected
-        signals_for_drawing = this.getSignalNoiseObject((selected_scan_info.SignalPeaks as Array<number[][]>)[this.selectedMassRow],
-          (selected_scan_info.NoisyPeaks as Array<number[][]>)[this.selectedMassRow])
+      } else if (this.selectedMassRow !== undefined) {
+        // when mass is selected
+        signals_for_drawing = this.getSignalNoiseObject(
+          (selected_scan_info.SignalPeaks as Array<number[][]>)[this.selectedMassRow],
+          (selected_scan_info.NoisyPeaks as Array<number[][]>)[this.selectedMassRow]
+        )
       }
 
       // if nothing was retrieved for drawing
@@ -99,6 +104,7 @@ export default defineComponent({
         title: this.args.title,
         paper_bgcolor: this.theme?.backgroundColor,
         plot_bgcolor: this.theme?.secondaryBackgroundColor,
+        height: 800,
         font: {
           color: this.theme?.textColor,
           family: this.theme?.font,
@@ -137,8 +143,9 @@ export default defineComponent({
       if (selected_scan.PrecursorScan == 0) return {}
 
       // if this scan is MS2, but doesn't have precursor scan -> not drawing anything
-      const precursor_scan = this.streamlitDataStore.allDataframes.per_scan_data.find(row =>
-        row.Scan === selected_scan.PrecursorScan) as Record<string, unknown>
+      const precursor_scan = this.streamlitDataStore.allDataframes.per_scan_data.find(
+        (row) => row.Scan === selected_scan.PrecursorScan
+      ) as Record<string, unknown>
       if (!precursor_scan) return {}
 
       // from the found "Precursor Scan", find if any masses from that scan matches selection's "Precursor Mass"
@@ -147,26 +154,33 @@ export default defineComponent({
       for (let index = 0, size = mass_list.length; index < size; ++index) {
         const mass = mass_list[index]
         if (Math.abs(mass - target_mass) < 1e-2) {
-          return this.getSignalNoiseObject((precursor_scan.SignalPeaks as Array<number[][]>)[index],
-            (precursor_scan.NoisyPeaks as Array<number[][]>)[index])
+          return this.getSignalNoiseObject(
+            (precursor_scan.SignalPeaks as Array<number[][]>)[index],
+            (precursor_scan.NoisyPeaks as Array<number[][]>)[index]
+          )
         }
       }
 
       return {}
     },
-    getSignalNoiseObject(signal_peaks: number[][], noisy_peaks: number[][]): Record<string, number[]> {
+    getSignalNoiseObject(
+      signal_peaks: number[][],
+      noisy_peaks: number[][]
+    ): Record<string, number[]> {
       // signal peaks
       let signal_object = this.get3DplotInputFromSNRPeaks(signal_peaks, true)
       // noise peaks
       let noisy_object = this.get3DplotInputFromSNRPeaks(noisy_peaks, false)
 
-      Object.assign(signal_object, noisy_object); // append noisy_object to signal_object
+      Object.assign(signal_object, noisy_object) // append noisy_object to signal_object
       return signal_object
     },
     get3DplotInputFromSNRPeaks(peaks: number[][], is_signal: boolean): Record<string, number[]> {
-      let xs = [], ys = [], zs = [];
+      let xs = [],
+        ys = [],
+        zs = []
       for (let i = 0, len = peaks.length; i < len; i++) {
-        const z = peaks[i][2]  // intensity
+        const z = peaks[i][2] // intensity
         if (z <= 0) continue // if intensity is below zero, ignore
         zs.push(-100000, z, -100000)
         const x = peaks[i][1] * peaks[i][3]! // mass
@@ -174,8 +188,10 @@ export default defineComponent({
         const y = peaks[i][3] // charge
         ys.push(y, y, y)
       }
-      return is_signal ? { 'signal_x': xs, 'signal_y': ys, 'signal_z': zs } : { 'noise_x': xs, 'noise_y': ys, 'noise_z': zs }
-    }
+      return is_signal
+        ? { signal_x: xs, signal_y: ys, signal_z: zs }
+        : { noise_x: xs, noise_y: ys, noise_z: zs }
+    },
   },
 })
 </script>

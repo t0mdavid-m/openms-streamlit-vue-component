@@ -1,6 +1,11 @@
 <template>
-  <TabulatorTable :table-data="tableData" :column-definitions="columnDefinitions" :title="args.title" :index="index"
-    @row-selected="updateSelectedMass" />
+  <TabulatorTable
+    :table-data="tableData"
+    :column-definitions="columnDefinitions"
+    :title="args.title"
+    :index="index"
+    @row-selected="updateSelectedMass"
+  />
 </template>
 
 <script lang="ts">
@@ -14,7 +19,7 @@ import type { ColumnDefinition } from 'tabulator-tables'
 export default defineComponent({
   name: 'TabulatorMassTable',
   components: {
-    TabulatorTable
+    TabulatorTable,
   },
   props: {
     args: {
@@ -26,26 +31,26 @@ export default defineComponent({
       required: true,
     },
   },
-  data() {
-    return {
-      columnDefinitions: [
-        {title: 'Index', field: 'id'},
-        {title: 'Monoisotopic mass', field: 'MonoMass'},
-        {title: 'Sum intensity', field: 'SumIntensity'},
-        {title: 'Min charge', field: 'MinCharges'},
-        {title: 'Max charge', field: 'MaxCharges'},
-        {title: 'Min isotope', field: 'MinIsotopes'},
-        {title: 'Max isotope', field: 'MaxIsotopes'},
-        {title: 'Cosine score', field: 'CosineScore'},
-        {title: 'SNR', field: 'SNR'},
-        {title: 'QScore', field: 'QScore'}
-      ] as ColumnDefinition[]
-    }
-  },
   setup() {
     const streamlitDataStore = useStreamlitDataStore()
     const selectionStore = useSelectionStore()
     return { streamlitDataStore, selectionStore }
+  },
+  data() {
+    return {
+      columnDefinitions: [
+        { title: 'Index', field: 'id' },
+        { title: 'Monoisotopic mass', field: 'MonoMass' },
+        { title: 'Sum intensity', field: 'SumIntensity' },
+        { title: 'Min charge', field: 'MinCharges' },
+        { title: 'Max charge', field: 'MaxCharges' },
+        { title: 'Min isotope', field: 'MinIsotopes' },
+        { title: 'Max isotope', field: 'MaxIsotopes' },
+        { title: 'Cosine score', field: 'CosineScore' },
+        { title: 'SNR', field: 'SNR' },
+        { title: 'QScore', field: 'QScore' },
+      ] as ColumnDefinition[],
+    }
   },
   computed: {
     selectedRow(): number | undefined {
@@ -58,7 +63,7 @@ export default defineComponent({
       const row = this.streamlitDataStore.allDataframes.per_scan_data[this.selectedRow]
 
       // Prepare required columns
-      const requiredColumns = this.columnDefinitions.map(col => col.field!)
+      const requiredColumns = this.columnDefinitions.map((col) => col.field!)
 
       // Prepare output array
       const tableData: Record<string, number>[] = []
@@ -82,17 +87,17 @@ export default defineComponent({
       })
 
       // Add back id to the new rows
-      tableData.map((entry, index) => entry['id'] = index)
+      tableData.map((entry, index) => (entry['id'] = index))
 
       return tableData
-    }
+    },
   },
   methods: {
     updateSelectedMass(selectedRow?: number) {
-      if (selectedRow) {
+      if (selectedRow !== undefined) {
         this.selectionStore.updateSelectedMass(selectedRow)
       }
     },
-  }
+  },
 })
 </script>
