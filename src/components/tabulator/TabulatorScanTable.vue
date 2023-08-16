@@ -50,7 +50,7 @@ export default defineComponent({
   },
   computed: {
     tableData(): Record<string, unknown>[] {
-      const rows = this.streamlitDataStore.allDataframes.per_scan_data
+      const rows = this.streamlitDataStore.allDataForDrawing.per_scan_data
       rows.forEach((row) => (row['id'] = row['index']))
       return rows
     },

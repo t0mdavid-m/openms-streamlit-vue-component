@@ -53,7 +53,7 @@ export default defineComponent({
         return xValues
       }
       ;(
-        this.streamlitDataStore.allDataframes.per_scan_data[this.selectedRow][
+        this.streamlitDataStore.allDataForDrawing.per_scan_data[this.selectedRow][
           this.xColmun
         ] as number[]
       ).forEach((num) => {
@@ -79,7 +79,7 @@ export default defineComponent({
       }
 
       ;(
-        this.streamlitDataStore.allDataframes.per_scan_data[this.selectedRow][
+        this.streamlitDataStore.allDataForDrawing.per_scan_data[this.selectedRow][
           this.yColmun
         ] as number[]
       ).forEach((num) => {

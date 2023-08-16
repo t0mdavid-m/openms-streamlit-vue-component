@@ -60,7 +60,7 @@ export default defineComponent({
       if (this.selectedRow === undefined) return []
 
       // Get selected row entry and filter by required columns
-      const row = this.streamlitDataStore.allDataframes.per_scan_data[this.selectedRow]
+      const row = this.streamlitDataStore.allDataForDrawing.per_scan_data[this.selectedRow]
 
       // Prepare required columns
       const requiredColumns = this.columnDefinitions.map((col) => col.field!)

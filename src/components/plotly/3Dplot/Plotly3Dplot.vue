@@ -50,7 +50,7 @@ export default defineComponent({
 
       // Get selected row entry and filter by required columns
       const selected_scan_info = this.selectedScanRow
-        ? this.streamlitDataStore.allDataframes.per_scan_data[this.selectedScanRow]
+        ? this.streamlitDataStore.allDataForDrawing.per_scan_data[this.selectedScanRow]
         : {}
       // get signal & noise array for drawing
       let signals_for_drawing: Record<string, number[]> = {}
@@ -143,7 +143,7 @@ export default defineComponent({
       if (selected_scan.PrecursorScan == 0) return {}
 
       // if this scan is MS2, but doesn't have precursor scan -> not drawing anything
-      const precursor_scan = this.streamlitDataStore.allDataframes.per_scan_data.find(
+      const precursor_scan = this.streamlitDataStore.allDataForDrawing.per_scan_data.find(
         (row) => row.Scan === selected_scan.PrecursorScan
       ) as Record<string, unknown>
       if (!precursor_scan) return {}

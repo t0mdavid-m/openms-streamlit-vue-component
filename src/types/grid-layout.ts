@@ -4,7 +4,7 @@ import type { ComponentLayout } from './component-layout'
 import type { PlotlyLineArguments } from '@/components/plotly/lineplot/plotly-lineplot'
 import type { Plotly3DplotArguments } from '@/components/plotly/3Dplot/plotly-3Dplot'
 
-export type DATAFRAMES = 'raw_heatmap_df' | 'deconv_heatmap_df' | 'per_scan_data'
+export type DATAFRAMES = 'raw_heatmap_df' | 'deconv_heatmap_df' | 'per_scan_data' | 'sequence_data'
 
 export type FlashViewerComponent = {
   componentLayout: ComponentLayout
@@ -18,6 +18,6 @@ export type FlashViewerComponent = {
 export type GridLayout = {
   columns?: number
   rows?: number
-  dataframes: Record<DATAFRAMES, string>
+  data_for_drawing: Record<DATAFRAMES, string>
   components: FlashViewerComponent[]
 }
