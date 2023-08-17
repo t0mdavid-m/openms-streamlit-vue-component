@@ -2,10 +2,10 @@
   <div class="d-flex justify-space-evenly">
     <template v-if="precursorData.length != 0">
       <h3>Precursor</h3>
-      <v-divider vertical></v-divider>
+      <v-divider vertical="true"></v-divider>
       <template v-for="(item, index) in precursorData" :key="index">
         {{ item }}
-        <v-divider vertical></v-divider>
+        <v-divider vertical="true"></v-divider>
       </template>
     </template>
   </div>
@@ -13,7 +13,7 @@
     <div class="d-flex justify-end px-4 mb-4">
       <div>
         <v-btn id="settings-button" variant="text" icon="mdi-cog" size="large"></v-btn>
-        <v-menu activator="#settings-button" location="bottom">
+        <v-menu :close-on-content-click="false" activator="#settings-button" location="bottom">
           <v-card min-width="300">
             <v-list>
               <v-list-item>
@@ -27,6 +27,26 @@
                   show-ticks="always"
                   tick-size="4"
                 ></v-slider>
+              </v-list-item>
+              <v-list-item>
+                <v-list-item-title>Fragment ion types</v-list-item-title>
+                <v-layout row wrap>
+                  <v-flex v-for="(category, index) in ionTypes" :key="ionTypes[index].text" xs6>
+                    <v-checkbox v-model="category.selected" light :label="category.text">
+                    </v-checkbox>
+                  </v-flex>
+                </v-layout>
+              </v-list-item>
+              <v-list-item>
+                <v-list-item-title>Fragment mass tolerance</v-list-item-title>
+                <v-text-field
+                  v-model="fragmentMassTolerance"
+                  type="number"
+                  hide-details="auto"
+                  label="mass tolerance in ppm"
+                  @change="updateMassTolerance"
+                ></v-text-field>
+                <!-- TODO: add "required" -->
               </v-list-item>
             </v-list>
           </v-card>
@@ -72,6 +92,14 @@
         </div>
       </template>
     </div>
+    <template v-if="fragmentTableTitle !== ''">
+      <TabulatorTable
+        :table-data="fragmentTableData"
+        :column-definitions="fragmentTableColumnDefinitions"
+        :title="fragmentTableTitle"
+        :index="index"
+      />
+    </template>
   </div>
 </template>
 
@@ -80,9 +108,19 @@ import { defineComponent } from 'vue'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
 import { useSelectionStore } from '@/stores/selection'
 import type { Streamlit, Theme } from 'streamlit-component-lib'
+import TabulatorTable from '@/components/tabulator/TabulatorTable.vue'
+import type { ColumnDefinition } from 'tabulator-tables'
+import type { SequenceData } from '@/types/sequence-data'
 
 export default defineComponent({
   name: 'SequenceView',
+  components: { TabulatorTable },
+  props: {
+    index: {
+      type: Number,
+      required: true,
+    },
+  },
   setup() {
     const streamlitDataStore = useStreamlitDataStore()
     const selectionStore = useSelectionStore()
@@ -90,8 +128,28 @@ export default defineComponent({
   },
   data() {
     return {
-      rowWidth: 25 as number,
+      rowWidth: 35 as number,
       precursorData: [] as string[],
+      ionTypes: [
+        { text: 'a', selected: false },
+        { text: 'b', selected: true },
+        { text: 'c', selected: false },
+        { text: 'x', selected: false },
+        { text: 'y', selected: true },
+        { text: 'z', selected: false },
+      ] as { text: string; selected: boolean }[],
+      fragmentMassTolerance: 10 as number,
+      fragmentTableColumnDefinitions: [
+        { title: 'Name', field: 'Name' },
+        { title: 'Ion type', field: 'IonType' },
+        { title: 'Ion number', field: 'IonNumber' },
+        { title: 'Theoretical mass', field: 'TheoreticalMass' },
+        { title: 'Observed mass', field: 'ObservedMass' },
+        { title: 'Mass difference (Da)', field: 'MassDiffDa' },
+        { title: 'Mass difference (ppm)', field: 'MassDiffPpm' },
+      ] as ColumnDefinition[],
+      fragmentTableData: [] as Record<string, unknown>[],
+      fragmentTableTitle: '' as string,
     }
   },
   computed: {
@@ -140,17 +198,28 @@ export default defineComponent({
   watch: {
     selectedScanIndex() {
       this.preparePrecursorInfo()
+      this.prepareFragmentTable()
+    },
+    fragmentMassTolerance() {
+      this.prepareFragmentTable()
     },
   },
+  mounted() {
+    this.preparePrecursorInfo()
+    this.prepareFragmentTable()
+  },
   methods: {
+    updateMassTolerance(event: Event) {
+      this.fragmentMassTolerance = Number.parseInt((event.target as any).value as string)
+    },
     preparePrecursorInfo(): void {
-      let selectedScan = this.selectedScanIndex
-      if (selectedScan == undefined) {
+      if (this.selectedScanIndex == undefined) {
         this.precursorData = [] // if no scan is selected, nothing to show
         return
       }
 
-      const selectedScanInfo = this.streamlitDataStore.allDataForDrawing.per_scan_data[selectedScan]
+      const selectedScanInfo =
+        this.streamlitDataStore.allDataForDrawing.per_scan_data[this.selectedScanIndex]
       const observedMass = selectedScanInfo.PrecursorMass as number
       if (observedMass === 0) {
         // if selected scan is not eligible for this view
@@ -166,6 +235,72 @@ export default defineComponent({
         `Observed mass :${observedMass.toFixed(2)}`,
         `Δ Mass (Da) :${deltaMassDa.toFixed(2)}`,
       ]
+    },
+
+    prepareFragmentTable(): void {
+      if (this.selectedScanIndex == undefined) {
+        this.fragmentTableTitle = '' // if no scan is selected, nothing to show
+        return
+      }
+
+      const selectedScanInfo =
+        this.streamlitDataStore.allDataForDrawing.per_scan_data[this.selectedScanIndex]
+      const observedMass = selectedScanInfo.PrecursorMass as number
+      if (observedMass === 0) {
+        // if selected scan is not eligible for this view
+        this.fragmentTableTitle = ''
+        return
+      }
+
+      // get the observed mass table info
+      const observed_masses = selectedScanInfo.MonoMass as number[]
+      console.log('number of candidate peaks =', observed_masses.length)
+      console.log(observed_masses)
+
+      // calculate matching masses
+      let matching_fragments: Record<string, unknown>[] = []
+      this.ionTypes
+        .filter((iontype) => iontype.selected)
+        .forEach((iontype) => {
+          const theoretical_frags = this.streamlitDataStore.sequenceData?.[
+            `fragment_masses_${iontype.text}` as keyof SequenceData
+          ] as number[]
+          console.log('iontype=', iontype.text)
+          console.log(theoretical_frags)
+
+          for (
+            let theoIndex = 0, FragSize = theoretical_frags.length;
+            theoIndex < FragSize;
+            ++theoIndex
+          ) {
+            for (
+              let obsIndex = 0, obsSize = observed_masses.length;
+              obsIndex < obsSize;
+              ++obsIndex
+            ) {
+              // Mass difference = (observed-theoretical)/theoretical*1e6
+              const massDiffDa = observed_masses[obsIndex] - theoretical_frags[theoIndex]
+              const massDiffPpm = (massDiffDa / theoretical_frags[theoIndex]) * 1e6
+              if (Math.abs(massDiffPpm) > this.fragmentMassTolerance) {
+                // if mass difference is larger than tolerance, ignore
+                continue
+              }
+              const matched = {
+                Name: `${iontype.text}${theoIndex + 1}`,
+                IonType: iontype.text,
+                IonNumber: theoIndex + 1,
+                TheoreticalMass: theoretical_frags[theoIndex].toFixed(3),
+                ObservedMass: observed_masses[obsIndex].toFixed(3),
+                MassDiffDa: massDiffDa.toFixed(3),
+                MassDiffPpm: massDiffPpm.toFixed(3),
+              }
+              matching_fragments.push(matched)
+            }
+          }
+        })
+
+      this.fragmentTableData = matching_fragments
+      this.fragmentTableTitle = `Matching fragments (# ${matching_fragments.length})`
     },
   },
 })
