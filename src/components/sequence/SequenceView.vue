@@ -1,9 +1,9 @@
 <template>
   <div class="d-flex justify-space-evenly">
-    <template v-if="precursorInfo.length != 0">
+    <template v-if="precursorData.length != 0">
       <h3>Precursor</h3>
       <v-divider vertical></v-divider>
-      <template v-for="(item, index) in precursorInfo" :key="index">
+      <template v-for="(item, index) in precursorData" :key="index">
         {{ item }}
         <v-divider vertical></v-divider>
       </template>
@@ -18,34 +18,55 @@
             <v-list>
               <v-list-item>
                 <v-list-item-title># amino acids per row</v-list-item-title>
-                <v-slider :ticks="tickLabels" :min="20" :max="40" step="5" show-ticks="always" tick-size="4"
-                  v-model="rowWidth"></v-slider>
+                <v-slider
+                  v-model="rowWidth"
+                  :ticks="tickLabels"
+                  :min="20"
+                  :max="40"
+                  step="5"
+                  show-ticks="always"
+                  tick-size="4"
+                ></v-slider>
               </v-list-item>
             </v-list>
           </v-card>
         </v-menu>
       </div>
     </div>
-    <div :class="gridClasses" style="width: 100% max-width: 100%">
+    <div :class="gridClasses" style="width: 100%; max-width: 100%">
       <template v-for="(aminoAcid, index) in sequence" :key="index">
-        <div class="d-flex justify-center align-center" v-if="index !== 0 && index % rowWidth === 0">
+        <div
+          v-if="index !== 0 && index % rowWidth === 0"
+          class="d-flex justify-center align-center"
+        >
           {{ index + 1 }}
         </div>
-        <div class="d-flex justify-center align-center rounded-lg protein-terminal" :style="proteinTerminalCellStyles"
-          v-if="index === 0">
+        <div
+          v-if="index === 0"
+          class="d-flex justify-center align-center rounded-lg protein-terminal"
+          :style="proteinTerminalCellStyles"
+        >
           N
           <v-tooltip activator="parent">N</v-tooltip>
         </div>
-        <div class="d-flex justify-center align-center rounded-lg sequence-amino-acid" :style="aminoAcidCellStyles">
+        <div
+          class="d-flex justify-center align-center rounded-lg sequence-amino-acid"
+          :style="aminoAcidCellStyles"
+        >
           {{ aminoAcid }}
           <v-tooltip activator="parent">{{ aminoAcid + (index + 1) }}</v-tooltip>
         </div>
-        <div class="d-flex justify-center align-center"
-          v-if="index % rowWidth === rowWidth - 1 && index !== sequence.length - 1">
+        <div
+          v-if="index % rowWidth === rowWidth - 1 && index !== sequence.length - 1"
+          class="d-flex justify-center align-center"
+        >
           {{ index + 1 }}
         </div>
-        <div class="d-flex justify-center align-center rounded-lg protein-terminal" :style="proteinTerminalCellStyles"
-          v-if="index === sequence.length - 1">
+        <div
+          v-if="index === sequence.length - 1"
+          class="d-flex justify-center align-center rounded-lg protein-terminal"
+          :style="proteinTerminalCellStyles"
+        >
           C
           <v-tooltip activator="parent">C</v-tooltip>
         </div>
@@ -70,6 +91,7 @@ export default defineComponent({
   data() {
     return {
       rowWidth: 25 as number,
+      precursorData: [] as string[],
     }
   },
   computed: {
@@ -111,18 +133,35 @@ export default defineComponent({
         '--amino-acid-cell-hover-bg-color': this.theme?.secondaryBackgroundColor ?? '#000',
       }
     },
-    precursorInfo(): string[] {
-      let selectedScan = this.selectionStore.selectedScanIndex
-      if (selectedScan == undefined) return [] // if no scan is selected, nothing to show
+    selectedScanIndex(): number | undefined {
+      return this.selectionStore.selectedScanIndex
+    },
+  },
+  watch: {
+    selectedScanIndex() {
+      this.preparePrecursorInfo()
+    },
+  },
+  methods: {
+    preparePrecursorInfo(): void {
+      let selectedScan = this.selectedScanIndex
+      if (selectedScan == undefined) {
+        this.precursorData = [] // if no scan is selected, nothing to show
+        return
+      }
 
       const selectedScanInfo = this.streamlitDataStore.allDataForDrawing.per_scan_data[selectedScan]
       const observedMass = selectedScanInfo.PrecursorMass as number
-      if (observedMass === 0) return [] // if selected scan is not eligible for this view
+      if (observedMass === 0) {
+        // if selected scan is not eligible for this view
+        this.precursorData = []
+        return
+      }
 
       const theoreticalMass = this.theoreticalMass
       const deltaMassDa = Math.abs(theoreticalMass - observedMass)
 
-      return [
+      this.precursorData = [
         `Theoretical mass: ${theoreticalMass.toFixed(2)}`,
         `Observed mass :${observedMass.toFixed(2)}`,
         `Δ Mass (Da) :${deltaMassDa.toFixed(2)}`,
@@ -138,13 +177,12 @@ export default defineComponent({
   grid-template-rows: auto;
   gap: 4px 4px;
 
-  >div {
+  > div {
     aspect-ratio: 1;
   }
 }
 
 .protein-terminal {
-
   &:hover {
     background-color: var(--amino-acid-cell-hover-bg-color);
     color: var(--amino-acid-cell-hover-color);
