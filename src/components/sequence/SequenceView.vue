@@ -3,7 +3,7 @@
     <template v-if="precursorData.length != 0">
       <h3>Precursor</h3>
       <v-divider vertical="true"></v-divider>
-      <template v-for="(item, index) in precursorData" :key="index">
+      <template v-for="(item, p_index) in precursorData" :key="p_index">
         {{ item }}
         <v-divider vertical="true"></v-divider>
       </template>
@@ -31,10 +31,15 @@
               <v-list-item>
                 <v-list-item-title>Fragment ion types</v-list-item-title>
                 <v-layout row wrap>
-                  <v-flex v-for="(category, index) in ionTypes" :key="ionTypes[index].text" xs6>
+                  <div
+                    v-for="(category, i_index) in ionTypes"
+                    :key="ionTypes[i_index].text"
+                    class="d-flex"
+                  >
+                    <!-- TODO: why is there space between this and the next v-list-item? -->
                     <v-checkbox v-model="category.selected" light :label="category.text">
                     </v-checkbox>
-                  </v-flex>
+                  </div>
                 </v-layout>
               </v-list-item>
               <v-list-item>
@@ -54,15 +59,15 @@
       </div>
     </div>
     <div :class="gridClasses" style="width: 100%; max-width: 100%">
-      <template v-for="(aminoAcid, index) in sequence" :key="index">
+      <template v-for="(aminoAcid, aa_index) in sequence" :key="aa_index">
         <div
-          v-if="index !== 0 && index % rowWidth === 0"
+          v-if="aa_index !== 0 && aa_index % rowWidth === 0"
           class="d-flex justify-center align-center"
         >
-          {{ index + 1 }}
+          {{ aa_index + 1 }}
         </div>
         <div
-          v-if="index === 0"
+          v-if="aa_index === 0"
           class="d-flex justify-center align-center rounded-lg protein-terminal"
           :style="proteinTerminalCellStyles"
         >
@@ -74,16 +79,16 @@
           :style="aminoAcidCellStyles"
         >
           {{ aminoAcid }}
-          <v-tooltip activator="parent">{{ aminoAcid + (index + 1) }}</v-tooltip>
+          <v-tooltip activator="parent">{{ aminoAcid + (aa_index + 1) }}</v-tooltip>
         </div>
         <div
-          v-if="index % rowWidth === rowWidth - 1 && index !== sequence.length - 1"
+          v-if="aa_index % rowWidth === rowWidth - 1 && aa_index !== sequence.length - 1"
           class="d-flex justify-center align-center"
         >
-          {{ index + 1 }}
+          {{ aa_index + 1 }}
         </div>
         <div
-          v-if="index === sequence.length - 1"
+          v-if="aa_index === sequence.length - 1"
           class="d-flex justify-center align-center rounded-lg protein-terminal"
           :style="proteinTerminalCellStyles"
         >
@@ -107,7 +112,7 @@
 import { defineComponent } from 'vue'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
 import { useSelectionStore } from '@/stores/selection'
-import type { Streamlit, Theme } from 'streamlit-component-lib'
+import type { Theme } from 'streamlit-component-lib'
 import TabulatorTable from '@/components/tabulator/TabulatorTable.vue'
 import type { ColumnDefinition } from 'tabulator-tables'
 import type { SequenceData } from '@/types/sequence-data'

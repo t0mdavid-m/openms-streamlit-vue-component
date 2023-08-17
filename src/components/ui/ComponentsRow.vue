@@ -48,7 +48,6 @@ import SequenceView from '@/components/sequence/SequenceView.vue'
 import { defineComponent, type PropType } from 'vue'
 import type { FlashViewerComponent } from '@/types/grid-layout'
 import type { ComponentLayout } from '@/types/component-layout'
-import { Streamlit } from 'streamlit-component-lib'
 
 export default defineComponent({
   name: 'ComponentsRow',
@@ -102,20 +101,17 @@ export default defineComponent({
 .component-width-1 {
   flex-basis: 100%;
   flex-grow: 0;
-  flex-grow: 0;
 }
 
 .component-width-2 {
   max-width: 50%;
   flex-basis: 50%;
   flex-grow: 0;
-  flex-grow: 0;
 }
 
 .component-width-3 {
   max-width: 33%;
   flex-basis: 33%;
-  flex-grow: 0;
   flex-grow: 0;
 }
 </style>
