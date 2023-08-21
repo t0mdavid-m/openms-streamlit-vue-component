@@ -75,7 +75,8 @@
           <v-tooltip activator="parent">N</v-tooltip>
         </div>
         <div
-          class="d-flex justify-center align-center rounded-lg sequence-amino-acid"
+          class="d-flex justify-center align-center rounded-lg"
+          :class="aminoAcidCellClass(aminoAcid)"
           :style="aminoAcidCellStyles"
         >
           {{ aminoAcid }}
@@ -167,6 +168,9 @@ export default defineComponent({
     theoreticalMass(): number {
       return this.streamlitDataStore.sequenceData?.theoretical_mass ?? 0
     },
+    fixedModificationSites(): string[] {
+      return this.streamlitDataStore.sequenceData?.fixed_modifications ?? []
+    },
     tickLabels(): Record<number, string> {
       return {
         20: '20',
@@ -210,6 +214,7 @@ export default defineComponent({
     },
   },
   mounted() {
+    console.log(this.fixedModificationSites)
     this.preparePrecursorInfo()
     this.prepareFragmentTable()
   },
@@ -259,8 +264,6 @@ export default defineComponent({
 
       // get the observed mass table info
       const observed_masses = selectedScanInfo.MonoMass as number[]
-      console.log('number of candidate peaks =', observed_masses.length)
-      console.log(observed_masses)
 
       // calculate matching masses
       let matching_fragments: Record<string, unknown>[] = []
@@ -270,8 +273,6 @@ export default defineComponent({
           const theoretical_frags = this.streamlitDataStore.sequenceData?.[
             `fragment_masses_${iontype.text}` as keyof SequenceData
           ] as number[]
-          console.log('iontype=', iontype.text)
-          console.log(theoretical_frags)
 
           for (
             let theoIndex = 0, FragSize = theoretical_frags.length;
@@ -307,6 +308,15 @@ export default defineComponent({
       this.fragmentTableData = matching_fragments
       this.fragmentTableTitle = `Matching fragments (# ${matching_fragments.length})`
     },
+
+    aminoAcidCellClass(aminoAcid: string): Record<string, boolean> {
+      const fixMod = this.fixedModificationSites.includes(aminoAcid)
+      console.log(fixMod, aminoAcid)
+      return {
+        'sequence-amino-acid': !fixMod,
+        'sequence-amino-acid-highlighted': fixMod,
+      }
+    },
   },
 })
 </script>
@@ -336,6 +346,15 @@ export default defineComponent({
   &:hover {
     background-color: var(--amino-acid-cell-hover-bg-color);
     color: var(--amino-acid-cell-hover-color);
+  }
+}
+
+.sequence-amino-acid-highlighted {
+  background-color: var(--amino-acid-cell-bg-color);
+  color: #9c1e1e;
+
+  &:hover {
+    background-color: var(--amino-acid-cell-hover-bg-color);
   }
 }
 

@@ -1,6 +1,7 @@
 export type SequenceData = {
   sequence: string[]
   theoretical_mass: number
+  fixed_modifications: string[]
   fragment_masses_a: number[]
   fragment_masses_b: number[]
   fragment_masses_c: number[]
