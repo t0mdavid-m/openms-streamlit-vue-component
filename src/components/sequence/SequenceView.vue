@@ -18,39 +18,24 @@
             <v-list>
               <v-list-item>
                 <v-list-item-title># amino acids per row</v-list-item-title>
-                <v-slider
-                  v-model="rowWidth"
-                  :ticks="tickLabels"
-                  :min="20"
-                  :max="40"
-                  step="5"
-                  show-ticks="always"
-                  tick-size="4"
-                ></v-slider>
+                <v-slider v-model="rowWidth" :ticks="tickLabels" :min="20" :max="40" step="5" show-ticks="always"
+                  tick-size="4"></v-slider>
               </v-list-item>
               <v-list-item>
                 <v-list-item-title>Fragment ion types</v-list-item-title>
                 <v-layout row wrap>
-                  <div
-                    v-for="(category, i_index) in ionTypes"
-                    :key="ionTypes[i_index].text"
-                    class="d-flex"
-                  >
+                  <div class="d-flex">
                     <!-- TODO: why is there space between this and the next v-list-item? -->
-                    <v-checkbox v-model="category.selected" light :label="category.text">
+                    <v-checkbox v-for="(category, index) in ionTypes" :key="category.text" v-model="category.selected"
+                      light :label="category.text" @click="toggleIonTypeSelected(index)">
                     </v-checkbox>
                   </div>
                 </v-layout>
               </v-list-item>
               <v-list-item>
                 <v-list-item-title>Fragment mass tolerance</v-list-item-title>
-                <v-text-field
-                  v-model="fragmentMassTolerance"
-                  type="number"
-                  hide-details="auto"
-                  label="mass tolerance in ppm"
-                  @change="updateMassTolerance"
-                ></v-text-field>
+                <v-text-field v-model="fragmentMassTolerance" type="number" hide-details="auto"
+                  label="mass tolerance in ppm" @change="updateMassTolerance"></v-text-field>
                 <!-- TODO: add "required" -->
               </v-list-item>
             </v-list>
@@ -59,68 +44,31 @@
       </div>
     </div>
     <div :class="gridClasses" style="width: 100%; max-width: 100%">
-      <template v-for="(aminoAcidObj, aa_index) in sequenceObject" :key="aa_index">
-        <div
-          v-if="aa_index !== 0 && aa_index % rowWidth === 0"
-          class="d-flex justify-center align-center"
-        >
+      <template v-for="(aminoAcidObj, aa_index) in sequenceObjects" :key="aa_index">
+        <div v-if="aa_index !== 0 && aa_index % rowWidth === 0" class="d-flex justify-center align-center">
           {{ aa_index + 1 }}
         </div>
-        <div
-          v-if="aa_index === 0"
-          class="d-flex justify-center align-center rounded-lg protein-terminal"
-          :style="proteinTerminalCellStyles"
-        >
+        <div v-if="aa_index === 0" class="d-flex justify-center align-center rounded-lg protein-terminal"
+          :style="proteinTerminalCellStyles">
           N
           <v-tooltip activator="parent">N</v-tooltip>
         </div>
-        <div
-          class="d-flex justify-center align-center rounded-lg"
-          :class="aminoAcidCellClass(aminoAcidObj.AminoAcid)"
-          :style="aminoAcidCellStyles"
-        >
-          <svg viewBox="0 0 10 10">
-            <path
-              v-if="aminoAcidObj.bIon"
-              stroke="blue"
-              d="M10, 0 V5 M10, 0 H5 z"
-              stroke-width="3"
-            />
-            <path
-              v-if="aminoAcidObj.yIon"
-              stroke="blue"
-              d="M0, 10 V5 M0, 10 H5 z"
-              stroke-width="3"
-            />
-          </svg>
-          <div class="aa-text">
-            {{ aminoAcidObj.AminoAcid }}
-            <v-tooltip activator="parent">{{ aminoAcidObj.AminoAcid + (aa_index + 1) }}</v-tooltip>
-          </div>
-        </div>
-        <div
-          v-if="aa_index % rowWidth === rowWidth - 1 && aa_index !== sequence.length - 1"
-          class="d-flex justify-center align-center"
-        >
+        <AminoAcidCell :index="aa_index" :sequence-object="aminoAcidObj"
+          :fixed-modification="fixedModification(aminoAcidObj.aminoAcid)" />
+        <div v-if="aa_index % rowWidth === rowWidth - 1 && aa_index !== sequence.length - 1"
+          class="d-flex justify-center align-center">
           {{ aa_index + 1 }}
         </div>
-        <div
-          v-if="aa_index === sequence.length - 1"
-          class="d-flex justify-center align-center rounded-lg protein-terminal"
-          :style="proteinTerminalCellStyles"
-        >
+        <div v-if="aa_index === sequence.length - 1"
+          class="d-flex justify-center align-center rounded-lg protein-terminal" :style="proteinTerminalCellStyles">
           C
           <v-tooltip activator="parent">C</v-tooltip>
         </div>
       </template>
     </div>
     <template v-if="fragmentTableTitle !== ''">
-      <TabulatorTable
-        :table-data="fragmentTableData"
-        :column-definitions="fragmentTableColumnDefinitions"
-        :title="fragmentTableTitle"
-        :index="index"
-      />
+      <TabulatorTable :table-data="fragmentTableData" :column-definitions="fragmentTableColumnDefinitions"
+        :title="fragmentTableTitle" :index="index" />
     </template>
   </div>
 </template>
@@ -131,22 +79,14 @@ import { useStreamlitDataStore } from '@/stores/streamlit-data'
 import { useSelectionStore } from '@/stores/selection'
 import type { Theme } from 'streamlit-component-lib'
 import TabulatorTable from '@/components/tabulator/TabulatorTable.vue'
+import AminoAcidCell from './AminoAcidCell.vue'
 import type { ColumnDefinition } from 'tabulator-tables'
 import type { SequenceData } from '@/types/sequence-data'
-
-type SequenceObject = {
-  AminoAcid: string
-  aIon: boolean
-  bIon: boolean
-  cIon: boolean
-  xIon: boolean
-  yIon: boolean
-  zIon: boolean
-}
+import type { SequenceObject } from '@/types/sequence-object'
 
 export default defineComponent({
   name: 'SequenceView',
-  components: { TabulatorTable },
+  components: { TabulatorTable, AminoAcidCell },
   props: {
     index: {
       type: Number,
@@ -182,7 +122,7 @@ export default defineComponent({
       ] as ColumnDefinition[],
       fragmentTableData: [] as Record<string, unknown>[],
       fragmentTableTitle: '' as string,
-      sequenceObject: [] as SequenceObject[],
+      sequenceObjects: [] as SequenceObject[],
     }
   },
   computed: {
@@ -213,15 +153,6 @@ export default defineComponent({
         [`grid-width-${this.rowWidth}`]: true,
       }
     },
-    aminoAcidCellStyles(): Record<string, string> {
-      return {
-        '--amino-acid-cell-color': this.theme?.textColor ?? '#fff',
-        '--amino-acid-cell-bg-color': this.theme?.secondaryBackgroundColor ?? '#000',
-        '--amino-acid-cell-hover-color': '#fff',
-        '--amino-acid-cell-hover-bg-color': this.theme?.backgroundColor ?? '#000',
-        position: 'relative',
-      }
-    },
     proteinTerminalCellStyles(): Record<string, string> {
       return {
         '--amino-acid-cell-hover-color': '#fff',
@@ -240,15 +171,26 @@ export default defineComponent({
     fragmentMassTolerance() {
       this.prepareFragmentTable()
     },
+    ionTypes: {
+      handler() {
+        console.log('iontypes changed', this.ionTypes)
+        this.initializeSequenceObjects()
+        this.prepareFragmentTable()
+      },
+      deep: true
+    },
   },
   mounted() {
-    this.initializeSequenceObject()
+    this.initializeSequenceObjects()
     this.preparePrecursorInfo()
     this.prepareFragmentTable()
   },
   methods: {
     updateMassTolerance(event: Event) {
       this.fragmentMassTolerance = Number.parseInt((event.target as any).value as string)
+    },
+    toggleIonTypeSelected(index: number) {
+      this.ionTypes[index].selected = !this.ionTypes[index].selected
     },
     preparePrecursorInfo(): void {
       if (this.selectedScanIndex == undefined) {
@@ -274,7 +216,6 @@ export default defineComponent({
         `Δ Mass (Da) :${deltaMassDa.toFixed(2)}`,
       ]
     },
-
     prepareFragmentTable(): void {
       if (this.selectedScanIndex == undefined) {
         this.fragmentTableTitle = '' // if no scan is selected, nothing to show
@@ -332,9 +273,9 @@ export default defineComponent({
               matching_fragments.push(matched)
               // setting the fragment mark for fragment map
               if (iontype.text === 'a' || iontype.text === 'b' || iontype.text === 'c')
-                this.sequenceObject[theoIndex][`${iontype.text}Ion`] = true
+                this.sequenceObjects[theoIndex][`${iontype.text}Ion`] = true
               if (iontype.text === 'x' || iontype.text === 'y' || iontype.text === 'z')
-                this.sequenceObject[sequence_size - theoIndex][`${iontype.text}Ion`] = true
+                this.sequenceObjects[sequence_size - theoIndex][`${iontype.text}Ion`] = true
             }
           }
         })
@@ -342,17 +283,14 @@ export default defineComponent({
       this.fragmentTableData = matching_fragments
       this.fragmentTableTitle = `Matching fragments (# ${matching_fragments.length})`
     },
-    aminoAcidCellClass(aminoAcid: string): Record<string, boolean> {
-      const fixMod = this.fixedModificationSites.includes(aminoAcid)
-      return {
-        'sequence-amino-acid': !fixMod,
-        'sequence-amino-acid-highlighted': fixMod,
-      }
+    fixedModification(aminoAcid: string): boolean {
+      return this.fixedModificationSites.includes(aminoAcid)
     },
-    initializeSequenceObject(): void {
+    initializeSequenceObjects(): void {
+      this.sequenceObjects = []
       this.sequence.forEach((aa) => {
-        this.sequenceObject.push({
-          AminoAcid: aa,
+        this.sequenceObjects.push({
+          aminoAcid: aa,
           aIon: false,
           bIon: false,
           cIon: false,
@@ -372,7 +310,7 @@ export default defineComponent({
   grid-template-rows: auto;
   gap: 4px 4px;
 
-  > div {
+  >div {
     aspect-ratio: 1;
   }
 }
@@ -381,25 +319,6 @@ export default defineComponent({
   &:hover {
     background-color: var(--amino-acid-cell-hover-bg-color);
     color: var(--amino-acid-cell-hover-color);
-  }
-}
-
-.sequence-amino-acid {
-  background-color: var(--amino-acid-cell-bg-color);
-  color: var(--amino-acid-cell-color);
-
-  &:hover {
-    background-color: var(--amino-acid-cell-hover-bg-color);
-    color: var(--amino-acid-cell-hover-color);
-  }
-}
-
-.sequence-amino-acid-highlighted {
-  background-color: var(--amino-acid-cell-bg-color);
-  color: #9c1e1e;
-
-  &:hover {
-    background-color: var(--amino-acid-cell-hover-bg-color);
   }
 }
 
@@ -421,12 +340,5 @@ export default defineComponent({
 
 .grid-width-40 {
   grid-template-columns: repeat(42, 1fr);
-}
-.svg {
-  position: absolute;
-  width: 100%;
-}
-.aa-text {
-  position: absolute;
 }
 </style>
