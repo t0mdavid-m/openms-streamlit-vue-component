@@ -59,7 +59,7 @@
       </div>
     </div>
     <div :class="gridClasses" style="width: 100%; max-width: 100%">
-      <template v-for="(aminoAcid, aa_index) in sequence" :key="aa_index">
+      <template v-for="(aminoAcidObj, aa_index) in sequenceObject" :key="aa_index">
         <div
           v-if="aa_index !== 0 && aa_index % rowWidth === 0"
           class="d-flex justify-center align-center"
@@ -76,11 +76,27 @@
         </div>
         <div
           class="d-flex justify-center align-center rounded-lg"
-          :class="aminoAcidCellClass(aminoAcid)"
+          :class="aminoAcidCellClass(aminoAcidObj.AminoAcid)"
           :style="aminoAcidCellStyles"
         >
-          {{ aminoAcid }}
-          <v-tooltip activator="parent">{{ aminoAcid + (aa_index + 1) }}</v-tooltip>
+          <svg viewBox="0 0 10 10">
+            <path
+              v-if="aminoAcidObj.bIon"
+              stroke="blue"
+              d="M10, 0 V5 M10, 0 H5 z"
+              stroke-width="3"
+            />
+            <path
+              v-if="aminoAcidObj.yIon"
+              stroke="blue"
+              d="M0, 10 V5 M0, 10 H5 z"
+              stroke-width="3"
+            />
+          </svg>
+          <div class="aa-text">
+            {{ aminoAcidObj.AminoAcid }}
+            <v-tooltip activator="parent">{{ aminoAcidObj.AminoAcid + (aa_index + 1) }}</v-tooltip>
+          </div>
         </div>
         <div
           v-if="aa_index % rowWidth === rowWidth - 1 && aa_index !== sequence.length - 1"
@@ -117,6 +133,16 @@ import type { Theme } from 'streamlit-component-lib'
 import TabulatorTable from '@/components/tabulator/TabulatorTable.vue'
 import type { ColumnDefinition } from 'tabulator-tables'
 import type { SequenceData } from '@/types/sequence-data'
+
+type SequenceObject = {
+  AminoAcid: string
+  aIon: boolean
+  bIon: boolean
+  cIon: boolean
+  xIon: boolean
+  yIon: boolean
+  zIon: boolean
+}
 
 export default defineComponent({
   name: 'SequenceView',
@@ -156,6 +182,7 @@ export default defineComponent({
       ] as ColumnDefinition[],
       fragmentTableData: [] as Record<string, unknown>[],
       fragmentTableTitle: '' as string,
+      sequenceObject: [] as SequenceObject[],
     }
   },
   computed: {
@@ -192,6 +219,7 @@ export default defineComponent({
         '--amino-acid-cell-bg-color': this.theme?.secondaryBackgroundColor ?? '#000',
         '--amino-acid-cell-hover-color': '#fff',
         '--amino-acid-cell-hover-bg-color': this.theme?.backgroundColor ?? '#000',
+        position: 'relative',
       }
     },
     proteinTerminalCellStyles(): Record<string, string> {
@@ -214,7 +242,7 @@ export default defineComponent({
     },
   },
   mounted() {
-    console.log(this.fixedModificationSites)
+    this.initializeSequenceObject()
     this.preparePrecursorInfo()
     this.prepareFragmentTable()
   },
@@ -267,6 +295,7 @@ export default defineComponent({
 
       // calculate matching masses
       let matching_fragments: Record<string, unknown>[] = []
+      const sequence_size = this.sequence.length - 1
       this.ionTypes
         .filter((iontype) => iontype.selected)
         .forEach((iontype) => {
@@ -301,6 +330,11 @@ export default defineComponent({
                 MassDiffPpm: massDiffPpm.toFixed(3),
               }
               matching_fragments.push(matched)
+              // setting the fragment mark for fragment map
+              if (iontype.text === 'a' || iontype.text === 'b' || iontype.text === 'c')
+                this.sequenceObject[theoIndex][`${iontype.text}Ion`] = true
+              if (iontype.text === 'x' || iontype.text === 'y' || iontype.text === 'z')
+                this.sequenceObject[sequence_size - theoIndex][`${iontype.text}Ion`] = true
             }
           }
         })
@@ -308,14 +342,25 @@ export default defineComponent({
       this.fragmentTableData = matching_fragments
       this.fragmentTableTitle = `Matching fragments (# ${matching_fragments.length})`
     },
-
     aminoAcidCellClass(aminoAcid: string): Record<string, boolean> {
       const fixMod = this.fixedModificationSites.includes(aminoAcid)
-      console.log(fixMod, aminoAcid)
       return {
         'sequence-amino-acid': !fixMod,
         'sequence-amino-acid-highlighted': fixMod,
       }
+    },
+    initializeSequenceObject(): void {
+      this.sequence.forEach((aa) => {
+        this.sequenceObject.push({
+          AminoAcid: aa,
+          aIon: false,
+          bIon: false,
+          cIon: false,
+          xIon: false,
+          yIon: false,
+          zIon: false,
+        })
+      })
     },
   },
 })
@@ -376,5 +421,12 @@ export default defineComponent({
 
 .grid-width-40 {
   grid-template-columns: repeat(42, 1fr);
+}
+.svg {
+  position: absolute;
+  width: 100%;
+}
+.aa-text {
+  position: absolute;
 }
 </style>
