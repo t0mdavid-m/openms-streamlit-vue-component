@@ -8,7 +8,6 @@
 import { defineComponent } from 'vue'
 import { useStreamlitDataStore } from './stores/streamlit-data'
 import { Streamlit, type RenderData } from 'streamlit-component-lib'
-import type { ComponentLayout } from './types/component-layout'
 import type { FlashViewerComponent } from './types/grid-layout'
 import ComponentsLayout from './components/ui/ComponentsLayout.vue'
 
@@ -23,15 +22,8 @@ export default defineComponent({
     return { streamlitDataStore }
   },
   computed: {
-    components(): FlashViewerComponent[] {
+    components(): FlashViewerComponent[][] {
       return this.streamlitDataStore.args?.components
-    },
-    gridStyles() {
-      return {
-        display: 'grid',
-        'grid-template-columns': `repeat(${this.streamlitDataStore.args.columns ?? 1}, 1fr)`,
-        'grid-template-rows': `repeat(${this.streamlitDataStore.args.rows ?? 1}, 1fr)`,
-      }
     },
   },
   created() {
@@ -47,12 +39,6 @@ export default defineComponent({
   methods: {
     updateStreamlitData(event: EventTargetShim.Event): void {
       this.streamlitDataStore.updateRenderData((event as CustomEvent<RenderData>).detail)
-    },
-    componentGridStyles(componentLayout?: ComponentLayout) {
-      return {
-        'grid-column': `auto / span ${componentLayout?.width ?? 1}`,
-        'grid-row': `auto / span ${componentLayout?.height ?? 1}`,
-      }
     },
     setFrameHeight() {
       Streamlit.setFrameHeight()
