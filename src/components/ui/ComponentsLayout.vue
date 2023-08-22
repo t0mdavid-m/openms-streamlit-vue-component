@@ -49,7 +49,7 @@ export default defineComponent({
     },
   },
   methods: {
-    componentRowClasses(layout: ComponentLayout): Record<string, boolean> {
+    componentRowClasses(): Record<string, boolean> {
       return {
         '[`height-${layout.height ?? 1}`]': true,
         [`component-width-${this.components.length}`]: true,

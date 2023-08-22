@@ -1,5 +1,9 @@
 <template>
-  <div class="d-flex justify-center align-center rounded-lg" :class="aminoAcidCellClass" :style="aminoAcidCellStyles">
+  <div
+    class="d-flex justify-center align-center rounded-lg"
+    :class="aminoAcidCellClass"
+    :style="aminoAcidCellStyles"
+  >
     <div class="svg-container-b">
       <svg viewBox="0 0 10 10">
         <path v-if="sequenceObject.bIon" stroke="blue" d="M10, 0 V5 M10, 0 H5 z" stroke-width="3" />
@@ -14,12 +18,24 @@
       {{ sequenceObject.aminoAcid }}
       <v-tooltip activator="parent">{{ sequenceObject.aminoAcid + (index + 1) }}</v-tooltip>
     </div>
-    <v-menu activator="parent" location="end" :close-on-content-click="false" width="200px" v-model="menuOpen">
+    <v-menu
+      v-model="menuOpen"
+      activator="parent"
+      location="end"
+      :close-on-content-click="false"
+      width="200px"
+    >
       <v-list>
         <v-list-item>
-          <v-select clearable label="Modification" density="compact" :items="modificationsForSelect"
-            v-model="selectedModification" @update:modelValue="updateSelectedModificaion"
-            @click:clear="updateSelectedModificaion(undefined)">
+          <v-select
+            v-model="selectedModification"
+            clearable
+            label="Modification"
+            density="compact"
+            :items="modificationsForSelect"
+            @update:modelValue="updateSelectedModificaion"
+            @click:clear="updateSelectedModificaion(undefined)"
+          >
           </v-select>
         </v-list-item>
       </v-list>
@@ -28,41 +44,41 @@
 </template>
 
 <script lang="ts">
-import { useStreamlitDataStore } from '@/stores/streamlit-data';
-import type { SequenceObject } from '@/types/sequence-object';
-import type { Theme } from 'streamlit-component-lib';
-import type { PropType } from 'vue';
-import { defineComponent } from 'vue';
+import { useStreamlitDataStore } from '@/stores/streamlit-data'
+import type { SequenceObject } from '@/types/sequence-object'
+import type { Theme } from 'streamlit-component-lib'
+import type { PropType } from 'vue'
+import { defineComponent } from 'vue'
 
 export default defineComponent({
   name: 'AminoAcidCell',
   props: {
     sequenceObject: {
       type: Object as PropType<SequenceObject>,
-      required: true
+      required: true,
     },
     index: {
       type: Number,
-      required: true
+      required: true,
     },
     fixedModification: {
       type: Boolean,
-      default: false
+      default: false,
     },
     potentialModifications: {
       type: Array as PropType<string[]>,
-      default: []
-    }
+      default: () => [],
+    },
+  },
+  setup() {
+    const streamlitData = useStreamlitDataStore()
+    return { streamlitData }
   },
   data() {
     return {
       menuOpen: false,
       selectedModification: undefined as string | undefined,
     }
-  },
-  setup() {
-    const streamlitData = useStreamlitDataStore()
-    return { streamlitData }
   },
   computed: {
     id(): string {
@@ -88,7 +104,7 @@ export default defineComponent({
       return {
         'sequence-amino-acid': !this.fixedModification,
         'sequence-amino-acid-highlighted': this.fixedModification,
-        'sequence-amino-acid-modified': this.selectedModification !== undefined
+        'sequence-amino-acid-modified': this.selectedModification !== undefined,
       }
     },
   },
@@ -101,7 +117,7 @@ export default defineComponent({
       }
       this.menuOpen = false
       console.log(this.selectedModification, modification)
-    }
+    },
   },
 })
 </script>
