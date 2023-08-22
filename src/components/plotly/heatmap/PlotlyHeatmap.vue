@@ -37,10 +37,14 @@ export default defineComponent({
       return this.streamlitDataStore.theme
     },
     xValues(): number[] {
-      return this.streamlitDataStore.allDataForDrawing.deconv_heatmap_df.map((row) => row.rt as number)
+      return this.streamlitDataStore.allDataForDrawing.deconv_heatmap_df.map(
+        (row) => row.rt as number
+      )
     },
     yValues(): number[] {
-      return this.streamlitDataStore.allDataForDrawing.deconv_heatmap_df.map((row) => row.mass as number)
+      return this.streamlitDataStore.allDataForDrawing.deconv_heatmap_df.map(
+        (row) => row.mass as number
+      )
     },
     markerColorValues(): number[] {
       return this.streamlitDataStore.allDataForDrawing.deconv_heatmap_df.map(
