@@ -1,8 +1,8 @@
 <template>
   <div class="component-layout">
-    <div v-for="(componentRow, index) in componentRows" :key="index" class="component-row">
+    <template v-for="(componentRow, index) in componentRows" :key="index">
       <ComponentsRow :components="componentRow" :row-index="index" />
-    </div>
+    </template>
   </div>
 </template>
 
@@ -49,7 +49,7 @@ export default defineComponent({
     },
   },
   methods: {
-    componentRowClasses(layout: ComponentLayout): Record<string, boolean> {
+    componentRowClasses(): Record<string, boolean> {
       return {
         '[`height-${layout.height ?? 1}`]': true,
         [`component-width-${this.components.length}`]: true,
@@ -63,11 +63,5 @@ export default defineComponent({
 .component-layout {
   display: flex;
   flex-direction: column;
-}
-
-.component-row {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
 }
 </style>
