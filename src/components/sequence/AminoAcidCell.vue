@@ -1,6 +1,5 @@
 <template>
-  <div class="d-flex justify-center align-center rounded-lg" :class="aminoAcidCellClass(sequenceObject.aminoAcid)"
-    :style="aminoAcidCellStyles">
+  <div class="d-flex justify-center align-center rounded-lg" :class="aminoAcidCellClass" :style="aminoAcidCellStyles">
     <div class="svg-container-b">
       <svg viewBox="0 0 10 10">
         <path v-if="sequenceObject.bIon" stroke="blue" d="M10, 0 V5 M10, 0 H5 z" stroke-width="3" />
@@ -15,6 +14,16 @@
       {{ sequenceObject.aminoAcid }}
       <v-tooltip activator="parent">{{ sequenceObject.aminoAcid + (index + 1) }}</v-tooltip>
     </div>
+    <v-menu activator="parent" location="end" :close-on-content-click="false" width="200px" v-model="menuOpen">
+      <v-list>
+        <v-list-item>
+          <v-select clearable label="Modification" density="compact" :items="modificationsForSelect"
+            v-model="selectedModification" @update:modelValue="updateSelectedModificaion"
+            @click:clear="updateSelectedModificaion(undefined)">
+          </v-select>
+        </v-list-item>
+      </v-list>
+    </v-menu>
   </div>
 </template>
 
@@ -24,13 +33,9 @@ import type { SequenceObject } from '@/types/sequence-object';
 import type { Theme } from 'streamlit-component-lib';
 import type { PropType } from 'vue';
 import { defineComponent } from 'vue';
-import IonMarker from './IonMarker.vue';
 
 export default defineComponent({
   name: 'AminoAcidCell',
-  components: {
-    IonMarker
-  },
   props: {
     sequenceObject: {
       type: Object as PropType<SequenceObject>,
@@ -43,6 +48,16 @@ export default defineComponent({
     fixedModification: {
       type: Boolean,
       default: false
+    },
+    potentialModifications: {
+      type: Array as PropType<string[]>,
+      default: []
+    }
+  },
+  data() {
+    return {
+      menuOpen: false,
+      selectedModification: undefined as string | undefined,
     }
   },
   setup() {
@@ -50,8 +65,15 @@ export default defineComponent({
     return { streamlitData }
   },
   computed: {
+    id(): string {
+      return `${this.sequenceObject.aminoAcid}${this.index}`
+    },
     theme(): Theme | undefined {
       return this.streamlitData.theme
+    },
+    modificationsForSelect(): string[] {
+      if (this.potentialModifications.length === 0) return []
+      return ['none', ...this.potentialModifications]
     },
     aminoAcidCellStyles(): Record<string, string> {
       return {
@@ -62,14 +84,24 @@ export default defineComponent({
         position: 'relative',
       }
     },
-  },
-  methods: {
-    aminoAcidCellClass(aminoAcid: string): Record<string, boolean> {
+    aminoAcidCellClass(): Record<string, boolean> {
       return {
         'sequence-amino-acid': !this.fixedModification,
         'sequence-amino-acid-highlighted': this.fixedModification,
+        'sequence-amino-acid-modified': this.selectedModification !== undefined
       }
     },
+  },
+  methods: {
+    updateSelectedModificaion(modification: string | undefined) {
+      if (modification === 'none') {
+        this.selectedModification = undefined
+      } else {
+        this.selectedModification = modification
+      }
+      this.menuOpen = false
+      console.log(this.selectedModification, modification)
+    }
   },
 })
 </script>
@@ -91,6 +123,15 @@ export default defineComponent({
 
   &:hover {
     background-color: var(--amino-acid-cell-hover-bg-color);
+  }
+}
+
+.sequence-amino-acid-modified {
+  background-color: #9c1e1e;
+  color: var(--amino-acid-cell-color);
+
+  &:hover {
+    background-color: #ff1e1e;
   }
 }
 

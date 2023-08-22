@@ -54,7 +54,8 @@
           <v-tooltip activator="parent">N</v-tooltip>
         </div>
         <AminoAcidCell :index="aa_index" :sequence-object="aminoAcidObj"
-          :fixed-modification="fixedModification(aminoAcidObj.aminoAcid)" />
+          :fixed-modification="fixedModification(aminoAcidObj.aminoAcid)"
+          :potential-modifications="potentialModifications(aminoAcidObj.aminoAcid)" />
         <div v-if="aa_index % rowWidth === rowWidth - 1 && aa_index !== sequence.length - 1"
           class="d-flex justify-center align-center">
           {{ aa_index + 1 }}
@@ -166,6 +167,7 @@ export default defineComponent({
   watch: {
     selectedScanIndex() {
       this.preparePrecursorInfo()
+      this.initializeSequenceObjects()
       this.prepareFragmentTable()
     },
     fragmentMassTolerance() {
@@ -285,6 +287,10 @@ export default defineComponent({
     },
     fixedModification(aminoAcid: string): boolean {
       return this.fixedModificationSites.includes(aminoAcid)
+    },
+    potentialModifications(aminoAcid: string): string[] {
+      if (aminoAcid === 'T') return ['mod 1', 'mod 2']
+      return ['mod 1']
     },
     initializeSequenceObjects(): void {
       this.sequenceObjects = []
