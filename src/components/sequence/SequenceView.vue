@@ -11,6 +11,7 @@
   </div>
   <div style="max-width: 97%">
     <div class="d-flex justify-end px-4 mb-4">
+      <!-- TODO: add legend (fixed mod, etc) -->
       <div>
         <v-btn id="settings-button" variant="text" icon="mdi-cog" size="large"></v-btn>
         <v-menu :close-on-content-click="false" activator="#settings-button" location="bottom">
@@ -81,7 +82,6 @@
           :index="aa_index"
           :sequence-object="aminoAcidObj"
           :fixed-modification="fixedModification(aminoAcidObj.aminoAcid)"
-          :potential-modifications="potentialModifications(aminoAcidObj.aminoAcid)"
         />
         <div
           v-if="aa_index % rowWidth === rowWidth - 1 && aa_index !== sequence.length - 1"
@@ -114,6 +114,7 @@
 import { defineComponent } from 'vue'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
 import { useSelectionStore } from '@/stores/selection'
+import { useModificationStore } from '@/stores/variable-modification'
 import type { Theme } from 'streamlit-component-lib'
 import TabulatorTable from '@/components/tabulator/TabulatorTable.vue'
 import AminoAcidCell from './AminoAcidCell.vue'
@@ -133,7 +134,8 @@ export default defineComponent({
   setup() {
     const streamlitDataStore = useStreamlitDataStore()
     const selectionStore = useSelectionStore()
-    return { streamlitDataStore, selectionStore }
+    const variableModData = useModificationStore()
+    return { streamlitDataStore, selectionStore, variableModData }
   },
   data() {
     return {
@@ -174,6 +176,9 @@ export default defineComponent({
     },
     fixedModificationSites(): string[] {
       return this.streamlitDataStore.sequenceData?.fixed_modifications ?? []
+    },
+    variableModifications(): Record<number, number> {
+      return this.variableModData.variableModifications ?? {}
     },
     tickLabels(): Record<number, string> {
       return {
@@ -216,6 +221,11 @@ export default defineComponent({
         this.prepareFragmentTable()
       },
       deep: true,
+    },
+    variableModifications() {
+      this.preparePrecursorInfo()
+      this.initializeSequenceObjects()
+      this.prepareFragmentTable()
     },
   },
   mounted() {
@@ -287,14 +297,32 @@ export default defineComponent({
             theoIndex < FragSize;
             ++theoIndex
           ) {
+            let theoretical_mass = theoretical_frags[theoIndex]
+            // if any variable modifications are given, change the theoretical mass accordingly
+            if (!this.variableModData.isEmpty) {
+              if (iontype.text === 'a' || iontype.text === 'b' || iontype.text === 'c')
+                // if this is prefix, add modification mass starting from the theoretical index
+                Object.entries(this.variableModifications).forEach(([varIndex, varMass]) => {
+                  if (parseInt(varIndex) >= theoIndex) {
+                    theoretical_mass += varMass
+                  }
+                })
+              if (iontype.text === 'x' || iontype.text === 'y' || iontype.text === 'z')
+                // if this is suffix, add modification mass string from the theoretical index (reverse)
+                Object.entries(this.variableModifications).forEach(([varIndex, varMass]) => {
+                  if (parseInt(varIndex) >= theoIndex) {
+                    theoretical_mass += varMass
+                  }
+                })
+            }
             for (
               let obsIndex = 0, obsSize = observed_masses.length;
               obsIndex < obsSize;
               ++obsIndex
             ) {
               // Mass difference = (observed-theoretical)/theoretical*1e6
-              const massDiffDa = observed_masses[obsIndex] - theoretical_frags[theoIndex]
-              const massDiffPpm = (massDiffDa / theoretical_frags[theoIndex]) * 1e6
+              const massDiffDa = observed_masses[obsIndex] - theoretical_mass
+              const massDiffPpm = (massDiffDa / theoretical_mass) * 1e6
               if (Math.abs(massDiffPpm) > this.fragmentMassTolerance) {
                 // if mass difference is larger than tolerance, ignore
                 continue
@@ -303,7 +331,7 @@ export default defineComponent({
                 Name: `${iontype.text}${theoIndex + 1}`,
                 IonType: iontype.text,
                 IonNumber: theoIndex + 1,
-                TheoreticalMass: theoretical_frags[theoIndex].toFixed(3),
+                TheoreticalMass: theoretical_mass.toFixed(3),
                 ObservedMass: observed_masses[obsIndex].toFixed(3),
                 MassDiffDa: massDiffDa.toFixed(3),
                 MassDiffPpm: massDiffPpm.toFixed(3),
@@ -323,10 +351,6 @@ export default defineComponent({
     },
     fixedModification(aminoAcid: string): boolean {
       return this.fixedModificationSites.includes(aminoAcid)
-    },
-    potentialModifications(aminoAcid: string): string[] {
-      if (aminoAcid === 'T') return ['mod 1', 'mod 2']
-      return ['mod 1']
     },
     initializeSequenceObjects(): void {
       this.sequenceObjects = []

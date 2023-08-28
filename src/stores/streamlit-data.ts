@@ -10,7 +10,7 @@ export const useStreamlitDataStore = defineStore('streamlit-data', {
   }),
   getters: {
     args: (state): GridLayout => state.renderData?.args,
-    components(): FlashViewerComponent[] {
+    components(): FlashViewerComponent[][] {
       return this.args.components
     },
     allDataForDrawing: (state) => state.dataForDrawing,
