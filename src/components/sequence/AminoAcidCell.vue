@@ -1,9 +1,6 @@
 <template>
-  <div
-    class="d-flex justify-center align-center rounded-lg"
-    :class="aminoAcidCellClass"
-    :style="aminoAcidCellStyles"
-  >
+  <div :id="id" class="d-flex justify-center align-center rounded-lg" :class="aminoAcidCellClass"
+    :style="aminoAcidCellStyles" @click="selectCell" @contextmenu.prevent="toggleMenuOpen">
     <div class="svg-container-b">
       <svg viewBox="0 0 10 10">
         <path v-if="sequenceObject.bIon" stroke="blue" d="M10, 0 V5 M10, 0 H5 z" stroke-width="3" />
@@ -17,40 +14,28 @@
     <div class="aa-text">
       {{ sequenceObject.aminoAcid }}
     </div>
-    <v-menu
-      v-model="menuOpen"
-      activator="parent"
-      location="end"
-      :close-on-content-click="false"
-      width="200px"
-    >
+    <v-menu activator="parent" v-model="menuOpen" location="end" :open-on-click="false" :close-on-content-click="false"
+      width="200px">
       <v-list>
         <v-list-item>
-          <v-select
-            v-model="selectedModification"
-            clearable
-            label="Modification"
-            density="compact"
-            :items="modificationsForSelect"
-            @update:modelValue="updateSelectedModification"
-            @click:clear="updateSelectedModification(undefined)"
-          >
+          <v-select v-model="selectedModification" clearable label="Modification" density="compact"
+            :items="modificationsForSelect" @update:modelValue="updateSelectedModification"
+            @click:clear="updateSelectedModification(undefined)">
           </v-select>
         </v-list-item>
         <v-list-item v-if="customSelected">
           <v-form @submit.prevent>
-            <v-text-field
-              v-model="customModMass"
-              hide-details
-              label="Monoisotopic mass in Da"
-              type="number"
-            />
+            <v-text-field v-model="customModMass" hide-details label="Monoisotopic mass in Da" type="number" />
             <v-btn type="submit" block class="mt-2" @click="updateCustomModification">Submit</v-btn>
           </v-form>
         </v-list-item>
       </v-list>
     </v-menu>
-    <v-tooltip activator="parent">{{ sequenceObject.aminoAcid + (index + 1) }}</v-tooltip>
+    <v-tooltip activator="parent">
+      {{ `Prefix: ${index + 1}` }}
+      <br />
+      {{ `Suffix: ${((streamlitData.sequenceData?.sequence.length ?? 0) - index)}` }}
+    </v-tooltip>
   </div>
 </template>
 
@@ -90,7 +75,7 @@ export default defineComponent({
       menuOpen: false,
       selectedModification: undefined as KnownModification | undefined,
       customSelected: false,
-      customModMass: 0 as number,
+      customModMass: '0' as string,
       modificationMass: {
         Acetyl: 42.010565,
         Methyl: 14.01565,
@@ -152,6 +137,12 @@ export default defineComponent({
     },
   },
   methods: {
+    toggleMenuOpen(): void {
+      this.menuOpen = !this.menuOpen
+    },
+    selectCell(): void {
+      // do something later
+    },
     updateSelectedModification(modification: string | undefined) {
       if (modification === 'None') {
         this.selectedModification = undefined
@@ -161,21 +152,16 @@ export default defineComponent({
       } else {
         this.selectedModification = modification as KnownModification
       }
-      this.menuOpen = false
+      this.toggleMenuOpen()
       this.customSelected = false
-      console.log('updated modification!', this.selectedModification, this.index)
       this.variableModData.updateVariableModifications(
         this.index,
         this.selectedModification ? this.modificationMass[this.selectedModification] : 0
       )
-      console.log('saved variables=', this.variableModifications)
     },
     updateCustomModification() {
-      console.log('Submitted!', this.index)
-      this.variableModData.updateVariableModifications(this.index, this.customModMass)
-      console.log('updated custom mod!', this.selectedModification, this.customModMass)
-      this.menuOpen = false
-      console.log('saved variables=', this.variableModifications)
+      this.variableModData.updateVariableModifications(this.index, parseFloat(this.customModMass))
+      this.toggleMenuOpen()
     },
     isThisAAmodified() {
       if (this.selectedModification !== undefined) return true

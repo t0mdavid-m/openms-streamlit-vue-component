@@ -19,42 +19,24 @@
             <v-list>
               <v-list-item>
                 <v-list-item-title># amino acids per row</v-list-item-title>
-                <v-slider
-                  v-model="rowWidth"
-                  :ticks="tickLabels"
-                  :min="20"
-                  :max="40"
-                  step="5"
-                  show-ticks="always"
-                  tick-size="4"
-                ></v-slider>
+                <v-slider v-model="rowWidth" :ticks="tickLabels" :min="20" :max="40" step="5" show-ticks="always"
+                  tick-size="4"></v-slider>
               </v-list-item>
               <v-list-item>
                 <v-list-item-title>Fragment ion types</v-list-item-title>
                 <v-layout row wrap>
                   <div class="d-flex">
                     <!-- TODO: why is there space between this and the next v-list-item? -->
-                    <v-checkbox
-                      v-for="(category, ionIndex) in ionTypes"
-                      :key="category.text"
-                      v-model="category.selected"
-                      light
-                      :label="category.text"
-                      @click="toggleIonTypeSelected(ionIndex)"
-                    >
+                    <v-checkbox v-for="(category, ionIndex) in ionTypes" :key="category.text" v-model="category.selected"
+                      light :label="category.text" @click="toggleIonTypeSelected(ionIndex)">
                     </v-checkbox>
                   </div>
                 </v-layout>
               </v-list-item>
               <v-list-item>
                 <v-list-item-title>Fragment mass tolerance</v-list-item-title>
-                <v-text-field
-                  v-model="fragmentMassTolerance"
-                  type="number"
-                  hide-details="auto"
-                  label="mass tolerance in ppm"
-                  @change="updateMassTolerance"
-                ></v-text-field>
+                <v-text-field v-model="fragmentMassTolerance" type="number" hide-details="auto"
+                  label="mass tolerance in ppm" @change="updateMassTolerance"></v-text-field>
                 <!-- TODO: add "required" -->
               </v-list-item>
             </v-list>
@@ -64,48 +46,30 @@
     </div>
     <div :class="gridClasses" style="width: 100%; max-width: 100%">
       <template v-for="(aminoAcidObj, aa_index) in sequenceObjects" :key="aa_index">
-        <div
-          v-if="aa_index !== 0 && aa_index % rowWidth === 0"
-          class="d-flex justify-center align-center"
-        >
+        <div v-if="aa_index !== 0 && aa_index % rowWidth === 0" class="d-flex justify-center align-center">
           {{ aa_index + 1 }}
         </div>
-        <div
-          v-if="aa_index === 0"
-          class="d-flex justify-center align-center rounded-lg protein-terminal"
-          :style="proteinTerminalCellStyles"
-        >
+        <div v-if="aa_index === 0" class="d-flex justify-center align-center rounded-lg protein-terminal"
+          :style="proteinTerminalCellStyles">
           N
           <v-tooltip activator="parent">N</v-tooltip>
         </div>
-        <AminoAcidCell
-          :index="aa_index"
-          :sequence-object="aminoAcidObj"
-          :fixed-modification="fixedModification(aminoAcidObj.aminoAcid)"
-        />
-        <div
-          v-if="aa_index % rowWidth === rowWidth - 1 && aa_index !== sequence.length - 1"
-          class="d-flex justify-center align-center"
-        >
+        <AminoAcidCell :index="aa_index" :sequence-object="aminoAcidObj"
+          :fixed-modification="fixedModification(aminoAcidObj.aminoAcid)" />
+        <div v-if="aa_index % rowWidth === rowWidth - 1 && aa_index !== sequence.length - 1"
+          class="d-flex justify-center align-center">
           {{ aa_index + 1 }}
         </div>
-        <div
-          v-if="aa_index === sequence.length - 1"
-          class="d-flex justify-center align-center rounded-lg protein-terminal"
-          :style="proteinTerminalCellStyles"
-        >
+        <div v-if="aa_index === sequence.length - 1"
+          class="d-flex justify-center align-center rounded-lg protein-terminal" :style="proteinTerminalCellStyles">
           C
           <v-tooltip activator="parent">C</v-tooltip>
         </div>
       </template>
     </div>
     <template v-if="fragmentTableTitle !== ''">
-      <TabulatorTable
-        :table-data="fragmentTableData"
-        :column-definitions="fragmentTableColumnDefinitions"
-        :title="fragmentTableTitle"
-        :index="index"
-      />
+      <TabulatorTable :table-data="fragmentTableData" :column-definitions="fragmentTableColumnDefinitions"
+        :title="fragmentTableTitle" :index="index" />
     </template>
   </div>
 </template>
@@ -216,7 +180,6 @@ export default defineComponent({
     },
     ionTypes: {
       handler() {
-        console.log('iontypes changed', this.ionTypes)
         this.initializeSequenceObjects()
         this.prepareFragmentTable()
       },
@@ -303,14 +266,14 @@ export default defineComponent({
               if (iontype.text === 'a' || iontype.text === 'b' || iontype.text === 'c')
                 // if this is prefix, add modification mass starting from the theoretical index
                 Object.entries(this.variableModifications).forEach(([varIndex, varMass]) => {
-                  if (parseInt(varIndex) >= theoIndex) {
+                  if (parseInt(varIndex) <= theoIndex) {
                     theoretical_mass += varMass
                   }
                 })
               if (iontype.text === 'x' || iontype.text === 'y' || iontype.text === 'z')
                 // if this is suffix, add modification mass string from the theoretical index (reverse)
                 Object.entries(this.variableModifications).forEach(([varIndex, varMass]) => {
-                  if (parseInt(varIndex) >= theoIndex) {
+                  if ((sequence_size - parseInt(varIndex)) <= theoIndex) {
                     theoretical_mass += varMass
                   }
                 })
@@ -376,7 +339,7 @@ export default defineComponent({
   grid-template-rows: auto;
   gap: 4px 4px;
 
-  > div {
+  >div {
     aspect-ratio: 1;
   }
 }
