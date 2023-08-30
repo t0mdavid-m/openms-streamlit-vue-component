@@ -228,7 +228,6 @@ export default defineComponent({
 
 .sequence-amino-acid-modified {
   background-color: #9c1e1e;
-  //color: var(--amino-acid-cell-color);
 
   &:hover {
     background-color: #ff1e1e;
