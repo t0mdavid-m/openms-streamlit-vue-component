@@ -1,18 +1,8 @@
 <template>
-  <div :id="id" class="d-flex justify-center align-center rounded-lg" :class="aminoAcidCellClass"
-    :style="aminoAcidCellStyles" @click="selectCell" @contextmenu.prevent="toggleMenuOpen">
-    <div class="svg-container-b">
-      <svg viewBox="0 0 10 10">
-        <path v-if="sequenceObject.bIon" stroke="blue" d="M10, 0 V5 M10, 0 H5 z" stroke-width="3" />
-      </svg>
-    </div>
-    <div class="svg-container-y">
-      <svg viewBox="0 0 10 10">
-        <path v-if="sequenceObject.yIon" stroke="blue" d="M0, 10 V5 M0, 10 H5 z" stroke-width="3" />
-      </svg>
-    </div>
-    <div class="aa-text">
-      {{ aminoAcid }}
+  <div class="d-flex justify-center align-center rounded-lg protein-terminal" :class="proteinTerminalCellClasses"
+    :style="proteinTerminalCellStyles" @click.stop @contextmenu.prevent="toggleMenuOpen">
+    <div>
+      {{ proteinTerminalText }}
     </div>
     <v-menu activator="parent" v-model="menuOpen" location="end" :open-on-click="false" :close-on-content-click="false"
       width="200px">
@@ -32,9 +22,7 @@
       </v-list>
     </v-menu>
     <v-tooltip activator="parent">
-      {{ `Prefix: ${index + 1}` }}
-      <br />
-      {{ `Suffix: ${((streamlitData.sequenceData?.sequence.length ?? 0) - index)}` }}
+      {{ proteinTerminalText }}
     </v-tooltip>
   </div>
 </template>
@@ -42,26 +30,21 @@
 <script lang="ts">
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
 import { useModificationStore } from '@/stores/variable-modification'
-import type { SequenceObject } from '@/types/sequence-object'
 import type { Theme } from 'streamlit-component-lib'
 import type { PropType } from 'vue'
 import { defineComponent } from 'vue'
 import { potentialModificationMap, type KnownModification, modificationMassMap } from './modification'
 
 export default defineComponent({
-  name: 'AminoAcidCell',
+  name: 'ProteinTerminalCell',
   props: {
-    sequenceObject: {
-      type: Object as PropType<SequenceObject>,
+    proteinTerminal: {
+      type: String as PropType<'N-term' | 'C-term'>,
       required: true,
     },
     index: {
       type: Number,
       required: true,
-    },
-    fixedModification: {
-      type: Boolean,
-      default: false,
     },
   },
   setup() {
@@ -79,46 +62,41 @@ export default defineComponent({
   },
   computed: {
     id(): string {
-      return `${this.aminoAcid}${this.index}`
+      return `${this.proteinTerminal}${this.index}`
     },
     theme(): Theme | undefined {
       return this.streamlitData.theme
     },
-    aminoAcid(): string {
-      return this.sequenceObject.aminoAcid
+    proteinTerminalText(): string {
+      return this.proteinTerminal.charAt(0)
     },
-    variableModifications(): Record<number, number> {
-      return this.variableModData.variableModifications ?? {}
+    hasVariableModification(): boolean {
+      return this.variableModData.variableModifications[this.index] !== undefined
+        && this.variableModData.variableModifications[this.index] !== 0
     },
     modificationsForSelect(): string[] {
       return ['None', 'Custom', ...this.potentialModifications]
     },
-    aminoAcidCellStyles(): Record<string, string> {
+    proteinTerminalCellStyles(): Record<string, string> {
       return {
-        '--amino-acid-cell-color': this.theme?.textColor ?? '#fff',
-        '--amino-acid-cell-bg-color': this.theme?.secondaryBackgroundColor ?? '#000',
-        '--amino-acid-cell-hover-color': this.theme?.textColor ?? '#fff',
-        '--amino-acid-cell-hover-bg-color': this.theme?.backgroundColor ?? '#000',
-        position: 'relative',
+        '--protein-terminal-cell-color': this.theme?.textColor ?? '#fff',
+        '--protein-terminal-cell-hover-color': '#fff',
+        '--protein-terminal-cell-hover-bg-color': this.theme?.secondaryBackgroundColor ?? '#000',
       }
     },
-    aminoAcidCellClass(): Record<string, boolean> {
+    proteinTerminalCellClasses(): Record<string, boolean> {
       return {
-        'sequence-amino-acid': !this.fixedModification,
-        'sequence-amino-acid-highlighted': this.fixedModification,
-        'sequence-amino-acid-modified': this.isThisAAmodified(),
+        'protein-terminal': true,
+        'protein-terminal-modified': this.selectedModification !== undefined || this.hasVariableModification,
       }
     },
     potentialModifications(): KnownModification[] {
-      return potentialModificationMap[this.aminoAcid] ?? []
+      return potentialModificationMap[this.proteinTerminal] ?? []
     },
   },
   methods: {
     toggleMenuOpen(): void {
       this.menuOpen = !this.menuOpen
-    },
-    selectCell(): void {
-      // do something later
     },
     updateSelectedModification(modification: string | undefined) {
       if (modification === 'None') {
@@ -140,66 +118,24 @@ export default defineComponent({
       this.variableModData.updateVariableModifications(this.index, parseFloat(this.customModMass))
       this.toggleMenuOpen()
     },
-    isThisAAmodified() {
-      if (this.selectedModification !== undefined) return true
-      else if (
-        this.index in this.variableModifications &&
-        this.variableModifications[this.index] !== 0
-      )
-        return true
-      return false
-    },
   },
 })
 </script>
 
 <style scoped lang="less">
-.sequence-amino-acid {
-  background-color: var(--amino-acid-cell-bg-color);
-  color: var(--amino-acid-cell-color);
-
+.protein-terminal {
   &:hover {
-    background-color: var(--amino-acid-cell-hover-bg-color);
-    color: var(--amino-acid-cell-hover-color);
+    background-color: var(--protein-terminal-cell-hover-bg-color);
+    color: var(--protein-terminal-cell-hover-color);
   }
 }
 
-.sequence-amino-acid-highlighted {
-  background-color: var(--amino-acid-cell-bg-color);
-  color: #9c1e1e;
-
-  &:hover {
-    background-color: var(--amino-acid-cell-hover-bg-color);
-  }
-}
-
-.sequence-amino-acid-modified {
+.protein-terminal-modified {
   background-color: #9c1e1e;
   color: var(--amino-acid-cell-color);
 
   &:hover {
     background-color: #ff1e1e;
   }
-}
-
-.svg-container {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  z-index: 1000;
-}
-
-.svg-container-b:extend(.svg-container) {
-  top: -3px;
-  left: 5px;
-}
-
-.svg-container-y:extend(.svg-container) {
-  bottom: -3px;
-  left: -5px;
-}
-
-.aa-text {
-  position: absolute;
 }
 </style>
