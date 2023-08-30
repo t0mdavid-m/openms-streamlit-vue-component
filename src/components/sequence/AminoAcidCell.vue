@@ -1,9 +1,6 @@
 <template>
-  <div
-    class="d-flex justify-center align-center rounded-lg"
-    :class="aminoAcidCellClass"
-    :style="aminoAcidCellStyles"
-  >
+  <div :id="id" class="d-flex justify-center align-center rounded-lg" :class="aminoAcidCellClass"
+    :style="aminoAcidCellStyles" @click="selectCell" @contextmenu.prevent="toggleMenuOpen">
     <div class="svg-container-b">
       <svg viewBox="0 0 10 10">
         <path v-if="sequenceObject.bIon" stroke="blue" d="M10, 0 V5 M10, 0 H5 z" stroke-width="3" />
@@ -16,39 +13,41 @@
     </div>
     <div class="aa-text">
       {{ sequenceObject.aminoAcid }}
-      <v-tooltip activator="parent">{{ sequenceObject.aminoAcid + (index + 1) }}</v-tooltip>
     </div>
-    <v-menu
-      v-model="menuOpen"
-      activator="parent"
-      location="end"
-      :close-on-content-click="false"
-      width="200px"
-    >
+    <v-menu activator="parent" v-model="menuOpen" location="end" :open-on-click="false" :close-on-content-click="false"
+      width="200px">
       <v-list>
         <v-list-item>
-          <v-select
-            v-model="selectedModification"
-            clearable
-            label="Modification"
-            density="compact"
-            :items="modificationsForSelect"
-            @update:modelValue="updateSelectedModificaion"
-            @click:clear="updateSelectedModificaion(undefined)"
-          >
+          <v-select v-model="selectedModification" clearable label="Modification" density="compact"
+            :items="modificationsForSelect" @update:modelValue="updateSelectedModification"
+            @click:clear="updateSelectedModification(undefined)">
           </v-select>
+        </v-list-item>
+        <v-list-item v-if="customSelected">
+          <v-form @submit.prevent>
+            <v-text-field v-model="customModMass" hide-details label="Monoisotopic mass in Da" type="number" />
+            <v-btn type="submit" block class="mt-2" @click="updateCustomModification">Submit</v-btn>
+          </v-form>
         </v-list-item>
       </v-list>
     </v-menu>
+    <v-tooltip activator="parent">
+      {{ `Prefix: ${index + 1}` }}
+      <br />
+      {{ `Suffix: ${((streamlitData.sequenceData?.sequence.length ?? 0) - index)}` }}
+    </v-tooltip>
   </div>
 </template>
 
 <script lang="ts">
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
+import { useModificationStore } from '@/stores/variable-modification'
 import type { SequenceObject } from '@/types/sequence-object'
 import type { Theme } from 'streamlit-component-lib'
 import type { PropType } from 'vue'
 import { defineComponent } from 'vue'
+
+type KnownModification = 'Methyl' | 'Acetyl' | 'Phospho' | 'Oxidation' | 'Deamidated'
 
 export default defineComponent({
   name: 'AminoAcidCell',
@@ -65,19 +64,25 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
-    potentialModifications: {
-      type: Array as PropType<string[]>,
-      default: () => [],
-    },
   },
   setup() {
     const streamlitData = useStreamlitDataStore()
-    return { streamlitData }
+    const variableModData = useModificationStore()
+    return { streamlitData, variableModData }
   },
   data() {
     return {
       menuOpen: false,
-      selectedModification: undefined as string | undefined,
+      selectedModification: undefined as KnownModification | undefined,
+      customSelected: false,
+      customModMass: '0' as string,
+      modificationMass: {
+        Acetyl: 42.010565,
+        Methyl: 14.01565,
+        Phospho: 79.966331,
+        Oxidation: 15.994915,
+        Deamidated: 0.984016,
+      } as Record<KnownModification, number>,
     }
   },
   computed: {
@@ -87,9 +92,12 @@ export default defineComponent({
     theme(): Theme | undefined {
       return this.streamlitData.theme
     },
+    variableModifications(): Record<number, number> {
+      return this.variableModData.variableModifications ?? {}
+    },
     modificationsForSelect(): string[] {
-      if (this.potentialModifications.length === 0) return []
-      return ['none', ...this.potentialModifications]
+      if (this.potentialModifications.length === 0) return ['None', 'Custom']
+      return ['None', 'Custom', ...this.potentialModifications]
     },
     aminoAcidCellStyles(): Record<string, string> {
       return {
@@ -104,19 +112,65 @@ export default defineComponent({
       return {
         'sequence-amino-acid': !this.fixedModification,
         'sequence-amino-acid-highlighted': this.fixedModification,
-        'sequence-amino-acid-modified': this.selectedModification !== undefined,
+        'sequence-amino-acid-modified': this.isThisAAmodified(),
       }
+    },
+    potentialModifications(): KnownModification[] {
+      const aminoAcid = this.sequenceObject.aminoAcid
+      // N-term: 'Acetyl', 'Methyl', 'Phospho'
+      // C-term: 'Amidated'
+      if (aminoAcid === 'C') return ['Acetyl', 'Methyl', 'Phospho']
+      else if (aminoAcid === 'D') return ['Methyl', 'Phospho']
+      else if (aminoAcid === 'E') return ['Methyl', 'Phospho']
+      else if (aminoAcid === 'H') return ['Methyl', 'Phospho']
+      else if (aminoAcid === 'I') return ['Methyl']
+      else if (aminoAcid === 'K') return ['Methyl', 'Phospho']
+      else if (aminoAcid === 'L') return ['Methyl']
+      else if (aminoAcid === 'M') return ['Oxidation']
+      else if (aminoAcid === 'N') return ['Methyl']
+      else if (aminoAcid === 'Q') return ['Deamidated', 'Methyl']
+      else if (aminoAcid === 'R') return ['Methyl', 'Phospho']
+      else if (aminoAcid === 'S') return ['Acetyl', 'Methyl']
+      else if (aminoAcid === 'T') return ['Acetyl', 'Methyl']
+      else if (aminoAcid === 'Y') return ['Phospho']
+      return []
     },
   },
   methods: {
-    updateSelectedModificaion(modification: string | undefined) {
-      if (modification === 'none') {
+    toggleMenuOpen(): void {
+      this.menuOpen = !this.menuOpen
+    },
+    selectCell(): void {
+      // do something later
+    },
+    updateSelectedModification(modification: string | undefined) {
+      if (modification === 'None') {
         this.selectedModification = undefined
+      } else if (modification === 'Custom') {
+        this.customSelected = true
+        return
       } else {
-        this.selectedModification = modification
+        this.selectedModification = modification as KnownModification
       }
-      this.menuOpen = false
-      console.log(this.selectedModification, modification)
+      this.toggleMenuOpen()
+      this.customSelected = false
+      this.variableModData.updateVariableModifications(
+        this.index,
+        this.selectedModification ? this.modificationMass[this.selectedModification] : 0
+      )
+    },
+    updateCustomModification() {
+      this.variableModData.updateVariableModifications(this.index, parseFloat(this.customModMass))
+      this.toggleMenuOpen()
+    },
+    isThisAAmodified() {
+      if (this.selectedModification !== undefined) return true
+      else if (
+        this.index in this.variableModifications &&
+        this.variableModifications[this.index] !== 0
+      )
+        return true
+      return false
     },
   },
 })
