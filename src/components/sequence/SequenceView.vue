@@ -1,68 +1,74 @@
 <template>
-  <div class="d-flex justify-space-evenly">
-    <template v-if="precursorData.length != 0">
-      <h3>Precursor</h3>
-      <v-divider vertical="true"></v-divider>
-      <template v-for="(item, p_index) in precursorData" :key="p_index">
-        {{ item }}
-        <v-divider vertical="true"></v-divider>
-      </template>
-    </template>
-  </div>
   <div style="max-width: 97%">
-    <div class="d-flex justify-end px-4 mb-4">
-      <!-- TODO: add legend (fixed mod, etc) -->
-      <div>
-        <v-btn id="settings-button" variant="text" icon="mdi-cog" size="large"></v-btn>
-        <v-menu :close-on-content-click="false" activator="#settings-button" location="bottom">
-          <v-card min-width="300">
-            <v-list>
-              <v-list-item>
-                <v-list-item-title># amino acids per row</v-list-item-title>
-                <v-slider v-model="rowWidth" :ticks="tickLabels" :min="20" :max="40" step="5" show-ticks="always"
-                  tick-size="4"></v-slider>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>Fragment ion types</v-list-item-title>
-                <v-layout row wrap>
-                  <div class="d-flex">
-                    <!-- TODO: why is there space between this and the next v-list-item? -->
-                    <v-checkbox v-for="(category, ionIndex) in ionTypes" :key="category.text" v-model="category.selected"
-                      light :label="category.text" @click="toggleIonTypeSelected(ionIndex)">
-                    </v-checkbox>
-                  </div>
-                </v-layout>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>Fragment mass tolerance</v-list-item-title>
-                <v-text-field v-model="fragmentMassTolerance" type="number" hide-details="auto"
-                  label="mass tolerance in ppm" @change="updateMassTolerance"></v-text-field>
-                <!-- TODO: add "required" -->
-              </v-list-item>
-            </v-list>
-          </v-card>
-        </v-menu>
+    <div id="sequence-part">
+      <div class="d-flex justify-space-evenly">
+        <template v-if="precursorData.length != 0">
+          <h3>Precursor</h3>
+          <v-divider vertical="true"></v-divider>
+          <template v-for="(item, p_index) in precursorData" :key="p_index">
+            {{ item }}
+            <v-divider vertical="true"></v-divider>
+          </template>
+        </template>
+      </div>
+      <div class="d-flex justify-end px-4 mb-4">
+        <!-- TODO: add legend (fixed mod, etc) -->
+        <div>
+          <SvgScreenshot element-id="sequence-part" />
+          <v-btn id="settings-button" variant="text" icon="mdi-cog" size="large"></v-btn>
+          <v-menu :close-on-content-click="false" activator="#settings-button" location="bottom">
+            <v-card min-width="300">
+              <v-list>
+                <v-list-item>
+                  <v-list-item-title># amino acids per row</v-list-item-title>
+                  <v-slider v-model="rowWidth" :ticks="tickLabels" :min="20" :max="40" step="5" show-ticks="always"
+                    tick-size="4"></v-slider>
+                </v-list-item>
+                <v-list-item>
+                  <v-list-item-title>Fragment ion types</v-list-item-title>
+                  <v-layout row wrap>
+                    <div class="d-flex">
+                      <!-- TODO: why is there space between this and the next v-list-item? -->
+                      <v-checkbox v-for="(category, ionIndex) in ionTypes" :key="category.text"
+                        v-model="category.selected" light :label="category.text" @click="toggleIonTypeSelected(ionIndex)">
+                      </v-checkbox>
+                    </div>
+                  </v-layout>
+                </v-list-item>
+                <v-list-item>
+                  <v-list-item-title>Fragment mass tolerance</v-list-item-title>
+                  <v-text-field v-model="fragmentMassTolerance" type="number" hide-details="auto"
+                    label="mass tolerance in ppm" @change="updateMassTolerance"></v-text-field>
+                  <!-- TODO: add "required" -->
+                </v-list-item>
+              </v-list>
+            </v-card>
+          </v-menu>
+        </div>
+      </div>
+      <div :class="gridClasses" style="width: 100%; max-width: 100%">
+        <template v-for="(aminoAcidObj, aa_index) in sequenceObjects" :key="aa_index">
+          <div v-if="aa_index !== 0 && aa_index % rowWidth === 0" class="d-flex justify-center align-center">
+            {{ aa_index + 1 }}
+          </div>
+          <ProteinTerminalCell v-if="aa_index === 0" protein-terminal="N-term" :index="-1" />
+          <AminoAcidCell :index="aa_index" :sequence-object="aminoAcidObj"
+            :fixed-modification="fixedModification(aminoAcidObj.aminoAcid)" />
+          <div v-if="aa_index % rowWidth === rowWidth - 1 && aa_index !== sequence.length - 1"
+            class="d-flex justify-center align-center">
+            {{ aa_index + 1 }}
+          </div>
+          <ProteinTerminalCell v-if="aa_index === sequence.length - 1" protein-terminal="C-term"
+            :index="sequence.length" />
+        </template>
       </div>
     </div>
-    <div :class="gridClasses" style="width: 100%; max-width: 100%">
-      <template v-for="(aminoAcidObj, aa_index) in sequenceObjects" :key="aa_index">
-        <div v-if="aa_index !== 0 && aa_index % rowWidth === 0" class="d-flex justify-center align-center">
-          {{ aa_index + 1 }}
-        </div>
-        <ProteinTerminalCell v-if="aa_index === 0" protein-terminal="N-term" :index="-1" />
-        <AminoAcidCell :index="aa_index" :sequence-object="aminoAcidObj"
-          :fixed-modification="fixedModification(aminoAcidObj.aminoAcid)" />
-        <div v-if="aa_index % rowWidth === rowWidth - 1 && aa_index !== sequence.length - 1"
-          class="d-flex justify-center align-center">
-          {{ aa_index + 1 }}
-        </div>
-        <ProteinTerminalCell v-if="aa_index === sequence.length - 1" protein-terminal="C-term" :index="sequence.length" />
+    <div id="sequence-view-table">
+      <template v-if="fragmentTableTitle !== ''">
+        <TabulatorTable :table-data="fragmentTableData" :column-definitions="fragmentTableColumnDefinitions"
+          :title="fragmentTableTitle" :index="index" />
       </template>
     </div>
-    <template v-if="fragmentTableTitle !== ''">
-      <TabulatorTable :table-data="fragmentTableData" :column-definitions="fragmentTableColumnDefinitions"
-        :title="fragmentTableTitle" :index="index" />
-    </template>
   </div>
 </template>
 
@@ -78,10 +84,11 @@ import ProteinTerminalCell from './ProteinTerminalCell.vue'
 import type { ColumnDefinition } from 'tabulator-tables'
 import type { SequenceData } from '@/types/sequence-data'
 import type { SequenceObject } from '@/types/sequence-object'
+import SvgScreenshot from '../ui/SvgScreenshot.vue'
 
 export default defineComponent({
   name: 'SequenceView',
-  components: { TabulatorTable, AminoAcidCell, ProteinTerminalCell },
+  components: { TabulatorTable, AminoAcidCell, ProteinTerminalCell, SvgScreenshot },
   props: {
     index: {
       type: Number,
