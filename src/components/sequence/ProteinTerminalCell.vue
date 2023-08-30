@@ -1,5 +1,5 @@
 <template>
-  <div class="d-flex justify-center align-center rounded-lg protein-terminal" :class="proteinTerminalCellClasses"
+  <div class="d-flex justify-center align-center rounded-lg" :class="proteinTerminalCellClasses"
     :style="proteinTerminalCellStyles" @click.stop @contextmenu.prevent="toggleMenuOpen">
     <div>
       {{ proteinTerminalText }}
@@ -10,7 +10,7 @@
         <v-list-item>
           <v-select v-model="selectedModification" clearable label="Modification" density="compact"
             :items="modificationsForSelect" @update:modelValue="updateSelectedModification"
-            @click:clear="updateSelectedModification(undefined)">
+            @click:clear="selectedModification = undefined">
           </v-select>
         </v-list-item>
         <v-list-item v-if="customSelected">
@@ -86,7 +86,7 @@ export default defineComponent({
     },
     proteinTerminalCellClasses(): Record<string, boolean> {
       return {
-        'protein-terminal': true,
+        'protein-terminal': this.selectedModification === undefined && !this.hasVariableModification,
         'protein-terminal-modified': this.selectedModification !== undefined || this.hasVariableModification,
       }
     },
@@ -98,7 +98,7 @@ export default defineComponent({
     toggleMenuOpen(): void {
       this.menuOpen = !this.menuOpen
     },
-    updateSelectedModification(modification: string | undefined) {
+    updateSelectedModification(modification: 'None' | 'Custom' | KnownModification) {
       if (modification === 'None') {
         this.selectedModification = undefined
       } else if (modification === 'Custom') {
@@ -130,7 +130,7 @@ export default defineComponent({
   }
 }
 
-.protein-terminal-modified {
+.protein-terminal-modified:extend(.protein-terminal) {
   background-color: #9c1e1e;
   color: var(--amino-acid-cell-color);
 

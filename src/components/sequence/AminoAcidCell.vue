@@ -20,7 +20,7 @@
         <v-list-item>
           <v-select v-model="selectedModification" clearable label="Modification" density="compact"
             :items="modificationsForSelect" @update:modelValue="updateSelectedModification"
-            @click:clear="updateSelectedModification(undefined)">
+            @click:clear="selectedModification = undefined">
           </v-select>
         </v-list-item>
         <v-list-item v-if="customSelected">
@@ -87,9 +87,6 @@ export default defineComponent({
     aminoAcid(): string {
       return this.sequenceObject.aminoAcid
     },
-    variableModifications(): Record<number, number> {
-      return this.variableModData.variableModifications ?? {}
-    },
     modificationsForSelect(): string[] {
       return ['None', 'Custom', ...this.potentialModifications]
     },
@@ -106,11 +103,19 @@ export default defineComponent({
       return {
         'sequence-amino-acid': !this.fixedModification,
         'sequence-amino-acid-highlighted': this.fixedModification,
-        'sequence-amino-acid-modified': this.isThisAAmodified(),
+        'sequence-amino-acid-modified': this.isThisAAmodified,
       }
     },
     potentialModifications(): KnownModification[] {
       return potentialModificationMap[this.aminoAcid] ?? []
+    },
+    isThisAAmodified(): boolean {
+      const variableModifications = this.variableModData.variableModifications ?? {}
+      if (this.selectedModification !== undefined) return true
+      return (
+        variableModifications[this.index] !== undefined &&
+        variableModifications[this.index] !== 0
+      )
     },
   },
   methods: {
@@ -120,7 +125,7 @@ export default defineComponent({
     selectCell(): void {
       // do something later
     },
-    updateSelectedModification(modification: string | undefined) {
+    updateSelectedModification(modification: 'None' | 'Custom' | KnownModification) {
       if (modification === 'None') {
         this.selectedModification = undefined
       } else if (modification === 'Custom') {
@@ -140,15 +145,6 @@ export default defineComponent({
       this.variableModData.updateVariableModifications(this.index, parseFloat(this.customModMass))
       this.toggleMenuOpen()
     },
-    isThisAAmodified() {
-      if (this.selectedModification !== undefined) return true
-      else if (
-        this.index in this.variableModifications &&
-        this.variableModifications[this.index] !== 0
-      )
-        return true
-      return false
-    },
   },
 })
 </script>
@@ -166,7 +162,7 @@ export default defineComponent({
 
 .sequence-amino-acid-highlighted {
   background-color: var(--amino-acid-cell-bg-color);
-  color: #9c1e1e;
+  color: #f0a441;
 
   &:hover {
     background-color: var(--amino-acid-cell-hover-bg-color);
@@ -175,7 +171,7 @@ export default defineComponent({
 
 .sequence-amino-acid-modified {
   background-color: #9c1e1e;
-  color: var(--amino-acid-cell-color);
+  //color: var(--amino-acid-cell-color);
 
   &:hover {
     background-color: #ff1e1e;
