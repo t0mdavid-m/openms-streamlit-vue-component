@@ -21,24 +21,42 @@
               <v-list>
                 <v-list-item>
                   <v-list-item-title># amino acids per row</v-list-item-title>
-                  <v-slider v-model="rowWidth" :ticks="tickLabels" :min="20" :max="40" step="5" show-ticks="always"
-                    tick-size="4"></v-slider>
+                  <v-slider
+                    v-model="rowWidth"
+                    :ticks="tickLabels"
+                    :min="20"
+                    :max="40"
+                    step="5"
+                    show-ticks="always"
+                    tick-size="4"
+                  ></v-slider>
                 </v-list-item>
                 <v-list-item>
                   <v-list-item-title>Fragment ion types</v-list-item-title>
                   <v-layout row wrap>
                     <div class="d-flex">
                       <!-- TODO: why is there space between this and the next v-list-item? -->
-                      <v-checkbox v-for="(category, ionIndex) in ionTypes" :key="category.text"
-                        v-model="category.selected" light :label="category.text" @click="toggleIonTypeSelected(ionIndex)">
+                      <v-checkbox
+                        v-for="(category, ionIndex) in ionTypes"
+                        :key="category.text"
+                        v-model="category.selected"
+                        light
+                        :label="category.text"
+                        @click="toggleIonTypeSelected(ionIndex)"
+                      >
                       </v-checkbox>
                     </div>
                   </v-layout>
                 </v-list-item>
                 <v-list-item>
                   <v-list-item-title>Fragment mass tolerance</v-list-item-title>
-                  <v-text-field v-model="fragmentMassTolerance" type="number" hide-details="auto"
-                    label="mass tolerance in ppm" @change="updateMassTolerance"></v-text-field>
+                  <v-text-field
+                    v-model="fragmentMassTolerance"
+                    type="number"
+                    hide-details="auto"
+                    label="mass tolerance in ppm"
+                    @change="updateMassTolerance"
+                  ></v-text-field>
                   <!-- TODO: add "required" -->
                 </v-list-item>
               </v-list>
@@ -48,25 +66,48 @@
       </div>
       <div :class="gridClasses" style="width: 100%; max-width: 100%">
         <template v-for="(aminoAcidObj, aa_index) in sequenceObjects" :key="aa_index">
-          <div v-if="aa_index !== 0 && aa_index % rowWidth === 0" class="d-flex justify-center align-center">
+          <div
+            v-if="aa_index !== 0 && aa_index % rowWidth === 0"
+            class="d-flex justify-center align-center"
+          >
             {{ aa_index + 1 }}
           </div>
           <ProteinTerminalCell v-if="aa_index === 0" protein-terminal="N-term" :index="-1" />
-          <AminoAcidCell :index="aa_index" :sequence-object="aminoAcidObj"
-            :fixed-modification="fixedModification(aminoAcidObj.aminoAcid)" />
-          <div v-if="aa_index % rowWidth === rowWidth - 1 && aa_index !== sequence.length - 1"
-            class="d-flex justify-center align-center">
+          <AminoAcidCell
+            :index="aa_index"
+            :sequence-object="aminoAcidObj"
+            :fixed-modification="fixedModification(aminoAcidObj.aminoAcid)"
+          />
+          <div
+            v-if="aa_index % rowWidth === rowWidth - 1 && aa_index !== sequence.length - 1"
+            class="d-flex justify-center align-center"
+          >
             {{ aa_index + 1 }}
           </div>
-          <ProteinTerminalCell v-if="aa_index === sequence.length - 1" protein-terminal="C-term"
-            :index="sequence.length" />
+          <ProteinTerminalCell
+            v-if="aa_index === sequence.length - 1"
+            protein-terminal="C-term"
+            :index="sequence.length"
+          />
         </template>
       </div>
     </div>
     <div id="sequence-view-table">
       <template v-if="fragmentTableTitle !== ''">
-        <TabulatorTable :table-data="fragmentTableData" :column-definitions="fragmentTableColumnDefinitions"
-          :title="fragmentTableTitle" :index="index" />
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr">
+          <!-- empty div in front of others for styling -->
+          <div class="d-flex justify-center" style="grid-column: 2 / span 1">
+            <h4>{{ fragmentTableTitle }}</h4>
+          </div>
+          <div class="d-flex justify-end" style="grid-column: 3 / span 1">
+            <h4>% Residue cleavage: {{ residueCleavagePercentage.toFixed(3) }}%</h4>
+          </div>
+        </div>
+        <TabulatorTable
+          :table-data="fragmentTableData"
+          :column-definitions="fragmentTableColumnDefinitions"
+          :index="index"
+        />
       </template>
     </div>
   </div>
@@ -125,6 +166,7 @@ export default defineComponent({
       ] as ColumnDefinition[],
       fragmentTableData: [] as Record<string, unknown>[],
       fragmentTableTitle: '' as string,
+      residueCleavagePercentage: 0 as number,
       sequenceObjects: [] as SequenceObject[],
     }
   },
@@ -167,6 +209,17 @@ export default defineComponent({
     },
     selectedScanIndex(): number | undefined {
       return this.selectionStore.selectedScanIndex
+    },
+    calculateCleavagePercentage(): number {
+      let explained_cleavage = 0
+      for (let i = 0, end_site = this.sequenceObjects.length - 1; i < end_site; ++i) {
+        const preAA = this.sequenceObjects[i]
+        const postAA = this.sequenceObjects[i + 1]
+        if (preAA.aIon || preAA.bIon || preAA.cIon || postAA.xIon || postAA.yIon || postAA.zIon) {
+          ++explained_cleavage
+        }
+      }
+      return (explained_cleavage / (this.sequenceObjects.length - 1)) * 100
     },
   },
   watch: {
@@ -316,7 +369,7 @@ export default defineComponent({
             }
           }
         })
-
+      this.residueCleavagePercentage = this.calculateCleavagePercentage
       this.fragmentTableData = matching_fragments
       this.fragmentTableTitle = `Matching fragments (# ${matching_fragments.length})`
     },
@@ -347,7 +400,7 @@ export default defineComponent({
   grid-template-rows: auto;
   gap: 4px 4px;
 
-  >div {
+  > div {
     aspect-ratio: 1;
   }
 }
