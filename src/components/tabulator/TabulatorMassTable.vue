@@ -30,6 +30,10 @@ export default defineComponent({
       type: Number,
       required: true,
     },
+    selectedRowFromSeqView: {
+      type: Number,
+      required: false,
+    },
   },
   setup() {
     const streamlitDataStore = useStreamlitDataStore()

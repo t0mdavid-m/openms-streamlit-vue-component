@@ -70,9 +70,15 @@
     >
       <v-list>
         <v-list-item>
-          <v-select v-model="selectedModification" clearable label="Modification" density="compact"
-            :items="modificationsForSelect" @update:modelValue="updateSelectedModification"
-            @click:clear="selectedModification = undefined">
+          <v-select
+            v-model="selectedModification"
+            clearable
+            label="Modification"
+            density="compact"
+            :items="modificationsForSelect"
+            @update:modelValue="updateSelectedModification"
+            @click:clear="selectedModification = undefined"
+          >
           </v-select>
         </v-list-item>
         <v-list-item v-if="customSelected">
@@ -103,7 +109,11 @@ import type { SequenceObject } from '@/types/sequence-object'
 import type { Theme } from 'streamlit-component-lib'
 import type { PropType } from 'vue'
 import { defineComponent } from 'vue'
-import { potentialModificationMap, type KnownModification, modificationMassMap } from './modification'
+import {
+  potentialModificationMap,
+  type KnownModification,
+  modificationMassMap,
+} from './modification'
 
 export default defineComponent({
   name: 'AminoAcidCell',
@@ -121,6 +131,7 @@ export default defineComponent({
       default: false,
     },
   },
+  emits: ['selected'],
   setup() {
     const streamlitData = useStreamlitDataStore()
     const variableModData = useModificationStore()
@@ -170,8 +181,17 @@ export default defineComponent({
       const variableModifications = this.variableModData.variableModifications ?? {}
       if (this.selectedModification !== undefined) return true
       return (
-        variableModifications[this.index] !== undefined &&
-        variableModifications[this.index] !== 0
+        variableModifications[this.index] !== undefined && variableModifications[this.index] !== 0
+      )
+    },
+    DoesThisAAHaveMatchingFragments(): boolean {
+      return (
+        this.sequenceObject.aIon ||
+        this.sequenceObject.bIon ||
+        this.sequenceObject.cIon ||
+        this.sequenceObject.xIon ||
+        this.sequenceObject.yIon ||
+        this.sequenceObject.zIon
       )
     },
   },
@@ -180,7 +200,9 @@ export default defineComponent({
       this.menuOpen = !this.menuOpen
     },
     selectCell(): void {
-      // do something later
+      if (this.DoesThisAAHaveMatchingFragments) {
+        this.$emit('selected', this.index)
+      }
     },
     updateSelectedModification(modification: 'None' | 'Custom' | KnownModification) {
       if (modification === 'None') {
