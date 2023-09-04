@@ -4,10 +4,10 @@
       <div class="d-flex justify-space-evenly">
         <template v-if="precursorData.length != 0">
           <h3>Precursor</h3>
-          <v-divider vertical="true"></v-divider>
+          <v-divider :vertical="true"></v-divider>
           <template v-for="(item, p_index) in precursorData" :key="p_index">
             {{ item }}
-            <v-divider vertical="true"></v-divider>
+            <v-divider :vertical="true"></v-divider>
           </template>
         </template>
       </div>
@@ -162,7 +162,13 @@ export default defineComponent({
         { title: 'Ion type', field: 'IonType' },
         { title: 'Ion number', field: 'IonNumber' },
         { title: 'Theoretical mass', field: 'TheoreticalMass' },
-        { title: 'Observed mass', field: 'ObservedMass' },
+        {
+          title: 'Observed mass',
+          field: 'ObservedMass',
+          formatter: (cell) => {
+            return (cell.getValue() as number).toFixed(3)
+          },
+        },
         { title: 'Mass difference (Da)', field: 'MassDiffDa' },
         { title: 'Mass difference (ppm)', field: 'MassDiffPpm' },
       ] as ColumnDefinition[],
@@ -307,7 +313,6 @@ export default defineComponent({
 
       // get the observed mass table info
       const observed_masses = selectedScanInfo.MonoMass as number[]
-      console.log('observed masses: ', observed_masses)
 
       // calculate matching masses
       let matching_fragments: Record<string, unknown>[] = []
@@ -359,7 +364,7 @@ export default defineComponent({
                 IonType: iontype.text,
                 IonNumber: theoIndex + 1,
                 TheoreticalMass: theoretical_mass.toFixed(3),
-                ObservedMass: observed_masses[obsIndex].toFixed(3),
+                ObservedMass: observed_masses[obsIndex], // should not have "toFixed" to be used as comparison factor
                 MassDiffDa: massDiffDa.toFixed(3),
                 MassDiffPpm: massDiffPpm.toFixed(3),
               }
@@ -411,10 +416,12 @@ export default defineComponent({
       } else {
         ionName = `z${this.sequence.length - aaIndex}`
       }
-      console.log(ionName)
-      // finding matching fragments from the table
+      // find matching fragments from the table
       this.selectedFragTableRowIndex = this.fragmentTableData.findIndex((x) => x.Name === ionName)
-      console.log('found index=', this.selectedFragTableRowIndex)
+      // set observed mass in data store for the mass table
+      this.selectionStore.selectedAminoAcid(
+        this.fragmentTableData[this.selectedFragTableRowIndex].ObservedMass as number
+      )
     },
   },
 })

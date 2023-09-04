@@ -9,6 +9,8 @@ export const useSelectionStore = defineStore('selection', {
   getters: {
     selectedScanIndex: (state): number | undefined => state.scanIndex,
     selectedMassIndex: (state): number | undefined => state.massIndex,
+    selectedObservedMassFromFragmentTable: (state): number | undefined =>
+      state.selectedObservedMass,
   },
   actions: {
     updateSelectedScan(rowIndex: number) {
@@ -17,7 +19,7 @@ export const useSelectionStore = defineStore('selection', {
     updateSelectedMass(rowIndex?: number) {
       this.massIndex = rowIndex
     },
-    selectedAminoAcid(fragmentMass: number) {
+    selectedAminoAcid(fragmentMass?: number) {
       this.selectedObservedMass = fragmentMass
     },
   },

@@ -4,6 +4,7 @@
     :column-definitions="columnDefinitions"
     :title="args.title"
     :index="index"
+    :selected-row-index-from-listening="selectedMassIndex"
     @row-selected="updateSelectedMass"
   />
 </template>
@@ -30,10 +31,6 @@ export default defineComponent({
       type: Number,
       required: true,
     },
-    selectedRowFromSeqView: {
-      type: Number,
-      required: false,
-    },
   },
   setup() {
     const streamlitDataStore = useStreamlitDataStore()
@@ -54,6 +51,7 @@ export default defineComponent({
         { title: 'SNR', field: 'SNR' },
         { title: 'QScore', field: 'QScore' },
       ] as ColumnDefinition[],
+      selectedMassIndex: undefined as number | undefined,
     }
   },
   computed: {
@@ -94,6 +92,17 @@ export default defineComponent({
       tableData.map((entry, index) => (entry['id'] = index))
 
       return tableData
+    },
+    selectedMassFromFragmentTable(): number | undefined {
+      return this.selectionStore.selectedObservedMassFromFragmentTable
+    },
+  },
+  watch: {
+    selectedMassFromFragmentTable(newMass: number | undefined) {
+      const foundMassIndex = this.tableData.findIndex((x) => x.MonoMass === newMass)
+      if (foundMassIndex !== -1) {
+        this.selectedMassIndex = foundMassIndex
+      }
     },
   },
   methods: {

@@ -26,6 +26,7 @@ export default defineComponent({
     title: {
       type: String,
       required: false,
+      default: () => 'Table',
     },
     index: {
       type: Number,
@@ -34,6 +35,7 @@ export default defineComponent({
     selectedRowIndexFromListening: {
       type: Number,
       required: false,
+      default: () => undefined,
     },
   },
   emits: ['rowSelected'],
@@ -116,9 +118,10 @@ export default defineComponent({
       }
     },
     onSelectedRowListener(row: number) {
-      this.tabulator?.scrollToRow(row, 'center', true)
-      this.tabulator?.getSelectedRows().forEach((row) => this.tabulator?.deselectRow(row))
-      this.tabulator?.selectRow(row)
+      this.tabulator?.scrollToRow(row, 'top', false)
+      this.tabulator?.deselectRow()
+      this.tabulator?.selectRow([row])
+      this.onTableClick()
     },
   },
 })
