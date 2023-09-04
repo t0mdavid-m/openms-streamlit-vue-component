@@ -4,10 +4,10 @@
       <div class="d-flex justify-space-evenly">
         <template v-if="precursorData.length != 0">
           <h3>Precursor</h3>
-          <v-divider vertical="true"></v-divider>
+          <v-divider :vertical="true"></v-divider>
           <template v-for="(item, p_index) in precursorData" :key="p_index">
             {{ item }}
-            <v-divider vertical="true"></v-divider>
+            <v-divider :vertical="true"></v-divider>
           </template>
         </template>
       </div>
@@ -77,6 +77,7 @@
             :index="aa_index"
             :sequence-object="aminoAcidObj"
             :fixed-modification="fixedModification(aminoAcidObj.aminoAcid)"
+            @selected="aminoAcidSelected"
           />
           <div
             v-if="aa_index % rowWidth === rowWidth - 1 && aa_index !== sequence.length - 1"
@@ -107,6 +108,7 @@
           :table-data="fragmentTableData"
           :column-definitions="fragmentTableColumnDefinitions"
           :index="index"
+          :selected-row-index-from-listening="selectedFragTableRowIndex"
         />
       </template>
     </div>
@@ -160,7 +162,13 @@ export default defineComponent({
         { title: 'Ion type', field: 'IonType' },
         { title: 'Ion number', field: 'IonNumber' },
         { title: 'Theoretical mass', field: 'TheoreticalMass' },
-        { title: 'Observed mass', field: 'ObservedMass' },
+        {
+          title: 'Observed mass',
+          field: 'ObservedMass',
+          formatter: (cell) => {
+            return (cell.getValue() as number).toFixed(3)
+          },
+        },
         { title: 'Mass difference (Da)', field: 'MassDiffDa' },
         { title: 'Mass difference (ppm)', field: 'MassDiffPpm' },
       ] as ColumnDefinition[],
@@ -168,6 +176,7 @@ export default defineComponent({
       fragmentTableTitle: '' as string,
       residueCleavagePercentage: 0 as number,
       sequenceObjects: [] as SequenceObject[],
+      selectedFragTableRowIndex: undefined as number | undefined,
     }
   },
   computed: {
@@ -304,7 +313,6 @@ export default defineComponent({
 
       // get the observed mass table info
       const observed_masses = selectedScanInfo.MonoMass as number[]
-      console.log('observed masses: ', observed_masses)
 
       // calculate matching masses
       let matching_fragments: Record<string, unknown>[] = []
@@ -356,7 +364,7 @@ export default defineComponent({
                 IonType: iontype.text,
                 IonNumber: theoIndex + 1,
                 TheoreticalMass: theoretical_mass.toFixed(3),
-                ObservedMass: observed_masses[obsIndex].toFixed(3),
+                ObservedMass: observed_masses[obsIndex], // should not have "toFixed" to be used as comparison factor
                 MassDiffDa: massDiffDa.toFixed(3),
                 MassDiffPpm: massDiffPpm.toFixed(3),
               }
@@ -389,6 +397,31 @@ export default defineComponent({
           zIon: false,
         })
       })
+    },
+    aminoAcidSelected(aaIndex: number) {
+      let ionName = ''
+      // prefix
+      const this_seqObj = this.sequenceObjects[aaIndex]
+      // const suffix_fragment = this.sequenceObjects[this.sequence.length - aaIndex - 1]
+      if (this_seqObj.aIon) {
+        ionName = `a${aaIndex + 1}`
+      } else if (this_seqObj.bIon) {
+        ionName = `b${aaIndex + 1}`
+      } else if (this_seqObj.cIon) {
+        ionName = `c${aaIndex + 1}`
+      } else if (this_seqObj.xIon) {
+        ionName = `x${this.sequence.length - aaIndex}`
+      } else if (this_seqObj.yIon) {
+        ionName = `y${this.sequence.length - aaIndex}`
+      } else {
+        ionName = `z${this.sequence.length - aaIndex}`
+      }
+      // find matching fragments from the table
+      this.selectedFragTableRowIndex = this.fragmentTableData.findIndex((x) => x.Name === ionName)
+      // set observed mass in data store for the mass table
+      this.selectionStore.selectedAminoAcid(
+        this.fragmentTableData[this.selectedFragTableRowIndex].ObservedMass as number
+      )
     },
   },
 })

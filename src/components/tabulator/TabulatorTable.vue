@@ -26,10 +26,16 @@ export default defineComponent({
     title: {
       type: String,
       required: false,
+      default: () => 'Table',
     },
     index: {
       type: Number,
       required: true,
+    },
+    selectedRowIndexFromListening: {
+      type: Number,
+      required: false,
+      default: () => undefined,
     },
   },
   emits: ['rowSelected'],
@@ -40,6 +46,7 @@ export default defineComponent({
   data() {
     return {
       tabulator: undefined as Tabulator | undefined,
+      preparedTableData: [] as Record<string, unknown>[],
     }
   },
   computed: {
@@ -67,6 +74,25 @@ export default defineComponent({
     tableData() {
       this.drawTable()
     },
+    selectedRowIndexFromListening(newVal: number | undefined) {
+      if (newVal !== undefined) {
+        this.onSelectedRowListener(newVal)
+      }
+    },
+  },
+  created() {
+    if (this.tableData.length > 0 && this.tableData[0].id === undefined) {
+      const tableDataWithId: Record<string, unknown>[] = []
+      this.tableData.forEach((row, index) => {
+        tableDataWithId.push({
+          ...row,
+          id: index,
+        })
+      })
+      this.preparedTableData = tableDataWithId
+      return
+    }
+    this.preparedTableData = this.tableData
   },
   mounted() {
     this.drawTable()
@@ -74,7 +100,7 @@ export default defineComponent({
   methods: {
     drawTable() {
       this.tabulator = new Tabulator(`#${this.id}`, {
-        data: this.tableData,
+        data: this.preparedTableData,
         minHeight: 50,
         maxHeight: this.title ? 320 : 310,
         layout: 'fitColumns',
@@ -90,6 +116,12 @@ export default defineComponent({
       if (selectedRow !== undefined) {
         this.$emit('rowSelected', selectedRow)
       }
+    },
+    onSelectedRowListener(row: number) {
+      this.tabulator?.scrollToRow(row, 'top', false)
+      this.tabulator?.deselectRow()
+      this.tabulator?.selectRow([row])
+      this.onTableClick()
     },
   },
 })
