@@ -35,7 +35,7 @@
     <div class="frag-marker-container-x">
       <svg viewBox="0 0 10 10">
         <path
-          v-if="sequenceObject.zIon"
+          v-if="sequenceObject.xIon"
           stroke="green"
           d="M1, 3 L1, 7 L3, 9 L1, 7 L1, 3 z"
           stroke-width="1.5"

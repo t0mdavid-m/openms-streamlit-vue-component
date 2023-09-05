@@ -12,9 +12,9 @@
         </template>
       </div>
       <div class="d-flex justify-end px-4 mb-4">
-        <!-- TODO: add legend (fixed mod, etc) -->
         <div>
           <SvgScreenshot element-id="sequence-part" />
+          <SequenceViewInformation />
           <v-btn id="settings-button" variant="text" icon="mdi-cog" size="large"></v-btn>
           <v-menu :close-on-content-click="false" activator="#settings-button" location="bottom">
             <v-card min-width="300">
@@ -128,10 +128,17 @@ import type { ColumnDefinition } from 'tabulator-tables'
 import type { SequenceData } from '@/types/sequence-data'
 import type { SequenceObject } from '@/types/sequence-object'
 import SvgScreenshot from '../ui/SvgScreenshot.vue'
+import SequenceViewInformation from '@/components/sequence/SequenceViewInformation.vue'
 
 export default defineComponent({
   name: 'SequenceView',
-  components: { TabulatorTable, AminoAcidCell, ProteinTerminalCell, SvgScreenshot },
+  components: {
+    SequenceViewInformation,
+    TabulatorTable,
+    AminoAcidCell,
+    ProteinTerminalCell,
+    SvgScreenshot,
+  },
   props: {
     index: {
       type: Number,
