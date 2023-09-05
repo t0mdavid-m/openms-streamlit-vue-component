@@ -1,5 +1,7 @@
 <template>
-  <div style="max-width: 97%">
+  <div class="d-flex justify-center"><h4>Sequence View</h4></div>
+
+  <v-sheet class="pa-4 rounded-lg" style="max-width: 97%" :theme="theme?.base ?? 'light'" border>
     <div id="sequence-part">
       <div class="d-flex justify-space-evenly">
         <template v-if="precursorData.length != 0">
@@ -112,7 +114,7 @@
         />
       </template>
     </div>
-  </div>
+  </v-sheet>
 </template>
 
 <script lang="ts">
