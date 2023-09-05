@@ -46,7 +46,6 @@ export default defineComponent({
   data() {
     return {
       tabulator: undefined as Tabulator | undefined,
-      preparedTableData: [] as Record<string, unknown>[],
     }
   },
   computed: {
@@ -69,6 +68,19 @@ export default defineComponent({
         'table-sm': true,
       }
     },
+    preparedTableData(): Record<string, unknown>[] {
+      if (this.tableData.length > 0 && this.tableData[0].id === undefined) {
+        const tableDataWithId: Record<string, unknown>[] = []
+        this.tableData.forEach((row, index) => {
+          tableDataWithId.push({
+            ...row,
+            id: index,
+          })
+        })
+        return tableDataWithId
+      }
+      return this.tableData
+    }
   },
   watch: {
     tableData() {
@@ -79,20 +91,6 @@ export default defineComponent({
         this.onSelectedRowListener(newVal)
       }
     },
-  },
-  created() {
-    if (this.tableData.length > 0 && this.tableData[0].id === undefined) {
-      const tableDataWithId: Record<string, unknown>[] = []
-      this.tableData.forEach((row, index) => {
-        tableDataWithId.push({
-          ...row,
-          id: index,
-        })
-      })
-      this.preparedTableData = tableDataWithId
-      return
-    }
-    this.preparedTableData = this.tableData
   },
   mounted() {
     this.drawTable()
