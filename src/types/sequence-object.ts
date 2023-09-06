@@ -6,4 +6,5 @@ export type SequenceObject = {
   xIon: boolean
   yIon: boolean
   zIon: boolean
+  extraTypes: string[]
 }

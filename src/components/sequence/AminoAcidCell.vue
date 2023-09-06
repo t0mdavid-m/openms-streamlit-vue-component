@@ -57,6 +57,11 @@
         />
       </svg>
     </div>
+    <div v-if="DoesThisAAHaveExtraFragTypes" class="frag-marker-extra-type">
+      <svg viewBox="0 0 10 10">
+        <circle cx="5" cy="5" r="0.5" stroke="black" stroke-width="0.3" fill="gold" />
+      </svg>
+    </div>
     <div class="aa-text">
       {{ aminoAcid }}
     </div>
@@ -72,11 +77,11 @@
         <v-list-item>
           <v-select
             v-model="selectedModification"
-            clearable
+            clearable="true"
             label="Modification"
             density="compact"
             :items="modificationsForSelect"
-            @update:modelValue="updateSelectedModification"
+            @update:model-value="updateSelectedModification"
             @click:clear="selectedModification = undefined"
           >
           </v-select>
@@ -89,7 +94,9 @@
               label="Monoisotopic mass in Da"
               type="number"
             />
-            <v-btn type="submit" block class="mt-2" @click="updateCustomModification">Submit</v-btn>
+            <v-btn type="submit" block="true" class="mt-2" @click="updateCustomModification"
+              >Submit</v-btn
+            >
           </v-form>
         </v-list-item>
       </v-list>
@@ -98,6 +105,10 @@
       {{ `Prefix: ${index + 1}` }}
       <br />
       {{ `Suffix: ${(streamlitData.sequenceData?.sequence.length ?? 0) - index}` }}
+      <br />
+      <div v-if="DoesThisAAHaveExtraFragTypes">
+        {{ sequenceObject.extraTypes.join(', ') }}
+      </div>
     </v-tooltip>
   </div>
 </template>
@@ -193,6 +204,9 @@ export default defineComponent({
         this.sequenceObject.yIon ||
         this.sequenceObject.zIon
       )
+    },
+    DoesThisAAHaveExtraFragTypes(): boolean {
+      return this.sequenceObject.extraTypes.length > 0
     },
   },
   methods: {
@@ -291,6 +305,10 @@ export default defineComponent({
 .frag-marker-container-z:extend(.frag-marker-container) {
   bottom: -32%;
   left: -10%;
+}
+
+.frag-marker-extra-type:extend(.frag-marker-container) {
+  top: -30%;
 }
 
 .aa-text {
