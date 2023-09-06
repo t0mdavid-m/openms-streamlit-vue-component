@@ -106,6 +106,7 @@ export default defineComponent({
         xIon: this.xIon,
         yIon: this.yIon,
         zIon: this.zIon,
+        extraTypes: ['H'], // TODO control with checkboxes
       }
     },
   },

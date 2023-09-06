@@ -35,20 +35,30 @@
                 </v-list-item>
                 <v-list-item>
                   <v-list-item-title>Fragment ion types</v-list-item-title>
-                  <v-layout row wrap>
-                    <div class="d-flex">
-                      <!-- TODO: why is there space between this and the next v-list-item? -->
-                      <v-checkbox
-                        v-for="(category, ionIndex) in ionTypes"
-                        :key="category.text"
-                        v-model="category.selected"
-                        light
-                        :label="category.text"
-                        @click="toggleIonTypeSelected(ionIndex)"
-                      >
-                      </v-checkbox>
-                    </div>
-                  </v-layout>
+                  <div class="d-flex justify-space-evenly">
+                    <v-checkbox
+                      v-for="(category, ionIndex) in ionTypes"
+                      :key="category.text"
+                      v-model="category.selected"
+                      hide-details
+                      density="comfortable"
+                      :label="category.text"
+                      @click="toggleIonTypeSelected(ionIndex)"
+                    >
+                    </v-checkbox>
+                  </div>
+                  <div class="d-flex justify-space-evenly">
+                    <v-checkbox
+                      v-for="(category, ionIndex) in ionTypesExtra"
+                      :key="category.text"
+                      v-model="category.selected"
+                      hide-details
+                      density="comfortable"
+                      :label="category.text"
+                      @click="toggleIonTypeExtraSelected(ionIndex)"
+                    >
+                    </v-checkbox>
+                  </div>
                 </v-list-item>
                 <v-list-item>
                   <v-list-item-title>Fragment mass tolerance</v-list-item-title>
@@ -131,6 +141,7 @@ import type { SequenceData } from '@/types/sequence-data'
 import type { SequenceObject } from '@/types/sequence-object'
 import SvgScreenshot from '../ui/SvgScreenshot.vue'
 import SequenceViewInformation from '@/components/sequence/SequenceViewInformation.vue'
+import { extraFragmentTypeObject } from '@/components/sequence/modification'
 
 export default defineComponent({
   name: 'SequenceView',
@@ -164,6 +175,11 @@ export default defineComponent({
         { text: 'x', selected: false },
         { text: 'y', selected: true },
         { text: 'z', selected: false },
+      ] as { text: string; selected: boolean }[],
+      ionTypesExtra: [
+        { text: 'water loss', selected: true },
+        { text: 'ammonium loss', selected: true },
+        { text: 'proton loss/addition', selected: true },
       ] as { text: string; selected: boolean }[],
       fragmentMassTolerance: 10 as number,
       fragmentTableColumnDefinitions: [
@@ -256,6 +272,13 @@ export default defineComponent({
       },
       deep: true,
     },
+    ionTypesExtra: {
+      handler() {
+        this.initializeSequenceObjects()
+        this.prepareFragmentTable()
+      },
+      deep: true,
+    },
     variableModifications() {
       this.preparePrecursorInfo()
       this.initializeSequenceObjects()
@@ -273,6 +296,9 @@ export default defineComponent({
     },
     toggleIonTypeSelected(index: number) {
       this.ionTypes[index].selected = !this.ionTypes[index].selected
+    },
+    toggleIonTypeExtraSelected(index: number) {
+      this.ionTypesExtra[index].selected = !this.ionTypesExtra[index].selected
     },
     preparePrecursorInfo(): void {
       if (this.selectedScanIndex == undefined) {
@@ -361,28 +387,40 @@ export default defineComponent({
               obsIndex < obsSize;
               ++obsIndex
             ) {
-              // Mass difference = (observed-theoretical)/theoretical*1e6
-              const massDiffDa = observed_masses[obsIndex] - theoretical_mass
-              const massDiffPpm = (massDiffDa / theoretical_mass) * 1e6
-              if (Math.abs(massDiffPpm) > this.fragmentMassTolerance) {
-                // if mass difference is larger than tolerance, ignore
-                continue
-              }
-              const matched = {
-                Name: `${iontype.text}${theoIndex + 1}`,
-                IonType: iontype.text,
-                IonNumber: theoIndex + 1,
-                TheoreticalMass: theoretical_mass.toFixed(3),
-                ObservedMass: observed_masses[obsIndex], // should not have "toFixed" to be used as comparison factor
-                MassDiffDa: massDiffDa.toFixed(3),
-                MassDiffPpm: massDiffPpm.toFixed(3),
-              }
-              matching_fragments.push(matched)
-              // setting the fragment mark for fragment map
-              if (iontype.text === 'a' || iontype.text === 'b' || iontype.text === 'c')
-                this.sequenceObjects[theoIndex][`${iontype.text}Ion`] = true
-              if (iontype.text === 'x' || iontype.text === 'y' || iontype.text === 'z')
-                this.sequenceObjects[sequence_size - theoIndex][`${iontype.text}Ion`] = true
+              Object.entries(extraFragmentTypeObject).forEach(([typeName, typeValues]) => {
+                // Mass difference = (observed-theoretical)/theoretical*1e6
+                const thisTypeMass = theoretical_mass + (typeValues[1] as number)
+                const massDiffDa = observed_masses[obsIndex] - thisTypeMass
+                const massDiffPpm = (massDiffDa / thisTypeMass) * 1e6
+                if (Math.abs(massDiffPpm) > this.fragmentMassTolerance) {
+                  // if mass difference is larger than tolerance, ignore
+                  return
+                }
+
+                const matched = {
+                  Name: `${iontype.text}${theoIndex + 1}`,
+                  IonType: `${iontype.text}${typeValues[0]}`,
+                  IonNumber: theoIndex + 1,
+                  TheoreticalMass: thisTypeMass.toFixed(3),
+                  ObservedMass: observed_masses[obsIndex], // should not have "toFixed" to be used as comparison factor
+                  MassDiffDa: massDiffDa.toFixed(3),
+                  MassDiffPpm: massDiffPpm.toFixed(3),
+                }
+                matching_fragments.push(matched)
+                // setting the fragment mark for fragment map
+                let aa_index = theoIndex
+                if (iontype.text === 'a' || iontype.text === 'b' || iontype.text === 'c')
+                  this.sequenceObjects[aa_index][`${iontype.text}Ion`] = true
+                if (iontype.text === 'x' || iontype.text === 'y' || iontype.text === 'z') {
+                  this.sequenceObjects[sequence_size - theoIndex][`${iontype.text}Ion`] = true
+                  aa_index = sequence_size - theoIndex
+                }
+                if (typeValues[0]) {
+                  this.sequenceObjects[aa_index]['extraTypes'].push(
+                    `${iontype.text}${typeValues[0]}`
+                  )
+                }
+              })
             }
           }
         })
@@ -404,14 +442,13 @@ export default defineComponent({
           xIon: false,
           yIon: false,
           zIon: false,
+          extraTypes: [],
         })
       })
     },
     aminoAcidSelected(aaIndex: number) {
       let ionName = ''
-      // prefix
       const this_seqObj = this.sequenceObjects[aaIndex]
-      // const suffix_fragment = this.sequenceObjects[this.sequence.length - aaIndex - 1]
       if (this_seqObj.aIon) {
         ionName = `a${aaIndex + 1}`
       } else if (this_seqObj.bIon) {
