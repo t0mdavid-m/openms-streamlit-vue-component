@@ -32,12 +32,12 @@
                 <v-checkbox
                   v-model="fixed_mod"
                   label="Fixed modifications"
-                  @update:modelValue="setAAWithVarMod"
+                  @update:model-value="setAAWithVarMod"
                 ></v-checkbox>
                 <v-checkbox
                   v-model="variable_mod"
                   label="Variable modifications"
-                  @update:modelValue="setAAWithVarMod"
+                  @update:model-value="setAAWithVarMod"
                 ></v-checkbox>
               </div>
             </v-layout>
@@ -59,7 +59,7 @@
         </v-list>
       </v-card-text>
       <v-card-actions>
-        <v-btn color="primary" block @click="dialog = false">Close</v-btn>
+        <v-btn color="primary" block="true" @click="dialog = false">Close</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>

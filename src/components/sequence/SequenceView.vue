@@ -387,9 +387,9 @@ export default defineComponent({
               obsIndex < obsSize;
               ++obsIndex
             ) {
-              Object.entries(extraFragmentTypeObject).forEach(([typeName, typeValues]) => {
+              Object.entries(extraFragmentTypeObject).forEach(([typeName, typeMass]) => {
                 // Mass difference = (observed-theoretical)/theoretical*1e6
-                const thisTypeMass = theoretical_mass + (typeValues[1] as number)
+                const thisTypeMass = theoretical_mass + typeMass
                 const massDiffDa = observed_masses[obsIndex] - thisTypeMass
                 const massDiffPpm = (massDiffDa / thisTypeMass) * 1e6
                 if (Math.abs(massDiffPpm) > this.fragmentMassTolerance) {
@@ -399,7 +399,7 @@ export default defineComponent({
 
                 const matched = {
                   Name: `${iontype.text}${theoIndex + 1}`,
-                  IonType: `${iontype.text}${typeValues[0]}`,
+                  IonType: `${iontype.text}${typeName}`,
                   IonNumber: theoIndex + 1,
                   TheoreticalMass: thisTypeMass.toFixed(3),
                   ObservedMass: observed_masses[obsIndex], // should not have "toFixed" to be used as comparison factor
@@ -415,10 +415,8 @@ export default defineComponent({
                   this.sequenceObjects[sequence_size - theoIndex][`${iontype.text}Ion`] = true
                   aa_index = sequence_size - theoIndex
                 }
-                if (typeValues[0]) {
-                  this.sequenceObjects[aa_index]['extraTypes'].push(
-                    `${iontype.text}${typeValues[0]}`
-                  )
+                if (typeName) {
+                  this.sequenceObjects[aa_index]['extraTypes'].push(`${iontype.text}${typeName}`)
                 }
               })
             }

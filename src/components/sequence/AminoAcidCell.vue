@@ -77,11 +77,11 @@
         <v-list-item>
           <v-select
             v-model="selectedModification"
-            clearable
+            clearable="true"
             label="Modification"
             density="compact"
             :items="modificationsForSelect"
-            @update:modelValue="updateSelectedModification"
+            @update:model-value="updateSelectedModification"
             @click:clear="selectedModification = undefined"
           >
           </v-select>
@@ -94,7 +94,9 @@
               label="Monoisotopic mass in Da"
               type="number"
             />
-            <v-btn type="submit" block class="mt-2" @click="updateCustomModification">Submit</v-btn>
+            <v-btn type="submit" block="true" class="mt-2" @click="updateCustomModification"
+              >Submit</v-btn
+            >
           </v-form>
         </v-list-item>
       </v-list>
