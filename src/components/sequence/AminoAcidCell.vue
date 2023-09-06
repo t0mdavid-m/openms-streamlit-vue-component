@@ -308,8 +308,6 @@ export default defineComponent({
 }
 
 .frag-marker-extra-type:extend(.frag-marker-container) {
-  //width: 10%;
-  //height: 10%;
   top: -30%;
 }
 
