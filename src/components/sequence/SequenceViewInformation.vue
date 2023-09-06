@@ -11,38 +11,37 @@
             <AminoAcidCell :index="0" :sequence-object="aaSequenceObject" @selected.stop />
           </div>
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr">
-          <div style="grid-column: 1 / span 1">
-            Fragment ion types
-            <v-layout row wrap>
-              <div class="d-flex">
-                <v-checkbox v-model="aIon" label="a"></v-checkbox>
-                <v-checkbox v-model="bIon" label="b"></v-checkbox>
-                <v-checkbox v-model="cIon" label="c"></v-checkbox>
-                <v-checkbox v-model="xIon" label="x"></v-checkbox>
-                <v-checkbox v-model="yIon" label="y"></v-checkbox>
-                <v-checkbox v-model="zIon" label="z"></v-checkbox>
-              </div>
-            </v-layout>
+        Fragment ion types
+        <v-row>
+          <div class="d-flex">
+            <v-checkbox v-model="aIon" label="a"></v-checkbox>
+            <v-checkbox v-model="bIon" label="b"></v-checkbox>
+            <v-checkbox v-model="cIon" label="c"></v-checkbox>
+            <v-checkbox v-model="xIon" label="x"></v-checkbox>
+            <v-checkbox v-model="yIon" label="y"></v-checkbox>
+            <v-checkbox v-model="zIon" label="z"></v-checkbox>
+            <v-checkbox v-model="waterLoss" label="water loss"></v-checkbox>
+            <v-checkbox v-model="ammoniumLoss" label="ammonium loss"></v-checkbox>
+            <v-checkbox v-model="proton" label="proton loss/addition"></v-checkbox>
           </div>
-          <div style="grid-column: 2 / span 1">
-            Modifications
-            <v-layout row wrap>
-              <div class="d-flex">
-                <v-checkbox
-                  v-model="fixed_mod"
-                  label="Fixed modifications"
-                  @update:model-value="setAAWithVarMod"
-                ></v-checkbox>
-                <v-checkbox
-                  v-model="variable_mod"
-                  label="Variable modifications"
-                  @update:model-value="setAAWithVarMod"
-                ></v-checkbox>
-              </div>
-            </v-layout>
-          </div>
-          <div class="text-subtitle-2 d-flex justify-end" style="grid-column: 2 / span 1">
+        </v-row>
+        Modifications
+        <div class="d-flex">
+          <v-checkbox
+            v-model="fixed_mod"
+            label="Fixed modifications"
+            hide-details
+            density="comfortable"
+            @update:model-value="setAAWithVarMod"
+          ></v-checkbox>
+          <v-checkbox
+            v-model="variable_mod"
+            label="Variable modifications"
+            hide-details
+            density="comfortable"
+            @update:model-value="setAAWithVarMod"
+          ></v-checkbox>
+          <div class="text-subtitle-2 d-flex justify-end align-end">
             * Click checkboxes to see the styles
           </div>
         </div>
@@ -91,6 +90,9 @@ export default defineComponent({
       fixed_mod: false,
       variable_mod: false,
       originalAAClasses: undefined as string | undefined,
+      waterLoss: false,
+      ammoniumLoss: false,
+      proton: false,
     }
   },
   computed: {
@@ -106,7 +108,7 @@ export default defineComponent({
         xIon: this.xIon,
         yIon: this.yIon,
         zIon: this.zIon,
-        extraTypes: ['H'], // TODO control with checkboxes
+        extraTypes: this.extraFragTypes(),
       }
     },
   },
@@ -125,6 +127,25 @@ export default defineComponent({
 
         foundID.setAttribute('class', class_string)
       }
+    },
+    extraFragTypes(): string[] {
+      let ionType = ''
+      if (this.aIon) ionType = 'a'
+      else if (this.bIon) ionType = 'b'
+      else if (this.cIon) ionType = 'c'
+      else if (this.xIon) ionType = 'x'
+      else if (this.yIon) ionType = 'y'
+      else if (this.zIon) ionType = 'z'
+      else return []
+
+      let extraTypes = []
+      if (this.waterLoss) extraTypes.push(`${ionType}-H20`)
+      if (this.ammoniumLoss) extraTypes.push(`${ionType}-NH3`)
+      if (this.proton) {
+        extraTypes.push(`${ionType}-H`)
+        extraTypes.push(`${ionType}+H`)
+      }
+      return extraTypes
     },
   },
 })
