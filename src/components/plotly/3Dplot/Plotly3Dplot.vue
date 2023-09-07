@@ -136,7 +136,17 @@ export default defineComponent({
   methods: {
     async graph() {
       // 3Dplot TODO: 1. add "markers" 2. draw signals from mass table (not precursor)
-      await Plotly.newPlot(this.id, this.dataForDrawing, this.layout, { responsive: true })
+      await Plotly.newPlot(this.id, this.dataForDrawing, this.layout, {
+        modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'],
+        modeBarButtonsToAdd: [{
+          title: 'Download as SVG',
+          name: 'toImageSvg',
+          icon: Plotly.Icons.camera,
+          click: function (plotlyElement) {
+            Plotly.downloadImage(plotlyElement, { filename: 'FLASHViewer-3d-plot', height: 800, width: 800, format: 'svg' })
+          }
+        }]
+      })
     },
     getPrecursorSignal(selected_scan: Record<string, unknown>): Record<string, number[]> {
       // if the selected scan is not MS2 -> not drawing anything

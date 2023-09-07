@@ -52,9 +52,9 @@ export default defineComponent({
       if (this.selectedRow === undefined) {
         return xValues
       }
-      ;(
+      ; (
         this.streamlitDataStore.allDataForDrawing.per_scan_data[this.selectedRow][
-          this.xColmun
+        this.xColmun
         ] as number[]
       ).forEach((num) => {
         xValues.push(num, num, num)
@@ -78,9 +78,9 @@ export default defineComponent({
         return yValues
       }
 
-      ;(
+      ; (
         this.streamlitDataStore.allDataForDrawing.per_scan_data[this.selectedRow][
-          this.yColmun
+        this.yColmun
         ] as number[]
       ).forEach((num) => {
         yValues.push(-10000000, num, -10000000)
@@ -126,9 +126,6 @@ export default defineComponent({
   },
   watch: {
     selectedRow() {
-      console.log(this.args.title)
-      console.log(this.xValues)
-      console.log(this.yValues)
       this.graph()
     },
   },
@@ -137,7 +134,17 @@ export default defineComponent({
   },
   methods: {
     async graph() {
-      await Plotly.newPlot(this.id, this.data, this.layout, { responsive: true })
+      await Plotly.newPlot(this.id, this.data, this.layout, {
+        modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'],
+        modeBarButtonsToAdd: [{
+          title: 'Download as SVG',
+          name: 'toImageSvg',
+          icon: Plotly.Icons.camera,
+          click: (plotlyElement) => {
+            Plotly.downloadImage(plotlyElement, { filename: 'FLASHViewer-lineplot', height: 400, width: 1200, format: 'svg' })
+          }
+        }]
+      })
     },
   },
 })

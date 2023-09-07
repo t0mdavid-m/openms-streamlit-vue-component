@@ -96,7 +96,17 @@ export default defineComponent({
   },
   methods: {
     async graph() {
-      await Plotly.newPlot(this.id, this.data, this.layout, { responsive: true })
+      await Plotly.newPlot(this.id, this.data, this.layout, {
+        modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'],
+        modeBarButtonsToAdd: [{
+          title: 'Download as SVG',
+          name: 'toImageSvg',
+          icon: Plotly.Icons.camera,
+          click: (plotlyElement) => {
+            Plotly.downloadImage(plotlyElement, { filename: 'FLASHViewer-heatmap', height: 400, width: 1200, format: 'svg' })
+          }
+        }]
+      })
     },
   },
 })
