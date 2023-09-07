@@ -34,9 +34,7 @@
         v-else-if="component.componentArgs.componentName === 'SequenceView'"
         :index="componentIndex(index)"
       />
-      <div v-else-if="component.componentArgs.componentName === 'FLASHQuantView'">
-        flashquant in js
-      </div>
+      <FLASHQuantView v-else-if="component.componentArgs.componentName === 'FLASHQuantView'" />
     </div>
   </div>
 </template>
@@ -50,10 +48,12 @@ import TabulatorMassTable from '@/components/tabulator/TabulatorMassTable.vue'
 import SequenceView from '@/components/sequence/SequenceView.vue'
 import { defineComponent, type PropType } from 'vue'
 import type { FlashViewerComponent } from '@/types/grid-layout'
+import FLASHQuantView from '@/components/flashQuant/FLASHQuantView.vue'
 
 export default defineComponent({
   name: 'ComponentsRow',
   components: {
+    FLASHQuantView,
     Plotly3Dplot,
     PlotlyHeatmap,
     TabulatorScanTable,
