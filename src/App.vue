@@ -21,6 +21,11 @@ export default defineComponent({
 
     return { streamlitDataStore }
   },
+  data() {
+    return {
+      timer: undefined as NodeJS.Timer | undefined
+    }
+  },
   computed: {
     components(): FlashViewerComponent[][] {
       return this.streamlitDataStore.args?.components
@@ -30,8 +35,14 @@ export default defineComponent({
     Streamlit.setComponentReady()
     Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, this.updateStreamlitData)
   },
+  mounted() {
+    this.timer = setInterval(() => {
+      Streamlit.setFrameHeight()
+    }, 500)
+  },
   unmounted() {
     Streamlit.events.removeEventListener(Streamlit.RENDER_EVENT, this.updateStreamlitData)
+    clearInterval(this.timer)
   },
   updated() {
     Streamlit.setFrameHeight()
