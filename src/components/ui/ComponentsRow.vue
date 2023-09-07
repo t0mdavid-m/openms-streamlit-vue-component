@@ -83,16 +83,19 @@ export default defineComponent({
 }
 
 .height-1 {
+  min-height: 200px;
   height: fit-content;
   max-height: 400px;
 }
 
 .height-2 {
+  min-height: 200px;
   height: fit-content;
   max-height: 800px;
 }
 
 .height-any {
+  min-height: 200px;
   height: fit-content;
 }
 
