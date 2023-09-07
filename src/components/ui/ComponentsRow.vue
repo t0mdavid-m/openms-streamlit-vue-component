@@ -1,39 +1,18 @@
 <template>
   <div class="component-row">
-    <div
-      v-for="(component, index) in components"
-      :key="index"
-      :class="componentClasses(component.componentArgs.componentName)"
-    >
-      <PlotlyHeatmap
-        v-if="component.componentArgs.componentName === 'PlotlyHeatmap'"
-        :args="component.componentArgs"
-        :index="componentIndex(index)"
-      />
-      <TabulatorScanTable
-        v-else-if="component.componentArgs.componentName === 'TabulatorScanTable'"
-        :args="component.componentArgs"
-        :index="componentIndex(index)"
-      />
-      <TabulatorMassTable
-        v-else-if="component.componentArgs.componentName === 'TabulatorMassTable'"
-        :args="component.componentArgs"
-        :index="componentIndex(index)"
-      />
-      <PlotlyLineplot
-        v-else-if="component.componentArgs.componentName === 'PlotlyLineplot'"
-        :args="component.componentArgs"
-        :index="componentIndex(index)"
-      />
-      <Plotly3Dplot
-        v-else-if="component.componentArgs.componentName === 'Plotly3Dplot'"
-        :args="component.componentArgs"
-        :index="componentIndex(index)"
-      />
-      <SequenceView
-        v-else-if="component.componentArgs.componentName === 'SequenceView'"
-        :index="componentIndex(index)"
-      />
+    <div v-for="(component, index) in components" :key="index"
+      :class="componentClasses(component.componentArgs.componentName)">
+      <PlotlyHeatmap v-if="component.componentArgs.componentName === 'PlotlyHeatmap'" :args="component.componentArgs"
+        :index="componentIndex(index)" />
+      <TabulatorScanTable v-else-if="component.componentArgs.componentName === 'TabulatorScanTable'"
+        :args="component.componentArgs" :index="componentIndex(index)" />
+      <TabulatorMassTable v-else-if="component.componentArgs.componentName === 'TabulatorMassTable'"
+        :args="component.componentArgs" :index="componentIndex(index)" />
+      <PlotlyLineplot v-else-if="component.componentArgs.componentName === 'PlotlyLineplot'"
+        :args="component.componentArgs" :index="componentIndex(index)" />
+      <Plotly3Dplot v-else-if="component.componentArgs.componentName === 'Plotly3Dplot'" :args="component.componentArgs"
+        :index="componentIndex(index)" />
+      <SequenceView v-else-if="component.componentArgs.componentName === 'SequenceView'" :index="componentIndex(index)" />
     </div>
   </div>
 </template>
@@ -76,8 +55,8 @@ export default defineComponent({
         PlotlyLineplot: 'height-1',
         PlotlyHeatmap: 'height-1',
         Plotly3Dplot: 'height-2',
-        SequenceView: 'height-2',
-      } as Record<FlashViewerComponent['componentArgs']['componentName'], 'height-1' | 'height-2'>,
+        SequenceView: 'height-any',
+      } as Record<FlashViewerComponent['componentArgs']['componentName'], 'height-1' | 'height-2' | 'height-any'>,
     }
   },
   methods: {
@@ -104,11 +83,17 @@ export default defineComponent({
 }
 
 .height-1 {
-  height: 400px;
+  height: fit-content;
+  max-height: 400px;
 }
 
 .height-2 {
-  height: 800px;
+  height: fit-content;
+  max-height: 800px;
+}
+
+.height-any {
+  height: fit-content;
 }
 
 .component-width-1 {
