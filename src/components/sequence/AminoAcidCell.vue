@@ -1,60 +1,34 @@
 <template>
-  <div
-    :id="id"
-    class="d-flex justify-center align-center rounded-lg"
-    :class="aminoAcidCellClass"
-    :style="aminoAcidCellStyles"
-    @click="selectCell"
-    @contextmenu.prevent="toggleMenuOpen"
-  >
-    <div class="frag-marker-container-a">
+  <div :id="id" class="d-flex justify-center align-center rounded-lg" :class="aminoAcidCellClass"
+    :style="aminoAcidCellStyles" @click="selectCell" @contextmenu.prevent="toggleMenuOpen">
+    <div v-if="sequenceObject.aIon" class="frag-marker-container-a">
       <svg viewBox="0 0 10 10">
-        <path
-          v-if="sequenceObject.aIon"
-          stroke="green"
-          d="M7, 1 L9, 3 L9, 7 L9, 3 L7, 1 z"
-          stroke-width="1.5"
-        />
+        <path stroke="green" d="M7, 1 L9, 3 L9, 7 L9, 3 L7, 1 z" stroke-width="1.5" />
       </svg>
     </div>
-    <div class="frag-marker-container-b">
+    <div v-if="sequenceObject.bIon" class="frag-marker-container-b">
       <svg viewBox="0 0 10 10">
-        <path v-if="sequenceObject.bIon" stroke="blue" d="M10, 0 V5 M10, 0 H5 z" stroke-width="3" />
+        <path stroke="blue" d="M10, 0 V5 M10, 0 H5 z" stroke-width="3" />
       </svg>
     </div>
-    <div class="frag-marker-container-c">
+    <div v-if="sequenceObject.cIon" class="frag-marker-container-c">
       <svg viewBox="0 0 10 10">
-        <path
-          v-if="sequenceObject.cIon"
-          stroke="red"
-          d="M4, 1 L9, 3 L9, 7 L9, 3 L4, 1 z"
-          stroke-width="1.5"
-        />
+        <path stroke="red" d="M4, 1 L9, 3 L9, 7 L9, 3 L4, 1 z" stroke-width="1.5" />
       </svg>
     </div>
-    <div class="frag-marker-container-x">
+    <div v-if="sequenceObject.xIon" class="frag-marker-container-x">
       <svg viewBox="0 0 10 10">
-        <path
-          v-if="sequenceObject.xIon"
-          stroke="green"
-          d="M1, 3 L1, 7 L3, 9 L1, 7 L1, 3 z"
-          stroke-width="1.5"
-        />
+        <path stroke="green" d="M1, 3 L1, 7 L3, 9 L1, 7 L1, 3 z" stroke-width="1.5" />
       </svg>
     </div>
-    <div class="frag-marker-container-y">
+    <div v-if="sequenceObject.yIon" class="frag-marker-container-y">
       <svg viewBox="0 0 10 10">
-        <path v-if="sequenceObject.yIon" stroke="blue" d="M0, 10 V5 M0, 10 H5 z" stroke-width="3" />
+        <path stroke="blue" d="M0, 10 V5 M0, 10 H5 z" stroke-width="3" />
       </svg>
     </div>
-    <div class="frag-marker-container-z">
+    <div v-if="sequenceObject.zIon" class="frag-marker-container-z">
       <svg viewBox="0 0 10 10">
-        <path
-          v-if="sequenceObject.zIon"
-          stroke="red"
-          d="M1, 3 L1, 7 L6, 9 L1, 7 L1, 3 z"
-          stroke-width="1.5"
-        />
+        <path stroke="red" d="M1, 3 L1, 7 L6, 9 L1, 7 L1, 3 z" stroke-width="1.5" />
       </svg>
     </div>
     <div v-if="DoesThisAAHaveExtraFragTypes" class="frag-marker-extra-type">
@@ -65,38 +39,19 @@
     <div class="aa-text">
       {{ aminoAcid }}
     </div>
-    <v-menu
-      v-model="menuOpen"
-      activator="parent"
-      location="end"
-      :open-on-click="false"
-      :close-on-content-click="false"
-      width="200px"
-    >
+    <v-menu v-model="menuOpen" activator="parent" location="end" :open-on-click="false" :close-on-content-click="false"
+      width="200px">
       <v-list>
         <v-list-item>
-          <v-select
-            v-model="selectedModification"
-            clearable="true"
-            label="Modification"
-            density="compact"
-            :items="modificationsForSelect"
-            @update:model-value="updateSelectedModification"
-            @click:clear="selectedModification = undefined"
-          >
+          <v-select v-model="selectedModification" clearable="true" label="Modification" density="compact"
+            :items="modificationsForSelect" @update:model-value="updateSelectedModification"
+            @click:clear="selectedModification = undefined">
           </v-select>
         </v-list-item>
         <v-list-item v-if="customSelected">
           <v-form @submit.prevent>
-            <v-text-field
-              v-model="customModMass"
-              hide-details
-              label="Monoisotopic mass in Da"
-              type="number"
-            />
-            <v-btn type="submit" block="true" class="mt-2" @click="updateCustomModification"
-              >Submit</v-btn
-            >
+            <v-text-field v-model="customModMass" hide-details label="Monoisotopic mass in Da" type="number" />
+            <v-btn type="submit" block="true" class="mt-2" @click="updateCustomModification">Submit</v-btn>
           </v-form>
         </v-list-item>
       </v-list>
