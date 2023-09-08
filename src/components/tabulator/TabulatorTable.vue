@@ -1,7 +1,12 @@
 <template>
   <div style="padding: 8px; width: 98%">
     <div v-if="title" :style="containerStyles">
-      <h4>{{ title }}</h4>
+      <h4 :id="`${id}-title`">{{ title }}</h4>
+      <v-menu :activator="`#${id}-title`" location="bottom">
+        <v-card min-width="100">
+          <v-btn prepend-icon="mdi-download" @click="downloadTable">Download</v-btn>
+        </v-card>
+      </v-menu>
     </div>
     <div :id="id" :class="tableClasses" @click="onTableClick"></div>
   </div>
@@ -121,6 +126,9 @@ export default defineComponent({
       this.tabulator?.selectRow([row])
       this.onTableClick()
     },
+    downloadTable() {
+      if (this.tabulator !== undefined) this.tabulator.download('csv', `${this.title}.csv`)
+    }
   },
 })
 </script>
