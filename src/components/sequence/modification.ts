@@ -34,10 +34,14 @@ export const potentialModificationMap: Record<string, KnownModification[]> = {
   Y: ['Phospho'],
 }
 
-export const extraFragmentTypeObject: Record<string, number> = {
-  '': 0, // default
-  '-H2O': -18.0105646863, // water loss
-  '-NH3': -17.0265491015, // ammonium loss
-  '-H': -1.0078250319, // proton loss
-  '+H': 1.0078250319, // proton addition
+export type ExtraFragmentType = 'water loss' | 'ammonium loss' | 'proton loss/addition';
+
+export const extraFragmentTypeObject: Record<ExtraFragmentType | 'default', { typeName: string, typeMass: number }[]> = {
+  'default': [{ typeName: '', typeMass: 0 }], // default
+  'water loss': [{ typeName: '-H2O', typeMass: -18.0105646863 }], // water loss
+  'ammonium loss': [{ typeName: '-NH3', typeMass: -17.0265491015 }], // ammonium loss
+  'proton loss/addition': [
+    { typeName: '-H', typeMass: -1.0078250319 }, // proton loss
+    { typeName: '+H', typeMass: 1.0078250319 }, // proton addition
+  ],
 }
