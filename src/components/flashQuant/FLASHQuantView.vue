@@ -1,67 +1,39 @@
 <template>
-  <div class="pa-4" style="width: 97%">
+  <div class="pa-4">
     <v-row class="flex-nowrap">
-      <div class="flex-grow-1 flex-shrink-0">
-        <v-file-input
-          v-model="uploadedResultFile"
-          label="FLASHQuant .tsv results file"
-        ></v-file-input>
-      </div>
-      <div class="flex-grow-1 flex-shrink-0">
-        <v-file-input
-          v-model="uploadedTraceFile"
-          label="FLASHQuant _shared.tsv trace file"
-        ></v-file-input>
-      </div>
-      <div class="d-flex justify-center ma-3 flex-grow-0 flex-shrink-0">
-        <v-btn @click="parseFiles">Upload</v-btn>
-      </div>
+      <TabulatorTable
+        v-if="featureGroupTableData"
+        title="Feature groups"
+        index="0"
+        :table-data="featureGroupTableData"
+        :column-definitions="featureGroupTableColumnDefinitions"
+        table-index-field="FeatureGroupIndex"
+        @row-selected="updateSelectedFeatureGroupRow"
+      />
     </v-row>
+    <div id="trace3Dplot" style="width: 90%"></div>
   </div>
-  <v-dialog v-model="loading" :scrim="false" persistent width="auto">
-    <v-card color="primary">
-      <v-card-text>
-        Please stand by
-        <v-progress-linear indeterminate color="white" class="mb-0"></v-progress-linear>
-      </v-card-text>
-    </v-card>
-  </v-dialog>
-  <!--  <div v-if="parsedResultFile.length > 0 && parsedTraceFile.length > 0">-->
-  <!--    <TabulatorTable-->
-  <!--      title="Feature groups"-->
-  <!--      :table-data="parsedResultFile"-->
-  <!--      :column-definitions="featureGroupTableColumnDefinitions"-->
-  <!--      :index="0"-->
-  <!--      table-index-field="FeatureGroupIndex"-->
-  <!--    />-->
-  <!--  </div>-->
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue'
-import { parse, type ParseResult } from 'papaparse'
 import { Streamlit } from 'streamlit-component-lib'
 import TabulatorTable from '@/components/tabulator/TabulatorTable.vue'
+import type { Theme } from 'streamlit-component-lib'
 import type { ColumnDefinition } from 'tabulator-tables'
-import { useFileStore } from '@/stores/file'
+import { useStreamlitDataStore } from '@/stores/streamlit-data'
+import Plotly from 'plotly.js-dist-min'
 
 export default defineComponent({
   name: 'FLASHQuantView',
   components: { TabulatorTable },
   setup() {
-    const fileStore = useFileStore()
-    return { fileStore }
+    const streamlitDataStore = useStreamlitDataStore()
+    return { streamlitDataStore }
   },
   data() {
     return {
       setHeightInterval: null as NodeJS.Timer | null, // currently just for development
-      uploadedResultFile: null as File[] | null,
-      uploadedTraceFile: null as File[] | null,
-      parsedResultFile: [] as Record<string, unknown>[],
-      parsedTraceFile: [] as Record<string, unknown>[],
-      parsingResultFile: false,
-      parsingTraceFile: false,
-      featureGroupTableData: [] as Record<string, unknown>[],
       featureGroupTableColumnDefinitions: [
         { title: 'Index', field: 'FeatureGroupIndex' },
         { title: 'Monoisotopic Mass', field: 'MonoisotopicMass' },
@@ -75,86 +47,112 @@ export default defineComponent({
         { title: 'Most Abundant Charge', field: 'MostAbundantFeatureCharge' },
         { title: 'Isotope Cosine Score', field: 'IsotopeCosineScore' },
       ] as ColumnDefinition[],
+      selectedFeatureGroupIndex: undefined as number | undefined,
+      maximumIntensity: 0 as number,
     }
   },
   computed: {
-    loading(): boolean {
-      return this.parsingResultFile || this.parsingTraceFile
+    theme(): Theme | undefined {
+      return this.streamlitDataStore.theme
     },
-    resultFile(): File[] | null {
-      if (this.uploadedResultFile) return this.uploadedResultFile
-      return this.fileStore.getResultFile
+    featureGroupTableData(): Record<string, unknown>[] {
+      return this.streamlitDataStore.dataForDrawing.quant_data
     },
-    traceFile(): File[] | null {
-      if (this.uploadedTraceFile) return this.uploadedTraceFile
-      return this.fileStore.getTreaceFile
+    trace3DgraphLayout(): Partial<Plotly.Layout> {
+      return {
+        title: 'Feature group signals',
+        paper_bgcolor: this.theme?.backgroundColor,
+        plot_bgcolor: this.theme?.secondaryBackgroundColor,
+        height: 800,
+        font: {
+          color: this.theme?.textColor,
+          family: this.theme?.font,
+        },
+        scene: {
+          xaxis: { title: 'm/z' },
+          yaxis: { title: 'retention time' },
+          zaxis: { title: 'intensity', range: [0, this.maximumIntensity] },
+        },
+        showlegend: true,
+      }
     },
   },
   watch: {
-    loading(newState: boolean) {
-      if (!newState && this.parsedResultFile.length !== 0 && this.parsedTraceFile.length !== 0) {
-        console.log('files loaded')
-        this.connectTraceWithResult()
-      }
+    selectedFeatureGroupIndex() {
+      this.trace3DGraph()
     },
   },
   mounted() {
     this.setHeightInterval = setInterval(() => Streamlit.setFrameHeight(), 500)
-    this.parseFiles()
   },
   unmounted() {
     if (this.setHeightInterval !== null) clearInterval(this.setHeightInterval)
   },
   methods: {
-    parseFiles() {
-      if (this.resultFile !== null && this.traceFile !== null) {
-        if (this.uploadedResultFile) this.fileStore.updateResult(this.uploadedResultFile)
-        if (this.uploadedTraceFile) this.fileStore.updateTrace(this.uploadedTraceFile)
-        this.parsingResultFile = true
-        this.parsingTraceFile = true
-        parse(this.resultFile[0], {
-          header: true,
-          worker: true,
-          delimiter: '\t',
-          dynamicTyping: true,
-          complete: (result: ParseResult<any>) => {
-            this.parsedResultFile = result.data
-            this.parsingResultFile = false
-          },
-        })
-        parse(this.traceFile[0], {
-          header: true,
-          worker: true,
-          delimiter: '\t',
-          dynamicTyping: true,
-          complete: (result: ParseResult<any>) => {
-            this.parsedTraceFile = result.data
-            this.parsingTraceFile = false
-          },
-        })
-      }
-      // TODO: add checker for validating two input files
-    },
-    connectTraceWithResult() {
-      console.log('are we here?')
-      const oldIndices = [
-        ...new Set(this.parsedTraceFile.map((item) => item.FeatureGroupID)),
-      ] as number[]
-      let indexMap = new Map<number, number>(oldIndices.map((value) => [value, -1]))
-
-      let counter = 0
-      this.parsedResultFile.forEach((featureGroup) => {
-        const thisIndex = featureGroup.FeatureGroupIndex
-        const thisMass = featureGroup.MonoisotopicMass
-
-        // const correspondingTraces = this.parsedTraceFile.filter((item) => item.Mass == thisMass)
-        let correspondingTraces = []
-        this.parsedTraceFile.forEach((item) => {
-          if (item['Mass'] === thisMass) correspondingTraces.push(item)
-        })
-        if (correspondingTraces.length == 0) counter += 1
+    async trace3DGraph() {
+      await Plotly.newPlot('trace3Dplot', this.trace3DgraphData(), this.trace3DgraphLayout, {
+        responsive: true,
       })
-      console.log('notFound/all = ', counter, this.parsedResultFile.length)
+    },
+    updateSelectedFeatureGroupRow(selectedRow?: number) {
+      if (selectedRow !== undefined) {
+        this.selectedFeatureGroupIndex = selectedRow
+      }
+    },
+    trace3DgraphData(): Plotly.Data[] {
+      if (this.selectedFeatureGroupIndex === undefined) return []
+
+      const featureGroup = this.featureGroupTableData[this.selectedFeatureGroupIndex]
+      const traceChargeSet = [...new Set(featureGroup.Charges as number[])] as number[]
+      const traceObjects: Record<number, { mzs: number[]; rts: number[]; intys: number[] }> = {}
+      traceChargeSet.forEach((value) => {
+        traceObjects[value] = { mzs: [], rts: [], intys: [] }
+      })
+      const traceChargeArray = featureGroup.Charges as number[]
+      traceChargeArray.forEach((charge, index) => {
+        const currentMzs = (featureGroup.MZs as string[])[index].split(',').map(parseFloat)
+        const currentRts = (featureGroup.RTs as string[])[index].split(',').map(parseFloat)
+        const currentIntys = (featureGroup.Intensities as string[])[index]
+          .split(',')
+          .map(parseFloat)
+        // initializing value for current trace (for -1000 in z level)
+        traceObjects[charge].mzs.push(currentMzs[0])
+        traceObjects[charge].rts.push(currentRts[0])
+        traceObjects[charge].intys.push(-1000)
+
+        // main push
+        traceObjects[charge].mzs.push(...currentMzs)
+        traceObjects[charge].rts.push(...currentRts)
+        traceObjects[charge].intys.push(...currentIntys)
+
+        // ending value for current trace (for -1000 in z level)
+        traceObjects[charge].mzs.push(currentMzs[-1])
+        traceObjects[charge].rts.push(currentRts[-1])
+        traceObjects[charge].intys.push(-1000)
+      })
+
+      this.maximumIntensity = Math.max.apply(
+        null,
+        Object.values(traceObjects).map((object) => {
+          return Math.max.apply(null, object.intys)
+        })
+      )
+
+      let tracesForDrawing = [] as Plotly.Data[]
+      Object.entries(traceObjects).forEach(([charge, feature]) => {
+        tracesForDrawing.push({
+          x: feature.mzs,
+          y: feature.rts,
+          z: feature.intys,
+          mode: 'lines',
+          line: {
+            color: '#3366CC',
+          },
+          type: 'scatter3d',
+          name: `Charge: ${charge}`,
+        })
+      })
+      return tracesForDrawing
     },
   },
 })
