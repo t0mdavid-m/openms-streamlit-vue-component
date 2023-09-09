@@ -1,8 +1,13 @@
 <template>
-  <div v-if="streamlitDataStore.args">
+  <div v-if="components !== undefined && components.length > 0">
     <ComponentsLayout :components="components" />
   </div>
-  <div v-else><FLASHQuantView /></div>
+  <div class="d-flex w-100" style="height: 400px;" v-else>
+    <v-alert class="h-50 ma-16 pr-16" icon="mdi-application-variable-outline" title="FLASHViewer loading" type="info">
+      <v-progress-linear indeterminate></v-progress-linear>
+      Text
+    </v-alert>
+  </div>
 </template>
 
 <script lang="ts">
@@ -11,12 +16,10 @@ import { useStreamlitDataStore } from './stores/streamlit-data'
 import { Streamlit, type RenderData } from 'streamlit-component-lib'
 import type { FlashViewerComponent } from './types/grid-layout'
 import ComponentsLayout from './components/ui/ComponentsLayout.vue'
-import FLASHQuantView from '@/components/flashQuant/FLASHQuantView.vue'
 
 export default defineComponent({
   name: 'App',
   components: {
-    FLASHQuantView,
     ComponentsLayout,
   },
   setup() {
@@ -30,12 +33,13 @@ export default defineComponent({
     }
   },
   computed: {
-    components(): FlashViewerComponent[][] {
+    components(): FlashViewerComponent[][] | undefined {
       return this.streamlitDataStore.args?.components
     },
   },
   created() {
     Streamlit.setComponentReady()
+    Streamlit.setFrameHeight(500)
     Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, this.updateStreamlitData)
   },
   mounted() {
@@ -51,12 +55,8 @@ export default defineComponent({
     Streamlit.setFrameHeight()
   },
   methods: {
-    updateStreamlitData(event: EventTargetShim.Event): void {
-      console.log((event as CustomEvent<RenderData>).detail)
+    async updateStreamlitData(event: EventTargetShim.Event): Promise<void> {
       this.streamlitDataStore.updateRenderData((event as CustomEvent<RenderData>).detail)
-    },
-    setFrameHeight() {
-      Streamlit.setFrameHeight()
     },
   },
 })

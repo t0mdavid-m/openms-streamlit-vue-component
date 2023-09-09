@@ -55,7 +55,7 @@ export default defineComponent({
             return (element.tagName !== 'BUTTON');
           },
           bgcolor: this.streamlitDataStore.theme?.backgroundColor ?? '#fff'
-        }).then((dataUrl) => {
+        }).then((dataUrl: string) => {
           const element = this.$refs.downloadLink as HTMLAnchorElement
           element.download = 'FLASHViewer-sequence.svg'
           element.href = dataUrl
