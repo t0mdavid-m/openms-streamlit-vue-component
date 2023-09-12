@@ -1,11 +1,6 @@
 <template>
-  <TabulatorTable
-    :table-data="tableData"
-    :column-definitions="columnDefinitions"
-    :title="args.title"
-    :index="index"
-    @row-selected="updateSelectedScan"
-  />
+  <TabulatorTable :table-data="tableData" :column-definitions="columnDefinitions" title="Scan Table" :index="index"
+    @row-selected="updateSelectedScan" />
 </template>
 
 <script lang="ts">
