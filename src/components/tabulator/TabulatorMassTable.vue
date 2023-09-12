@@ -1,12 +1,6 @@
 <template>
-  <TabulatorTable
-    :table-data="tableData"
-    :column-definitions="columnDefinitions"
-    :title="args.title"
-    :index="index"
-    :selected-row-index-from-listening="selectedMassIndex"
-    @row-selected="updateSelectedMass"
-  />
+  <TabulatorTable :table-data="tableData" :column-definitions="columnDefinitions" title="Mass Table" :index="index"
+    :selected-row-index-from-listening="selectedMassIndex" @row-selected="updateSelectedMass" />
 </template>
 
 <script lang="ts">

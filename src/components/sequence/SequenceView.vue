@@ -72,17 +72,11 @@
     </div>
     <div id="sequence-view-table">
       <template v-if="fragmentTableTitle !== ''">
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr">
-          <!-- empty div in front of others for styling -->
-          <div class="d-flex justify-center" style="grid-column: 2 / span 1">
-            <h4>{{ fragmentTableTitle }}</h4>
-          </div>
-          <div class="d-flex justify-end" style="grid-column: 3 / span 1">
-            <h4>% Residue cleavage: {{ residueCleavagePercentage.toFixed(3) }}%</h4>
-          </div>
-        </div>
         <TabulatorTable :table-data="fragmentTableData" :column-definitions="fragmentTableColumnDefinitions"
-          :index="index" :selected-row-index-from-listening="selectedFragTableRowIndex" />
+          :index="index" :selected-row-index-from-listening="selectedFragTableRowIndex">
+          <template #default>{{ fragmentTableTitle }}</template>
+          <template #end-title-row>% Residue cleavage: {{ residueCleavagePercentage.toFixed(3) }}%</template>
+        </TabulatorTable>
       </template>
     </div>
   </v-sheet>

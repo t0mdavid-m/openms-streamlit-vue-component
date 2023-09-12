@@ -1,5 +1,5 @@
 <template>
-  <div :id="id" style="height: 100%; width: 100%"></div>
+  <div :id="id" style="width: 100%"></div>
 </template>
 
 <script lang="ts">
@@ -69,7 +69,7 @@ export default defineComponent({
     },
     layout(): Partial<Plotly.Layout> {
       return {
-        title: this.args.title,
+        title: `<b>${this.args.title}</b>`,
         showlegend: this.args.showLegend,
         xaxis: {
           title: 'Retention Time',
