@@ -20,6 +20,11 @@ import { useStreamlitDataStore } from '@/stores/streamlit-data'
 export default defineComponent({
   name: 'TabulatorTable',
   props: {
+    tableIndexField: {
+      type: String,
+      required: false,
+      default: () => 'id',
+    },
     tableData: {
       type: Object as PropType<Record<string, unknown>[]>,
       required: true,
@@ -74,18 +79,18 @@ export default defineComponent({
       }
     },
     preparedTableData(): Record<string, unknown>[] {
-      if (this.tableData.length > 0 && this.tableData[0].id === undefined) {
+      if (this.tableData.length > 0 && this.tableData[0][this.tableIndexField] === undefined) {
         const tableDataWithId: Record<string, unknown>[] = []
         this.tableData.forEach((row, index) => {
           tableDataWithId.push({
             ...row,
-            id: index,
+            [this.tableIndexField]: index,
           })
         })
         return tableDataWithId
       }
       return this.tableData
-    }
+    },
   },
   watch: {
     tableData() {
@@ -103,6 +108,7 @@ export default defineComponent({
   methods: {
     drawTable() {
       this.tabulator = new Tabulator(`#${this.id}`, {
+        index: this.tableIndexField,
         data: this.preparedTableData,
         minHeight: 50,
         maxHeight: this.title ? 320 : 310,

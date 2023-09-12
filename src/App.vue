@@ -2,6 +2,7 @@
   <div v-if="streamlitDataStore.args">
     <ComponentsLayout :components="components" />
   </div>
+  <div v-else><FLASHQuantView /></div>
 </template>
 
 <script lang="ts">
@@ -10,10 +11,12 @@ import { useStreamlitDataStore } from './stores/streamlit-data'
 import { Streamlit, type RenderData } from 'streamlit-component-lib'
 import type { FlashViewerComponent } from './types/grid-layout'
 import ComponentsLayout from './components/ui/ComponentsLayout.vue'
+import FLASHQuantView from '@/components/flashQuant/FLASHQuantView.vue'
 
 export default defineComponent({
   name: 'App',
   components: {
+    FLASHQuantView,
     ComponentsLayout,
   },
   setup() {
@@ -49,6 +52,7 @@ export default defineComponent({
   },
   methods: {
     updateStreamlitData(event: EventTargetShim.Event): void {
+      console.log((event as CustomEvent<RenderData>).detail)
       this.streamlitDataStore.updateRenderData((event as CustomEvent<RenderData>).detail)
     },
     setFrameHeight() {
