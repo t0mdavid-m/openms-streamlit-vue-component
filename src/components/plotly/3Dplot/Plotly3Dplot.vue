@@ -36,6 +36,10 @@ export default defineComponent({
     id(): string {
       return `graph-${this.index}`
     },
+    title(): string {
+      if (this.selectedScanRow === undefined) return ''
+      return this.selectedMassRow === undefined ? 'Precursor signals' : 'Mass signals'
+    },
     theme(): Theme | undefined {
       return this.streamlitDataStore.theme
     },
@@ -101,7 +105,7 @@ export default defineComponent({
     },
     layout(): Partial<Plotly.Layout> {
       return {
-        title: this.args.title,
+        title: `<b>${this.title}</b>`,
         paper_bgcolor: this.theme?.backgroundColor,
         plot_bgcolor: this.theme?.secondaryBackgroundColor,
         height: 800,

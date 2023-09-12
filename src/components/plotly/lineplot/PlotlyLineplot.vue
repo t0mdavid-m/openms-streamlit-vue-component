@@ -101,7 +101,7 @@ export default defineComponent({
     },
     layout(): Partial<Plotly.Layout> {
       return {
-        title: this.args.title,
+        title: `<b>${this.args.title}</b>`,
         showlegend: false,
         height: 400,
         xaxis: {
