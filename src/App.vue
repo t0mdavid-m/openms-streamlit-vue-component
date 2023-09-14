@@ -2,10 +2,15 @@
   <div v-if="components !== undefined && components.length > 0">
     <ComponentsLayout :components="components" />
   </div>
-  <div class="d-flex w-100" style="height: 400px;" v-else>
-    <v-alert class="h-50 ma-16 pr-16" icon="mdi-application-variable-outline" title="FLASHViewer loading" type="info">
+  <div v-else class="d-flex w-100" style="height: 400px">
+    <v-alert
+      class="h-50 ma-16 pr-16"
+      icon="mdi-application-variable-outline"
+      title="FLASHViewer loading"
+      type="info"
+    >
       <v-progress-linear indeterminate></v-progress-linear>
-      Text
+      Please wait...
     </v-alert>
   </div>
 </template>
@@ -29,7 +34,7 @@ export default defineComponent({
   },
   data() {
     return {
-      timer: undefined as NodeJS.Timer | undefined
+      timer: undefined as NodeJS.Timer | undefined,
     }
   },
   computed: {

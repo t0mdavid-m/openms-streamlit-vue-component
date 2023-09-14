@@ -21,7 +21,7 @@
     "uuid": "^9.0.0",
     "vue": "^3.2.47",
     "vue-router": "^4.1.6",
-    "vuetify": "^3.3.13"
+    "vuetify": "^3.3.16"
   },
   "devDependencies": {
     "@mdi/font": "^7.2.96",

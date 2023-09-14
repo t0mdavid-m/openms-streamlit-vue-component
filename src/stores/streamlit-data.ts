@@ -27,7 +27,6 @@ export const useStreamlitDataStore = defineStore('streamlit-data', {
       Object.entries(newDataframes).forEach((df) => {
         this.dataForDrawing[df[0] as DATAFRAMES] = JSON.parse(df[1])
       })
-      console.log(this.dataForDrawing)
     },
   },
 })

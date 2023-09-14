@@ -1,6 +1,12 @@
 <template>
-  <TabulatorTable :table-data="tableData" :column-definitions="columnDefinitions" title="Scan Table" :index="index"
-    @row-selected="updateSelectedScan" />
+  <TabulatorTable
+    :table-data="tableData"
+    :column-definitions="columnDefinitions"
+    title="Scan Table"
+    :index="index"
+    table-layout-param="fitColumns"
+    @row-selected="updateSelectedScan"
+  />
 </template>
 
 <script lang="ts">
@@ -10,6 +16,7 @@ import { useStreamlitDataStore } from '@/stores/streamlit-data'
 import type { TabulatorTableArguments } from './tabulator-table'
 import { useSelectionStore } from '@/stores/selection'
 import TabulatorTable from './TabulatorTable.vue'
+import { toFixedFormatter } from '@/components/tabulator/tabulator-formatters'
 
 export default defineComponent({
   name: 'TabulatorScanTable',
@@ -37,8 +44,8 @@ export default defineComponent({
         { title: 'Index', field: 'id' },
         { title: 'Scan Number', field: 'Scan' },
         { title: 'MS Level', field: 'MSLevel' },
-        { title: 'Retention time', field: 'RT' },
-        { title: 'Precursor Mass', field: 'PrecursorMass' },
+        { title: 'Retention time', field: 'RT', formatter: toFixedFormatter() },
+        { title: 'Precursor Mass', field: 'PrecursorMass', formatter: toFixedFormatter() },
         { title: '#Masses', field: '#Masses' },
       ] as ColumnDefinition[],
     }
