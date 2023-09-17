@@ -202,9 +202,6 @@ export default defineComponent({
     }
   },
   computed: {
-    ExtraFragmentType() {
-      return ExtraFragmentType
-    },
     theme(): Theme | undefined {
       return this.streamlitDataStore.theme
     },

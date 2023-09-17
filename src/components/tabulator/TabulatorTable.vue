@@ -26,7 +26,7 @@
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
-import { TabulatorFull as Tabulator, type ColumnDefinition, Options } from 'tabulator-tables'
+import { TabulatorFull as Tabulator, type ColumnDefinition, type Options } from 'tabulator-tables'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
 
 export default defineComponent({
