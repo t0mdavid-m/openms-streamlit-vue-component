@@ -2,6 +2,7 @@ import type { DATAFRAMES, FlashViewerComponent, GridLayout } from '@/types/grid-
 import type { SequenceData } from '@/types/sequence-data'
 import { defineStore } from 'pinia'
 import type { RenderData, Theme } from 'streamlit-component-lib'
+import type { InternalFragmentData } from '@/types/internal-fragment-data'
 
 export const useStreamlitDataStore = defineStore('streamlit-data', {
   state: () => ({
@@ -16,6 +17,8 @@ export const useStreamlitDataStore = defineStore('streamlit-data', {
     allDataForDrawing: (state) => state.dataForDrawing,
     sequenceData: (state): SequenceData | undefined =>
       state.dataForDrawing.sequence_data as unknown as SequenceData | undefined,
+    internalFragmentData: (state): InternalFragmentData | undefined =>
+      state.dataForDrawing.internal_fragment_data as unknown as InternalFragmentData | undefined,
     theme: (state): Theme | undefined => state.renderData?.theme,
   },
   actions: {
