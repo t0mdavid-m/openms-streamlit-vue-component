@@ -53,7 +53,7 @@
                     <v-checkbox
                       v-for="category in Object.keys(ionTypesExtra)"
                       :key="category"
-                      v-model="ionTypesExtra[category as ExtraFragmentType]"
+                      v-model="ionTypesExtra[category]"
                       hide-details
                       density="comfortable"
                       :label="category"
