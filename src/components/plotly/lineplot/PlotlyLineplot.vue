@@ -1,5 +1,5 @@
 <template>
-  <div :id="id" style="width=100%"></div>
+  <div :id="id" style="width: 100%"></div>
 </template>
 
 <script lang="ts">
@@ -37,7 +37,17 @@ export default defineComponent({
     selectedRow(): number | undefined {
       return this.selectionStore.selectedScanIndex
     },
-    xColmun(): string {
+    xAxisLabel(): string {
+      switch (this.args.title) {
+        case 'Annotated spectrum':
+          return 'm/z'
+        case 'Deconvolved spectrum':
+          return 'Monoisotopic Mass'
+        default:
+          return ''
+      }
+    },
+    xColumn(): string {
       switch (this.args.title) {
         case 'Annotated spectrum':
           return 'MonoMass_Anno'
@@ -52,9 +62,9 @@ export default defineComponent({
       if (this.selectedRow === undefined) {
         return xValues
       }
-      ; (
+      ;(
         this.streamlitDataStore.allDataForDrawing.per_scan_data[this.selectedRow][
-        this.xColmun
+          this.xColumn
         ] as number[]
       ).forEach((num) => {
         xValues.push(num, num, num)
@@ -78,9 +88,9 @@ export default defineComponent({
         return yValues
       }
 
-      ; (
+      ;(
         this.streamlitDataStore.allDataForDrawing.per_scan_data[this.selectedRow][
-        this.yColmun
+          this.yColmun
         ] as number[]
       ).forEach((num) => {
         yValues.push(-10000000, num, -10000000)
@@ -105,7 +115,7 @@ export default defineComponent({
         showlegend: false,
         height: 400,
         xaxis: {
-          title: 'Monoisotopic Mass',
+          title: this.xAxisLabel,
           showgrid: false,
         },
         yaxis: {
@@ -136,14 +146,21 @@ export default defineComponent({
     async graph() {
       await Plotly.newPlot(this.id, this.data, this.layout, {
         modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'],
-        modeBarButtonsToAdd: [{
-          title: 'Download as SVG',
-          name: 'toImageSvg',
-          icon: Plotly.Icons.camera,
-          click: (plotlyElement) => {
-            Plotly.downloadImage(plotlyElement, { filename: 'FLASHViewer-lineplot', height: 400, width: 1200, format: 'svg' })
-          }
-        }]
+        modeBarButtonsToAdd: [
+          {
+            title: 'Download as SVG',
+            name: 'toImageSvg',
+            icon: Plotly.Icons.camera,
+            click: (plotlyElement) => {
+              Plotly.downloadImage(plotlyElement, {
+                filename: 'FLASHViewer-lineplot',
+                height: 400,
+                width: 1200,
+                format: 'svg',
+              })
+            },
+          },
+        ],
       })
     },
   },

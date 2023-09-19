@@ -4,7 +4,7 @@
       <TabulatorTable
         v-if="featureGroupTableData"
         title="Feature groups"
-        index="0"
+        :index="0"
         :table-data="featureGroupTableData"
         :column-definitions="featureGroupTableColumnDefinitions"
         table-index-field="FeatureGroupIndex"

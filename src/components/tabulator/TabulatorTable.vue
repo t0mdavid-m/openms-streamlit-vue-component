@@ -19,7 +19,6 @@
           <slot name="end-title-row"></slot>
         </div>
       </div>
-
     </div>
     <div :id="id" :class="tableClasses" @click="onTableClick"></div>
   </div>
@@ -27,7 +26,7 @@
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
-import { TabulatorFull as Tabulator, type ColumnDefinition } from 'tabulator-tables'
+import { TabulatorFull as Tabulator, type ColumnDefinition, type Options } from 'tabulator-tables'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
 
 export default defineComponent({
@@ -58,6 +57,11 @@ export default defineComponent({
       type: Number,
       required: false,
       default: () => undefined,
+    },
+    tableLayoutParam: {
+      type: String as PropType<Options['layout']>,
+      required: false,
+      default: () => 'fitDataFill',
     },
   },
   emits: ['rowSelected'],
@@ -124,8 +128,12 @@ export default defineComponent({
         data: this.preparedTableData,
         minHeight: 50,
         maxHeight: this.title ? 320 : 310,
-        layout: 'fitColumns',
+        layout: this.tableLayoutParam,
         selectable: 1,
+        columnDefaults: {
+          title: '',
+          hozAlign: 'right',
+        },
         columns: this.columnDefinitions.map((col) => {
           col.headerTooltip = true
           return col
@@ -146,7 +154,7 @@ export default defineComponent({
     },
     downloadTable() {
       if (this.tabulator !== undefined) this.tabulator.download('csv', `${this.title}.csv`)
-    }
+    },
   },
 })
 </script>
@@ -161,4 +169,9 @@ export default defineComponent({
 //$rowAltBackgroundColor:#262730;
 
 @import 'tabulator-tables/src/scss/themes/bootstrap/tabulator_bootstrap4';
+
+.tabulator-col-title,
+.tabulator-cell {
+  font-size: 14px;
+}
 </style>

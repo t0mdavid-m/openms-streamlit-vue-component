@@ -1,6 +1,12 @@
 <template>
-  <TabulatorTable :table-data="tableData" :column-definitions="columnDefinitions" title="Mass Table" :index="index"
-    :selected-row-index-from-listening="selectedMassIndex" @row-selected="updateSelectedMass" />
+  <TabulatorTable
+    :table-data="tableData"
+    :column-definitions="columnDefinitions"
+    title="Mass Table"
+    :index="index"
+    :selected-row-index-from-listening="selectedMassIndex"
+    @row-selected="updateSelectedMass"
+  />
 </template>
 
 <script lang="ts">
@@ -10,6 +16,7 @@ import type { TabulatorTableArguments } from './tabulator-table'
 import { useSelectionStore } from '@/stores/selection'
 import TabulatorTable from './TabulatorTable.vue'
 import type { ColumnDefinition } from 'tabulator-tables'
+import { toFixedFormatter } from '@/components/tabulator/tabulator-formatters'
 
 export default defineComponent({
   name: 'TabulatorMassTable',
@@ -35,15 +42,15 @@ export default defineComponent({
     return {
       columnDefinitions: [
         { title: 'Index', field: 'id' },
-        { title: 'Monoisotopic mass', field: 'MonoMass' },
-        { title: 'Sum intensity', field: 'SumIntensity' },
+        { title: 'Monoisotopic mass', field: 'MonoMass', formatter: toFixedFormatter() },
+        { title: 'Sum intensity', field: 'SumIntensity', formatter: toFixedFormatter() },
         { title: 'Min charge', field: 'MinCharges' },
         { title: 'Max charge', field: 'MaxCharges' },
         { title: 'Min isotope', field: 'MinIsotopes' },
         { title: 'Max isotope', field: 'MaxIsotopes' },
-        { title: 'Cosine score', field: 'CosineScore' },
-        { title: 'SNR', field: 'SNR' },
-        { title: 'QScore', field: 'QScore' },
+        { title: 'Cosine score', field: 'CosineScore', formatter: toFixedFormatter() },
+        { title: 'SNR', field: 'SNR', formatter: toFixedFormatter() },
+        { title: 'QScore', field: 'QScore', formatter: toFixedFormatter() },
       ] as ColumnDefinition[],
       selectedMassIndex: undefined as number | undefined,
     }
