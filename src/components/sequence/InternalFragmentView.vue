@@ -19,38 +19,19 @@
             <v-list-item>
               <v-list-item-title>Fragments display style</v-list-item-title>
               <div class="d-flex">
-                <v-switch
-                  v-model="fragmentDisplayOverlay"
-                  hide-details
-                  :label="`${fragmentDisplayOverlayLabels}`"
-                  class="mr-4"
-                />
+                <v-switch v-model="fragmentDisplayOverlay" hide-details :label="`${fragmentDisplayOverlayLabels}`"
+                  class="mr-4" />
               </div>
             </v-list-item>
             <v-list-item>
-              <v-list-item-title
-                >Opacity of each fragment (If overlay display style)</v-list-item-title
-              >
+              <v-list-item-title>Opacity of each fragment (If overlay display style)</v-list-item-title>
               <div :style="{ background: `rgba(240, 164, 65, ${fragOpacity})` }">
-                <v-slider
-                  v-model="fragOpacity"
-                  class="align-center ml-4"
-                  :max="fragOpacityMax"
-                  :min="fragOpacityMin"
-                  hide-details
-                >
+                <v-slider v-model="fragOpacity" class="align-center ml-4" :max="fragOpacityMax" :min="fragOpacityMin"
+                  hide-details>
                   <template #append>
-                    <v-text-field
-                      v-model="fragOpacity"
-                      hide-details
-                      single-line
-                      :min="fragOpacityMin"
-                      :max="fragOpacityMax"
-                      step="0.01"
-                      density="compact"
-                      type="number"
-                      class="textFieldFontSize"
-                    ></v-text-field>
+                    <v-text-field v-model="fragOpacity" hide-details single-line :min="fragOpacityMin"
+                      :max="fragOpacityMax" step="0.01" density="compact" type="number"
+                      class="textFieldFontSize"></v-text-field>
                   </template>
                 </v-slider>
               </div>
@@ -58,21 +39,10 @@
             <v-list-item>
               <v-list-item-title>Fragment mass tolerance</v-list-item-title>
               <div class="d-flex justify-space-between">
-                <v-switch
-                  v-model="fragmentMassToleranceUnit"
-                  true-value="ppm"
-                  false-value="Da"
-                  hide-details
-                  :label="`${fragmentMassToleranceUnit}`"
-                  class="mr-4"
-                />
-                <v-text-field
-                  v-model="fragmentMassTolerance"
-                  type="number"
-                  hide-details="auto"
-                  label="mass tolerance"
-                  @change="updateMassTolerance"
-                ></v-text-field>
+                <v-switch v-model="fragmentMassToleranceUnit" true-value="ppm" false-value="Da" hide-details
+                  :label="`${fragmentMassToleranceUnit}`" class="mr-4" />
+                <v-text-field v-model="fragmentMassTolerance" type="number" hide-details="auto" label="mass tolerance"
+                  @change="updateMassTolerance"></v-text-field>
               </div>
             </v-list-item>
           </v-list>
@@ -82,65 +52,31 @@
   </div>
   <v-sheet class="pa-4 rounded-lg" style="max-width: 97%" :theme="theme?.base ?? 'light'" border>
     <div id="internal-fragment-part">
-      <div
-        class="d-flex"
-        style="border-bottom: white; border-bottom-width: 1px; border-bottom-style: solid"
-      >
-        <div
-          v-for="(aa, aaIndex) in sequence"
-          :key="`${aa}-${aaIndex}`"
-          class="d-flex justify-center align-center fragment-segment sequence-text"
-          :style="fragmentStyle"
-        >
+      <div class="d-flex" style="border-bottom: white; border-bottom-width: 1px; border-bottom-style: solid">
+        <div v-for="(aa, aaIndex) in sequence" :key="`${aa}-${aaIndex}`"
+          class="d-flex justify-center align-center fragment-segment sequence-text" :style="fragmentStyle">
           {{ aa }}
         </div>
       </div>
       <div :style="fragmentTypeContainerStyle">
-        <div
-          v-for="fragmentData in byData"
-          :key="fragmentData.mass"
-          class="d-flex"
-          :style="fragmentTypeOverlayStyle"
-        >
-          <div
-            v-for="(aa, aaIndex) in sequence"
-            :key="`${aa}-${aaIndex}`"
+        <div v-for="fragmentData in byData" :key="fragmentData.mass" class="d-flex" :style="fragmentTypeOverlayStyle">
+          <div v-for="(aa, aaIndex) in sequence" :key="`${aa}-${aaIndex}`"
             :class="fragmentClasses(aaIndex, fragmentData.start, fragmentData.end, 'by-fragment')"
-            style="border: 1px solid white"
-            :style="fragmentStyle"
-          ></div>
+            style="border: 1px solid white" :style="fragmentStyle"></div>
         </div>
       </div>
       <div :style="fragmentTypeContainerStyle">
-        <div
-          v-for="fragmentData in cyData"
-          :key="fragmentData.mass"
-          class="d-flex"
-          :style="fragmentTypeOverlayStyle"
-        >
-          <div
-            v-for="(aa, aaIndex) in sequence"
-            :key="`${aa}-${aaIndex}`"
+        <div v-for="fragmentData in cyData" :key="fragmentData.mass" class="d-flex" :style="fragmentTypeOverlayStyle">
+          <div v-for="(aa, aaIndex) in sequence" :key="`${aa}-${aaIndex}`"
             :class="fragmentClasses(aaIndex, fragmentData.start, fragmentData.end, 'cy-fragment')"
-            style="border: 1px solid white"
-            :style="fragmentStyle"
-          ></div>
+            style="border: 1px solid white" :style="fragmentStyle"></div>
         </div>
       </div>
       <div :style="fragmentTypeContainerStyle">
-        <div
-          v-for="fragmentData in bzData"
-          :key="fragmentData.mass"
-          class="d-flex"
-          :style="fragmentTypeOverlayStyle"
-        >
-          <div
-            v-for="(aa, aaIndex) in sequence"
-            :key="`${aa}-${aaIndex}`"
+        <div v-for="fragmentData in bzData" :key="fragmentData.mass" class="d-flex" :style="fragmentTypeOverlayStyle">
+          <div v-for="(aa, aaIndex) in sequence" :key="`${aa}-${aaIndex}`"
             :class="fragmentClasses(aaIndex, fragmentData.start, fragmentData.end, 'bz-fragment')"
-            style="border: 1px solid white"
-            :style="fragmentStyle"
-          ></div>
+            style="border: 1px solid white" :style="fragmentStyle"></div>
         </div>
       </div>
     </div>
@@ -152,6 +88,7 @@ import { defineComponent } from 'vue'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
 import { useSelectionStore } from '@/stores/selection'
 import type { InternalFragmentData } from '@/types/internal-fragment-data'
+import type { StyleValue } from 'vue'
 
 type CombinedFragmentData = { mass: number; start: number; end: number }
 
@@ -207,7 +144,7 @@ export default defineComponent({
         //'--amino-acid-cell-color': this.theme?.textColor ?? '#fff',
       }
     },
-    fragmentTypeOverlayStyle() {
+    fragmentTypeOverlayStyle(): StyleValue {
       return {
         position: this.fragmentDisplayOverlay ? 'absolute' : 'static',
       }
@@ -390,6 +327,7 @@ export default defineComponent({
 .cy-fragment:extend(.fragment-segment) {
   background: #12871d;
 }
+
 .cy-fragment-overlayed:extend(.cy-fragment) {
   opacity: var(--frag-block-opacity-value);
 }
@@ -397,6 +335,7 @@ export default defineComponent({
 .bz-fragment:extend(.fragment-segment) {
   background: #7831cc;
 }
+
 .bz-fragment-overlayed:extend(.bz-fragment) {
   opacity: var(--frag-block-opacity-value);
 }
@@ -405,6 +344,7 @@ export default defineComponent({
   background: transparent;
   aspect-ratio: 1;
 }
+
 .v-input.textFieldFontSize {
   width: 100px;
 }
