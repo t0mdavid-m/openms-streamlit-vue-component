@@ -322,9 +322,6 @@ export default defineComponent({
       return combinedByData
     },
   },
-  mounted() {
-    console.log(this.streamlitData.internalFragmentData)
-  },
   methods: {
     updateMassTolerance(event: Event) {
       this.fragmentMassTolerance = Number.parseInt((event.target as any).value as string)
