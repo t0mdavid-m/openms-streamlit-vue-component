@@ -3,7 +3,7 @@ import type { PlotlyHeatmapArguments } from '@/components/plotly/heatmap/plotly-
 import type { PlotlyLineArguments } from '@/components/plotly/lineplot/plotly-lineplot'
 import type { Plotly3DplotArguments } from '@/components/plotly/3Dplot/plotly-3Dplot'
 import type { SequenceViewArgs } from '@/components/sequence/sequence-view'
-import type { InternalFragmentViewArgs } from '@/components/sequence/internal-fragment-view'
+import type { InternalFragmentMapArgs } from '@/components/sequence/internal-fragment-map'
 
 export type DATAFRAMES =
   | 'raw_heatmap_df'
@@ -20,7 +20,7 @@ export type FlashViewerComponent = {
     | PlotlyLineArguments
     | Plotly3DplotArguments
     | SequenceViewArgs
-    | InternalFragmentViewArgs
+    | InternalFragmentMapArgs
 }
 
 export type GridLayout = {

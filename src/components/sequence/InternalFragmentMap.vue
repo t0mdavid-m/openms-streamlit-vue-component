@@ -1,6 +1,6 @@
 <template>
   <div class="d-flex justify-center">
-    <h4>Internal Fragment View</h4>
+    <h4>Internal Fragment Map</h4>
   </div>
   <div class="d-flex justify-space-between">
     <div class="d-flex justify-start align-center px-4 mb-4">
@@ -157,7 +157,7 @@ import type { StyleValue } from 'vue'
 type CombinedFragmentData = { mass: number; start: number; end: number }
 
 export default defineComponent({
-  name: 'InternalFragmentView',
+  name: 'InternalFragmentMap',
   props: {
     index: {
       type: Number,
