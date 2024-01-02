@@ -39,9 +39,9 @@ export default defineComponent({
     },
     xAxisLabel(): string {
       switch (this.args.title) {
-        case 'Annotated spectrum':
+        case 'Annotated Spectrum':
           return 'm/z'
-        case 'Deconvolved spectrum':
+        case 'Deconvolved Spectrum':
           return 'Monoisotopic Mass'
         default:
           return ''
@@ -49,9 +49,9 @@ export default defineComponent({
     },
     xColumn(): string {
       switch (this.args.title) {
-        case 'Annotated spectrum':
+        case 'Annotated Spectrum':
           return 'MonoMass_Anno'
-        case 'Deconvolved spectrum':
+        case 'Deconvolved Spectrum':
           return 'MonoMass'
         default:
           return ''
@@ -74,9 +74,9 @@ export default defineComponent({
     },
     yColmun(): string {
       switch (this.args.title) {
-        case 'Annotated spectrum':
+        case 'Annotated Spectrum':
           return 'SumIntensity_Anno'
-        case 'Deconvolved spectrum':
+        case 'Deconvolved Spectrum':
           return 'SumIntensity'
         default:
           return ''
@@ -87,7 +87,6 @@ export default defineComponent({
       if (this.selectedRow === undefined) {
         return yValues
       }
-
       ;(
         this.streamlitDataStore.allDataForDrawing.per_scan_data[this.selectedRow][
           this.yColmun
