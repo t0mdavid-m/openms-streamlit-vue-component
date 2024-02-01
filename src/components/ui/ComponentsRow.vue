@@ -20,6 +20,16 @@
         :args="component.componentArgs"
         :index="componentIndex(index)"
       />
+      <TabulatorProteinTable
+        v-else-if="component.componentArgs.componentName === 'TabulatorProteinTable'"
+        :args="component.componentArgs"
+        :index="componentIndex(index)"
+      />
+      <TabulatorTagTable
+        v-else-if="component.componentArgs.componentName === 'TabulatorTagTable'"
+        :args="component.componentArgs"
+        :index="componentIndex(index)"
+      />
       <PlotlyLineplot
         v-else-if="component.componentArgs.componentName === 'PlotlyLineplot'"
         :args="component.componentArgs"
@@ -49,6 +59,8 @@ import TabulatorScanTable from '@/components/tabulator/TabulatorScanTable.vue'
 import PlotlyLineplot from '@/components/plotly/lineplot/PlotlyLineplot.vue'
 import Plotly3Dplot from '@/components/plotly/3Dplot/Plotly3Dplot.vue'
 import TabulatorMassTable from '@/components/tabulator/TabulatorMassTable.vue'
+import TabulatorProteinTable from '@/components/tabulator/TabulatorProteinTable.vue'
+import TabulatorTagTable from '@/components/tabulator/TabulatorTagTable.vue'
 import SequenceView from '@/components/sequence/SequenceView.vue'
 import { defineComponent, type PropType } from 'vue'
 import type { FlashViewerComponent } from '@/types/grid-layout'
@@ -65,6 +77,8 @@ export default defineComponent({
     TabulatorScanTable,
     PlotlyLineplot,
     TabulatorMassTable,
+    TabulatorProteinTable,
+    TabulatorTagTable,
     SequenceView,
   },
   props: {
@@ -82,6 +96,8 @@ export default defineComponent({
       componentHeightMapping: {
         TabulatorScanTable: 'height-any',
         TabulatorMassTable: 'height-any',
+        TabulatorProteinTable: 'height-any',
+        TabulatorTagTable: 'height-any',
         PlotlyLineplot: 'height-any',
         PlotlyHeatmap: 'height-any',
         Plotly3Dplot: 'height-any',

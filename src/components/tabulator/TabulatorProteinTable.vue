@@ -1,0 +1,74 @@
+<template>
+  <TabulatorTable
+    :table-data="tableData"
+    :column-definitions="columnDefinitions"
+    title="Protein Table"
+    :index="index"
+    :selected-row-index-from-listening="selectedRow"
+    :default-row=1
+    @row-selected="updateSelectedProtein"
+  />
+</template>
+
+<script lang="ts">
+import { defineComponent, type PropType } from 'vue'
+import { useStreamlitDataStore } from '@/stores/streamlit-data'
+import type { TabulatorTableArguments } from './tabulator-table'
+import { useSelectionStore } from '@/stores/selection'
+import TabulatorTable from './TabulatorTable.vue'
+import type { ColumnDefinition } from 'tabulator-tables'
+import { toFixedFormatter } from '@/components/tabulator/tabulator-formatters'
+
+export default defineComponent({
+  name: 'TabulatorProteinTable',
+  components: {
+    TabulatorTable,
+  },
+  props: {
+    args: {
+      type: Object as PropType<TabulatorTableArguments>,
+      required: true,
+    },
+    index: {
+      type: Number,
+      required: true,
+    },
+  },
+  setup() {
+    const streamlitDataStore = useStreamlitDataStore()
+    const selectionStore = useSelectionStore()
+    return { streamlitDataStore, selectionStore }
+  },
+  data() {
+    return {
+      columnDefinitions: [
+        //{ title: 'Index', field: 'id' },
+        { title: 'Accession', field: 'accession'},
+        { title: 'Description', field: 'description'},
+        { title: 'Length', field: 'length'},
+      ] as ColumnDefinition[],
+    }
+  },
+  computed: {
+    selectedRow(): number | undefined {
+      console.log(this.selectionStore.selectedProteinIndex)
+      return this.selectionStore.selectedProteinIndex
+    },
+    tableData(): Record<string, unknown>[] {
+      const rows = this.streamlitDataStore.dataForDrawing.protein_table
+      rows.forEach((row) => (row['id'] = row['index']))
+      return rows
+    },
+  },
+  methods: {
+    updateSelectedProtein(selectedRow?: number) {
+      if (selectedRow !== undefined) {
+        this.selectionStore.updateSelectedProtein(selectedRow)
+        this.selectionStore.updateSelectedTag(undefined)
+        this.selectionStore.updateTagData(undefined)
+      }
+    },
+  },
+},
+)
+</script>

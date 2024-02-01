@@ -1,4 +1,4 @@
 export type TabulatorTableArguments = {
-  componentName: 'TabulatorScanTable' | 'TabulatorMassTable'
+  componentName: 'TabulatorScanTable' | 'TabulatorMassTable' | 'TabulatorProteinTable' | 'TabulatorTagTable'
   title?: string
 }

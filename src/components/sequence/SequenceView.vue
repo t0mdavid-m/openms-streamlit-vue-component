@@ -4,6 +4,7 @@
   </div>
 
   <v-sheet class="pa-4 rounded-lg" style="max-width: 97%" :theme="theme?.base ?? 'light'" border>
+    <div class="sequence-and-scale">
     <div id="sequence-part">
       <div class="d-flex justify-space-evenly">
         <template v-if="precursorData.length != 0">
@@ -106,6 +107,12 @@
         </template>
       </div>
     </div>
+    <div class="scale-container" title="Coverage">
+      <div class="scale-text"> {{ maxCoverage + "x" }}</div>
+      <div class="scale"></div>
+      <div class="scale-text">1x</div>
+    </div>
+  </div>
     <div id="sequence-view-table">
       <template v-if="fragmentTableTitle !== ''">
         <TabulatorTable
@@ -123,12 +130,13 @@
       </template>
     </div>
   </v-sheet>
+  
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
-import { useSelectionStore } from '@/stores/selection'
+import { useSelectionStore, type TagData } from '@/stores/selection'
 import { useModificationStore } from '@/stores/variable-modification'
 import type { Theme } from 'streamlit-component-lib'
 import TabulatorTable from '@/components/tabulator/TabulatorTable.vue'
@@ -205,14 +213,50 @@ export default defineComponent({
     theme(): Theme | undefined {
       return this.streamlitDataStore.theme
     },
+    selectedSequence(): number | undefined {
+      const pid = this.selectionStore.selectedProteinIndex
+      if (typeof pid === 'number') {
+        return pid
+      }
+      return undefined
+    },
+    selectedTag(): TagData | undefined {
+      return this.selectionStore.selectedTag
+    },
     sequence(): string[] {
-      return this.streamlitDataStore.sequenceData?.sequence ?? []
+      const key = this.selectedSequence;
+      if (typeof key === 'number') {
+        return this.streamlitDataStore.sequenceData?.[key]?.sequence ?? []
+      }
+      return []
+    },
+    coverage(): number[] {
+      const key = this.selectedSequence;
+      if (typeof key === 'number') {
+        return this.streamlitDataStore.sequenceData?.[key]?.coverage ?? []
+      }
+      return []
+    },
+    maxCoverage() : number {
+      const key = this.selectedSequence;
+      if (typeof key === 'number') {
+        return  this.streamlitDataStore.sequenceData?.[key]?.maxCoverage ?? -1
+      }
+      return -1
     },
     theoreticalMass(): number {
-      return this.streamlitDataStore.sequenceData?.theoretical_mass ?? 0
+      const key = this.selectedSequence;
+      if (typeof key === 'number') {
+        return this.streamlitDataStore.sequenceData?.[key]?.theoretical_mass ?? 0
+      }
+      return 0
     },
     fixedModificationSites(): string[] {
-      return this.streamlitDataStore.sequenceData?.fixed_modifications ?? []
+      const key = this.selectedSequence;
+      if (typeof key === 'number') {
+        return this.streamlitDataStore.sequenceData?.[key]?.fixed_modifications ?? []
+      }
+      return []
     },
     variableModifications(): Record<number, number> {
       return this.variableModData.variableModifications ?? {}
@@ -254,10 +298,14 @@ export default defineComponent({
     },
   },
   watch: {
-    selectedScanIndex() {
+    sequence() {
+      this.selectionStore.updateSelectedAA(undefined)
       this.preparePrecursorInfo()
       this.initializeSequenceObjects()
       this.prepareFragmentTable()
+    },
+    selectedTag() {
+      this.initializeSequenceObjects()
     },
     fragmentMassTolerance() {
       this.prepareFragmentTable()
@@ -283,6 +331,7 @@ export default defineComponent({
     },
   },
   mounted() {
+    this.selectionStore.updateSelectedAA(undefined)
     this.initializeSequenceObjects()
     this.preparePrecursorInfo()
     this.prepareFragmentTable()
@@ -433,14 +482,18 @@ export default defineComponent({
     },
     initializeSequenceObjects(): void {
       this.sequenceObjects = []
-      this.sequence.forEach((aa) => {
+      this.sequence.forEach((aa, index) => {
+        const cov = this.coverage[index]
+        const start = this.selectedTag?.startPos == index
+        const end = this.selectedTag?.endPos == index
         this.sequenceObjects.push({
           aminoAcid: aa,
+          coverage: cov,
           aIon: false,
-          bIon: false,
+          bIon: end,
           cIon: false,
           xIon: false,
-          yIon: false,
+          yIon: start,
           zIon: false,
           extraTypes: [],
         })
@@ -510,4 +563,39 @@ export default defineComponent({
 .grid-width-40 {
   grid-template-columns: repeat(42, 1fr);
 }
+
+.sequence-and-scale {
+    display: flex;
+    align-items: center;
+  }
+
+  .scale-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #sequence-part {
+    flex-grow: 1;
+  }
+
+  .scale {
+    width: 60px;
+    height: 100px; /* Adjust the width as needed */
+    background: linear-gradient(
+      to top, 
+      rgba(228, 87, 46, 0.1),
+      rgba(228, 87, 46, 0.2) 10%,
+      rgba(228, 87, 46, 0.4) 20%,
+      rgba(228, 87, 46, 0.6) 40%,
+      rgba(228, 87, 46, 0.8) 70%,
+      rgba(228, 87, 46, 1) 100%
+    );
+  }
+
+  .scale-text {
+    text-align: center;
+    font-size: 14pt;
+    font-weight: bold;
+  }
 </style>

@@ -1,5 +1,7 @@
 export type SequenceData = {
   sequence: string[]
+  coverage: number[]
+  maxCoverage: number
   theoretical_mass: number
   fixed_modifications: string[]
   fragment_masses_a: number[]
@@ -9,3 +11,7 @@ export type SequenceData = {
   fragment_masses_y: number[]
   fragment_masses_z: number[]
 }
+
+export type SequenceDataDictionary = {
+  [key: number]: SequenceData;
+};
