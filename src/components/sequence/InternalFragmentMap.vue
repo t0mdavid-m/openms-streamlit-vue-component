@@ -12,8 +12,12 @@
       <div class="mr-4">cy</div>
     </div>
     <div class="d-flex justify-end px-4 mb-4" style="max-width: 97%">
-      <v-btn id="settings-button" variant="text" icon="mdi-cog" size="medium"></v-btn>
-      <v-menu :close-on-content-click="false" activator="#settings-button" location="bottom">
+      <v-btn id="internal-frag-settings-button" variant="text" icon="mdi-cog" size="medium"></v-btn>
+      <v-menu
+        :close-on-content-click="false"
+        activator="#internal-frag-settings-button"
+        location="bottom"
+      >
         <v-card min-width="300">
           <v-list>
             <v-list-item>
