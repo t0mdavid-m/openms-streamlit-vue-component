@@ -36,43 +36,6 @@
                     tick-size="4"
                   ></v-slider>
                 </v-list-item>
-                <v-list-item>
-                  <v-list-item-title>Fragment ion types</v-list-item-title>
-                  <div class="d-flex justify-space-evenly">
-                    <v-checkbox
-                      v-for="(category, ionIndex) in ionTypes"
-                      :key="category.text"
-                      v-model="category.selected"
-                      hide-details
-                      density="comfortable"
-                      :label="category.text"
-                      @click="toggleIonTypeSelected(ionIndex)"
-                    >
-                    </v-checkbox>
-                  </div>
-                  <div class="d-flex justify-space-evenly">
-                    <v-checkbox
-                      v-for="category in Object.keys(ionTypesExtra)"
-                      :key="category"
-                      v-model="ionTypesExtra[category]"
-                      hide-details
-                      density="comfortable"
-                      :label="category"
-                    >
-                    </v-checkbox>
-                  </div>
-                </v-list-item>
-                <v-list-item>
-                  <v-list-item-title>Fragment mass tolerance</v-list-item-title>
-                  <v-text-field
-                    v-model="fragmentMassTolerance"
-                    type="number"
-                    hide-details="auto"
-                    label="mass tolerance in ppm"
-                    @change="updateMassTolerance"
-                  ></v-text-field>
-                  <!-- TODO: add "required" -->
-                </v-list-item>
               </v-list>
             </v-card>
           </v-menu>
@@ -302,39 +265,39 @@ export default defineComponent({
       this.selectionStore.updateSelectedAA(undefined)
       this.preparePrecursorInfo()
       this.initializeSequenceObjects()
-      this.prepareFragmentTable()
+      //this.prepareFragmentTable()
     },
     selectedTag() {
       this.initializeSequenceObjects()
     },
     fragmentMassTolerance() {
-      this.prepareFragmentTable()
+      //this.prepareFragmentTable()
     },
     ionTypes: {
       handler() {
         this.initializeSequenceObjects()
-        this.prepareFragmentTable()
+        //this.prepareFragmentTable()
       },
       deep: true,
     },
     ionTypesExtra: {
       handler() {
         this.initializeSequenceObjects()
-        this.prepareFragmentTable()
+        //this.prepareFragmentTable()
       },
       deep: true,
     },
     variableModifications() {
       this.preparePrecursorInfo()
       this.initializeSequenceObjects()
-      this.prepareFragmentTable()
+      //this.prepareFragmentTable()
     },
   },
   mounted() {
     this.selectionStore.updateSelectedAA(undefined)
     this.initializeSequenceObjects()
     this.preparePrecursorInfo()
-    this.prepareFragmentTable()
+    //this.prepareFragmentTable()
   },
   methods: {
     updateMassTolerance(event: Event) {
@@ -368,11 +331,12 @@ export default defineComponent({
       }
       const deltaMassDa = Math.abs(theoreticalMass - observedMass)
 
-      this.precursorData = [
-        `Theoretical mass: ${theoreticalMass.toFixed(2)}`,
-        `Observed mass :${observedMass.toFixed(2)}`,
-        `Δ Mass (Da) :${deltaMassDa.toFixed(2)}`,
-      ]
+      // this.precursorData = [
+      //   `Theoretical mass: ${theoreticalMass.toFixed(2)}`,
+      //   `Observed mass :${observedMass.toFixed(2)}`,
+      //   `Δ Mass (Da) :${deltaMassDa.toFixed(2)}`,
+      // ]
+      
     },
     prepareFragmentTable(): void {
       if (this.selectedScanIndex == undefined) {

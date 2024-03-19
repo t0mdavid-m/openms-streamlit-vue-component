@@ -51,7 +51,6 @@ export default defineComponent({
   },
   computed: {
     selectedRow(): number | undefined {
-      console.log(this.selectionStore.selectedProteinIndex)
       return this.selectionStore.selectedProteinIndex
     },
     tableData(): Record<string, unknown>[] {
@@ -62,6 +61,8 @@ export default defineComponent({
   },
   methods: {
     updateSelectedProtein(selectedRow?: number) {
+      console.log('SelectedProtein!!')
+      console.log(selectedRow)
       if (selectedRow !== undefined) {
         this.selectionStore.updateSelectedProtein(selectedRow)
         this.selectionStore.updateSelectedTag(undefined)

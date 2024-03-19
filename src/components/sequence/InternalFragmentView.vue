@@ -250,7 +250,6 @@ export default defineComponent({
         combinedByData
       )
 
-      console.log(combinedByData)
 
       return combinedByData
     },
@@ -283,7 +282,6 @@ export default defineComponent({
         combinedByData
       )
 
-      console.log(combinedByData)
 
       return combinedByData
     },
@@ -316,7 +314,6 @@ export default defineComponent({
         combinedByData
       )
 
-      console.log(combinedByData)
 
       return combinedByData
     },

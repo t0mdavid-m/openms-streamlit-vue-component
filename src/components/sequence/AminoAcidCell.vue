@@ -125,7 +125,6 @@ export default defineComponent({
       return 1
     },
     theme(): Theme | undefined {
-      console.log(this.streamlitData.theme)
       return this.streamlitData.theme
     },
     aminoAcid(): string {
