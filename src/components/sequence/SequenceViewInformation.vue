@@ -109,6 +109,7 @@ export default defineComponent({
         yIon: this.yIon,
         zIon: this.zIon,
         extraTypes: this.extraFragTypes(),
+        coverage: 0
       }
     },
   },

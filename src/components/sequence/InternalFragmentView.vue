@@ -152,6 +152,9 @@ import { defineComponent } from 'vue'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
 import { useSelectionStore } from '@/stores/selection'
 import type { InternalFragmentData } from '@/types/internal-fragment-data'
+import type { CSSProperties } from 'vue'
+
+
 
 type CombinedFragmentData = { mass: number; start: number; end: number }
 
@@ -189,7 +192,7 @@ export default defineComponent({
       return this.streamlitData.theme
     },
     internalFragmentData() {
-      return this.streamlitData.internalFragmentData
+      return this.streamlitData.internalFragmentData 
     },
     sequence() {
       return this.internalFragmentData?.sequence
@@ -207,7 +210,7 @@ export default defineComponent({
         //'--amino-acid-cell-color': this.theme?.textColor ?? '#fff',
       }
     },
-    fragmentTypeOverlayStyle() {
+    fragmentTypeOverlayStyle() : CSSProperties {
       return {
         position: this.fragmentDisplayOverlay ? 'absolute' : 'static',
       }

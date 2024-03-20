@@ -353,6 +353,7 @@ export default defineComponent({
         return
       }
 
+
       // get the observed mass table info
       const observed_masses = selectedScanInfo.MonoMass as number[]
 
@@ -362,9 +363,14 @@ export default defineComponent({
       this.ionTypes
         .filter((iontype) => iontype.selected)
         .forEach((iontype) => {
-          const theoretical_frags = this.streamlitDataStore.sequenceData?.[
-            `fragment_masses_${iontype.text}` as keyof SequenceData
-          ] as number[]
+
+
+          const propName = `fragment_masses_${iontype.text}` as keyof SequenceData;
+          let theoretical_frags: number[] = [];
+
+          if (typeof this.streamlitDataStore.sequenceData !== 'undefined') {
+            theoretical_frags = (this.streamlitDataStore.sequenceData as any)[propName] as number[];
+}
 
           for (
             let theoIndex = 0, FragSize = theoretical_frags.length;
