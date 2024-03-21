@@ -153,7 +153,7 @@ export default defineComponent({
     });
     },
     selectDefaultRow() {
-      if (this.defaultRow !== undefined && this.defaultRow >= 1) {
+      if (this.defaultRow !== undefined && this.defaultRow >= 0) {
           this.tabulator?.selectRow([this.defaultRow])
           this.onTableClick()
       }
