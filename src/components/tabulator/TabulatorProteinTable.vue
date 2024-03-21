@@ -5,7 +5,7 @@
     title="Protein Table"
     :index="index"
     :selected-row-index-from-listening="selectedRow"
-    :default-row=1
+    :default-row=0
     @row-selected="updateSelectedProtein"
   />
 </template>
