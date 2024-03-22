@@ -145,9 +145,10 @@ export default defineComponent({
       if (this.selectedScan === undefined) {
         return mzSignals
       }
+
       mzSignals = this.streamlitDataStore.allDataForDrawing.per_scan_data[
         this.selectedScan
-      ]['CombinedPeaks'] as number[][][]
+      ]['SignalPeaks'] as number[][][]
       return mzSignals
     },
     yColmun(): string {
