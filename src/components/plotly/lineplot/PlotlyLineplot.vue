@@ -729,7 +729,7 @@ export default defineComponent({
         }
         const mzs = this.highlightedValues[selectedMass].mzs
         for (let j = 0; j < mzs.length; j++) {
-          if (Math.abs(value - mzs[j]) <= 0.03) {
+          if (Math.abs(value - mzs[j]) <= 1e-5) {
             return selectedMass
           }
         }
