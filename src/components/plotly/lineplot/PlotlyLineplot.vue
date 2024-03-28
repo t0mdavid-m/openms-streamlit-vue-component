@@ -445,7 +445,8 @@ export default defineComponent({
 
 
         if (sequence !== undefined) {
-          AA = sequence[i]
+          const reverseIndex = sequence.length - 1 - i;
+          AA = sequence[reverseIndex];
         }
 
         if (xStart > xEnd) {
@@ -476,7 +477,7 @@ export default defineComponent({
             axref: 'x',
             ayref: 'y',
             showarrow: true,
-            arrowhead: 2,
+            arrowhead: 0,
             arrowsize: 1,
             arrowwidth: 2,
             arrowcolor: fillcolor
@@ -493,7 +494,7 @@ export default defineComponent({
             axref: 'x',
             ayref: 'y',
             showarrow: true,
-            arrowhead: 0,
+            arrowhead: 2,
             arrowsize: 1,
             arrowwidth: 2,
             arrowcolor: fillcolor
