@@ -529,11 +529,11 @@ export default defineComponent({
       let traces : Plotly.Data[] = []
 
       traces.push({
-        x: this.plotData.selected_x,
-        y: this.plotData.selected_y,
+        x: this.plotData.unhighlighted_x,
+        y: this.plotData.unhighlighted_y,
         mode: 'lines',
         type: 'scatter',
-        marker: { color: '#F3A712' }
+        marker: { color: 'lightblue' }
       })
       
       traces.push({
@@ -545,12 +545,14 @@ export default defineComponent({
       })
 
       traces.push({
-        x: this.plotData.unhighlighted_x,
-        y: this.plotData.unhighlighted_y,
+        x: this.plotData.selected_x,
+        y: this.plotData.selected_y,
         mode: 'lines',
         type: 'scatter',
-        marker: { color: 'lightblue' }
+        marker: { color: '#F3A712' }
       })
+
+
 
       if (this.args.title === "Deconvolved Spectrum") {
         const buttonTraces = this.annotationData.traces
