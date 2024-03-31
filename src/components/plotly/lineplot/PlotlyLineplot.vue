@@ -187,7 +187,7 @@ export default defineComponent({
       // TODO: Refactor in Python + Hashmaps, okay for now though
       for (let i = 0; i < values.length; i++) {
         for (let j = 0; j < this.xMassValues.length; j++) {
-          if (Math.abs(values[i] - this.xMassValues[j]) <= 0.05) {
+          if (Math.abs(values[i] - this.xMassValues[j]) <= 1e-5) {
             positions.push(j)
             break
           }
@@ -737,7 +737,7 @@ export default defineComponent({
       }
       else {
         for (let i = 0; i < this.highlightedValues.length; i++) {
-          if (Math.abs(value - this.highlightedValues[i].mass) <= 0.05) {
+          if (Math.abs(value - this.highlightedValues[i].mass) <= 1e-5) {
             return i
           }
         }      
