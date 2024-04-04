@@ -259,7 +259,7 @@ export default defineComponent({
           unhighlighted_y.push(y_val)
         }
       }
-      return {
+      return { 
         'unhighlighted_x' : unhighlighted_x,
         'unhighlighted_y' : unhighlighted_y,
         'selected_x' : selected_x,
