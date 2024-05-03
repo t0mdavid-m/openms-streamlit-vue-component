@@ -36,20 +36,34 @@ export default defineComponent({
     theme(): Theme | undefined {
       return this.streamlitDataStore.theme
     },
+    dataForHeatmapDrawing(): Record<string, unknown>[] {
+      switch (this.args.title) {
+        case 'Raw MS1 Heatmap':
+          return this.streamlitDataStore.allDataForDrawing.raw_heatmap_df
+        case 'Deconvolved MS1 Heatmap':
+          return this.streamlitDataStore.allDataForDrawing.deconv_heatmap_df
+        default:
+          return []
+      }
+    },
+    yAxisLabel(): string {
+      switch (this.args.title) {
+        case 'Raw MS1 Heatmap':
+          return 'm/z'
+        case 'Deconvolved MS1 Heatmap':
+          return 'Monoisotopic Mass'
+        default:
+          return ''
+      }
+    },
     xValues(): number[] {
-      return this.streamlitDataStore.allDataForDrawing.deconv_heatmap_df.map(
-        (row) => row.rt as number
-      )
+      return this.dataForHeatmapDrawing.map((row) => row.rt as number)
     },
     yValues(): number[] {
-      return this.streamlitDataStore.allDataForDrawing.deconv_heatmap_df.map(
-        (row) => row.mass as number
-      )
+      return this.dataForHeatmapDrawing.map((row) => row.mass as number)
     },
     markerColorValues(): number[] {
-      return this.streamlitDataStore.allDataForDrawing.deconv_heatmap_df.map(
-        (row) => row.intensity as number
-      )
+      return this.dataForHeatmapDrawing.map((row) => row.intensity as number)
     },
     data(): Plotly.Data[] {
       return [
@@ -76,7 +90,7 @@ export default defineComponent({
           title: 'Retention Time',
         },
         yaxis: {
-          title: 'Monoisotopic Mass',
+          title: this.yAxisLabel,
         },
         paper_bgcolor: this.theme?.backgroundColor,
         plot_bgcolor: this.theme?.secondaryBackgroundColor,
