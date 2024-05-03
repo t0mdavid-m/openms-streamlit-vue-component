@@ -4,6 +4,7 @@
   </div>
 
   <v-sheet class="pa-4 rounded-lg" style="max-width: 97%" :theme="theme?.base ?? 'light'" border>
+    <div class="sequence-and-scale">
     <div id="sequence-part">
       <div class="d-flex justify-space-evenly">
         <template v-if="precursorData.length != 0">
@@ -18,35 +19,22 @@
       <div class="d-flex justify-end px-4 mb-4">
         <div>
           <SvgScreenshot element-id="sequence-part" />
-          <SequenceViewInformation />
+          <SequenceViewInformationTagger />
           <v-btn id="settings-button" variant="text" icon="mdi-cog" size="large"></v-btn>
           <v-menu :close-on-content-click="false" activator="#settings-button" location="bottom">
             <v-card min-width="300">
               <v-list>
                 <v-list-item>
                   <v-list-item-title># amino acids per row</v-list-item-title>
-                  <v-slider v-model="rowWidth" :ticks="tickLabels" :min="20" :max="40" step="5" show-ticks="always"
-                    tick-size="4"></v-slider>
-                </v-list-item>
-                <v-list-item>
-                  <v-list-item-title>Fragment ion types</v-list-item-title>
-                  <div class="d-flex justify-space-evenly">
-                    <v-checkbox v-for="(category, ionIndex) in ionTypes" :key="category.text" v-model="category.selected"
-                      hide-details density="comfortable" :label="category.text" @click="toggleIonTypeSelected(ionIndex)">
-                    </v-checkbox>
-                  </div>
-                  <div class="d-flex justify-space-evenly">
-                    <v-checkbox v-for="category in Object.keys(ionTypesExtra)" :key="category"
-                      v-model="ionTypesExtra[category as ExtraFragmentType]" hide-details density="comfortable"
-                      :label="category">
-                    </v-checkbox>
-                  </div>
-                </v-list-item>
-                <v-list-item>
-                  <v-list-item-title>Fragment mass tolerance</v-list-item-title>
-                  <v-text-field v-model="fragmentMassTolerance" type="number" hide-details="auto"
-                    label="mass tolerance in ppm" @change="updateMassTolerance"></v-text-field>
-                  <!-- TODO: add "required" -->
+                  <v-slider
+                    v-model="rowWidth"
+                    :ticks="tickLabels"
+                    :min="20"
+                    :max="40"
+                    step="5"
+                    show-ticks="always"
+                    tick-size="4"
+                  ></v-slider>
                 </v-list-item>
               </v-list>
             </v-card>
@@ -55,56 +43,82 @@
       </div>
       <div class="pb-4 px-2" :class="gridClasses" style="width: 100%; max-width: 100%">
         <template v-for="(aminoAcidObj, aa_index) in sequenceObjects" :key="aa_index">
-          <div v-if="aa_index !== 0 && aa_index % rowWidth === 0" class="d-flex justify-center align-center">
+          <div
+            v-if="aa_index !== 0 && aa_index % rowWidth === 0"
+            class="d-flex justify-center align-center"
+          >
             {{ aa_index + 1 }}
           </div>
           <ProteinTerminalCell v-if="aa_index === 0" protein-terminal="N-term" :index="-1" />
-          <AminoAcidCell :index="aa_index" :sequence-object="aminoAcidObj"
-            :fixed-modification="fixedModification(aminoAcidObj.aminoAcid)" @selected="aminoAcidSelected" />
-          <div v-if="aa_index % rowWidth === rowWidth - 1 && aa_index !== sequence.length - 1"
-            class="d-flex justify-center align-center">
+          <AminoAcidCellTagger
+            :index="aa_index"
+            :sequence-object="aminoAcidObj"
+            :fixed-modification="fixedModification(aminoAcidObj.aminoAcid)"
+            @selected="aminoAcidSelected"
+          />
+          <div
+            v-if="aa_index % rowWidth === rowWidth - 1 && aa_index !== sequence.length - 1"
+            class="d-flex justify-center align-center"
+          >
             {{ aa_index + 1 }}
           </div>
-          <ProteinTerminalCell v-if="aa_index === sequence.length - 1" protein-terminal="C-term"
-            :index="sequence.length" />
+          <ProteinTerminalCell
+            v-if="aa_index === sequence.length - 1"
+            protein-terminal="C-term"
+            :index="sequence.length"
+          />
         </template>
       </div>
     </div>
+    <div class="scale-container" title="Coverage">
+      <div class="scale-text"> {{ maxCoverage + "x" }}</div>
+      <div class="scale"></div>
+      <div class="scale-text">1x</div>
+    </div>
+  </div>
     <div id="sequence-view-table">
       <template v-if="fragmentTableTitle !== ''">
-        <TabulatorTable :table-data="fragmentTableData" :column-definitions="fragmentTableColumnDefinitions"
-          :index="index" :selected-row-index-from-listening="selectedFragTableRowIndex" table-layout-param="fitColumns">
+        <TabulatorTable
+          :table-data="fragmentTableData"
+          :column-definitions="fragmentTableColumnDefinitions"
+          :index="index"
+          :selected-row-index-from-listening="selectedFragTableRowIndex"
+          table-layout-param="fitColumns"
+        >
           <template #default>{{ fragmentTableTitle }}</template>
-          <template #end-title-row>% Residue cleavage: {{ residueCleavagePercentage.toFixed(3) }}%</template>
+          <template #end-title-row
+            >% Residue cleavage: {{ residueCleavagePercentage.toFixed(3) }}%</template
+          >
         </TabulatorTable>
       </template>
     </div>
   </v-sheet>
+  
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
-import { useSelectionStore } from '@/stores/selection'
+import { useSelectionStore, type TagData } from '@/stores/selection'
 import { useModificationStore } from '@/stores/variable-modification'
 import type { Theme } from 'streamlit-component-lib'
 import TabulatorTable from '@/components/tabulator/TabulatorTable.vue'
-import AminoAcidCell from './AminoAcidCell.vue'
+import AminoAcidCellTagger from './AminoAcidCellTagger.vue'
 import ProteinTerminalCell from './ProteinTerminalCell.vue'
 import type { ColumnDefinition } from 'tabulator-tables'
 import type { SequenceData } from '@/types/sequence-data'
-import type { SequenceObject } from '@/types/sequence-object'
+import type { SequenceObject } from '@/types/sequence-objectTagger'
 import SvgScreenshot from '../ui/SvgScreenshot.vue'
-import SequenceViewInformation from '@/components/sequence/SequenceViewInformation.vue'
+import SequenceViewInformationTagger from '@/components/sequence/SequenceViewInformationTagger.vue'
 import { extraFragmentTypeObject, type ExtraFragmentType } from '@/components/sequence/modification'
 import { toFixedFormatter } from '@/components/tabulator/tabulator-formatters'
 
 export default defineComponent({
-  name: 'SequenceView',
+  name: 'SequenceViewTagger',
   components: {
-    SequenceViewInformation,
+    SequenceViewInformationTagger,
     TabulatorTable,
-    AminoAcidCell,
+    AminoAcidCellTagger,
     ProteinTerminalCell,
     SvgScreenshot,
   },
@@ -162,14 +176,50 @@ export default defineComponent({
     theme(): Theme | undefined {
       return this.streamlitDataStore.theme
     },
+    selectedSequence(): number | undefined {
+      const pid = this.selectionStore.selectedProteinIndex
+      if (typeof pid === 'number') {
+        return pid
+      }
+      return undefined
+    },
+    selectedTag(): TagData | undefined {
+      return this.selectionStore.selectedTag
+    },
     sequence(): string[] {
-      return this.streamlitDataStore.sequenceData?.sequence ?? []
+      const key = this.selectedSequence;
+      if (typeof key === 'number') {
+        return this.streamlitDataStore.sequenceData?.[key]?.sequence ?? []
+      }
+      return []
+    },
+    coverage(): number[] {
+      const key = this.selectedSequence;
+      if (typeof key === 'number') {
+        return this.streamlitDataStore.sequenceData?.[key]?.coverage ?? []
+      }
+      return []
+    },
+    maxCoverage() : number {
+      const key = this.selectedSequence;
+      if (typeof key === 'number') {
+        return  this.streamlitDataStore.sequenceData?.[key]?.maxCoverage ?? -1
+      }
+      return -1
     },
     theoreticalMass(): number {
-      return this.streamlitDataStore.sequenceData?.theoretical_mass ?? 0
+      const key = this.selectedSequence;
+      if (typeof key === 'number') {
+        return this.streamlitDataStore.sequenceData?.[key]?.theoretical_mass ?? 0
+      }
+      return 0
     },
     fixedModificationSites(): string[] {
-      return this.streamlitDataStore.sequenceData?.fixed_modifications ?? []
+      const key = this.selectedSequence;
+      if (typeof key === 'number') {
+        return this.streamlitDataStore.sequenceData?.[key]?.fixed_modifications ?? []
+      }
+      return []
     },
     variableModifications(): Record<number, number> {
       return this.variableModData.variableModifications ?? {}
@@ -211,38 +261,43 @@ export default defineComponent({
     },
   },
   watch: {
-    selectedScanIndex() {
+    sequence() {
+      this.selectionStore.updateSelectedAA(undefined)
       this.preparePrecursorInfo()
       this.initializeSequenceObjects()
-      this.prepareFragmentTable()
+      //this.prepareFragmentTable()
+    },
+    selectedTag() {
+      this.initializeSequenceObjects()
     },
     fragmentMassTolerance() {
-      this.prepareFragmentTable()
+      //this.prepareFragmentTable()
     },
     ionTypes: {
       handler() {
         this.initializeSequenceObjects()
-        this.prepareFragmentTable()
+        //this.prepareFragmentTable()
       },
       deep: true,
     },
     ionTypesExtra: {
       handler() {
         this.initializeSequenceObjects()
-        this.prepareFragmentTable()
+        //this.prepareFragmentTable()
       },
       deep: true,
     },
     variableModifications() {
       this.preparePrecursorInfo()
       this.initializeSequenceObjects()
-      this.prepareFragmentTable()
+      //this.prepareFragmentTable()
     },
   },
   mounted() {
+    this.selectionStore.updateSelectedAA(undefined)
     this.initializeSequenceObjects()
     this.preparePrecursorInfo()
-    this.prepareFragmentTable()
+    //this.prepareFragmentTable()
   },
   methods: {
     updateMassTolerance(event: Event) {
@@ -276,11 +331,12 @@ export default defineComponent({
       }
       const deltaMassDa = Math.abs(theoreticalMass - observedMass)
 
-      this.precursorData = [
-        `Theoretical mass: ${theoreticalMass.toFixed(2)}`,
-        `Observed mass :${observedMass.toFixed(2)}`,
-        `Δ Mass (Da) :${deltaMassDa.toFixed(2)}`,
-      ]
+      // this.precursorData = [
+      //   `Theoretical mass: ${theoreticalMass.toFixed(2)}`,
+      //   `Observed mass :${observedMass.toFixed(2)}`,
+      //   `Δ Mass (Da) :${deltaMassDa.toFixed(2)}`,
+      // ]
+      
     },
     prepareFragmentTable(): void {
       if (this.selectedScanIndex == undefined) {
@@ -297,6 +353,7 @@ export default defineComponent({
         return
       }
 
+
       // get the observed mass table info
       const observed_masses = selectedScanInfo.MonoMass as number[]
 
@@ -306,9 +363,14 @@ export default defineComponent({
       this.ionTypes
         .filter((iontype) => iontype.selected)
         .forEach((iontype) => {
-          const theoretical_frags = this.streamlitDataStore.sequenceData?.[
-            `fragment_masses_${iontype.text}` as keyof SequenceData
-          ] as number[]
+
+
+          const propName = `fragment_masses_${iontype.text}` as keyof SequenceData;
+          let theoretical_frags: number[] = [];
+
+          if (typeof this.streamlitDataStore.sequenceData !== 'undefined') {
+            theoretical_frags = (this.streamlitDataStore.sequenceData as any)[propName] as number[];
+}
 
           for (
             let theoIndex = 0, FragSize = theoretical_frags.length;
@@ -390,14 +452,18 @@ export default defineComponent({
     },
     initializeSequenceObjects(): void {
       this.sequenceObjects = []
-      this.sequence.forEach((aa) => {
+      this.sequence.forEach((aa, index) => {
+        const cov = this.coverage[index]
+        const start = this.selectedTag?.startPos == index
+        const end = this.selectedTag?.endPos == index
         this.sequenceObjects.push({
           aminoAcid: aa,
+          coverage: cov,
           aIon: false,
-          bIon: false,
+          bIon: end,
           cIon: false,
           xIon: false,
-          yIon: false,
+          yIon: start,
           zIon: false,
           extraTypes: [],
         })
@@ -436,7 +502,7 @@ export default defineComponent({
   grid-template-rows: auto;
   gap: 4px 4px;
 
-  >div {
+  > div {
     aspect-ratio: 1;
   }
 }
@@ -467,4 +533,40 @@ export default defineComponent({
 .grid-width-40 {
   grid-template-columns: repeat(42, 1fr);
 }
+
+.sequence-and-scale {
+    display: flex;
+    align-items: center;
+  }
+
+  .scale-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #sequence-part {
+    flex-grow: 1;
+  }
+
+  .scale {
+    width: 60px;
+    height: 100px; /* Adjust the width as needed */
+    background: linear-gradient(
+      to top, 
+      rgba(228, 87, 46, 0.1),
+      rgba(228, 87, 46, 0.2) 10%,
+      rgba(228, 87, 46, 0.4) 20%,
+      rgba(228, 87, 46, 0.6) 40%,
+      rgba(228, 87, 46, 0.8) 70%,
+      rgba(228, 87, 46, 1) 100%
+    );
+  }
+
+  .scale-text {
+    text-align: center;
+    font-size: 14pt;
+    font-weight: bold;
+  }
 </style>
+@/types/sequence-data
