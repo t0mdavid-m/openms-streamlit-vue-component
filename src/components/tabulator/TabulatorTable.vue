@@ -65,8 +65,8 @@ export default defineComponent({
     },
     defaultRow: {
       type: Number,
-      required: false,
-      default: () => undefined,
+      required: true,
+      default: () => 0,
     },
   },
   emits: ['rowSelected'],
