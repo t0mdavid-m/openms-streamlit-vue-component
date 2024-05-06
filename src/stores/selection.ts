@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 
 
-export interface TagData {
+export type TagData = {
   sequence : String
   nTerminal: Boolean
   masses: number[]

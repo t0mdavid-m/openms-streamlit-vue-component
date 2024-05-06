@@ -14,7 +14,7 @@ import { useSelectionStore } from '@/stores/selection'
 import { PassThrough } from 'stream'
 import { initCustomFormatter } from 'vue'
 
-interface PlotData {
+type PlotData = {
   unhighlighted_x: number[]
   unhighlighted_y: number[]
   highlighted_x: number[]
@@ -23,13 +23,13 @@ interface PlotData {
   selected_y: number[]
 }
 
-interface PlotAnnotations {
+type PlotAnnotations = {
   shapes : Partial<Plotly.Shape>[]
   annotations: Partial<Plotly.Annotations>[]
   traces: Plotly.Data[],
 }
 
-interface highlightData {
+type highlightData = {
   mass : number,
   mzs : number[],
   intensity : number[]
@@ -282,7 +282,7 @@ export default defineComponent({
 
       if (this.args.title === 'Annotated Spectrum') {
 
-        interface MzIntensity {
+        type MzIntensity = {
           mz: number;
           intensity: number;
         }
