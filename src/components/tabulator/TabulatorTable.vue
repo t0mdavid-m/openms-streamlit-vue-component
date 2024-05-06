@@ -63,6 +63,11 @@ export default defineComponent({
       required: false,
       default: () => 'fitDataFill',
     },
+    defaultRow: {
+      type: Number,
+      required: true,
+      default: () => 0,
+    },
   },
   emits: ['rowSelected'],
   setup() {
@@ -72,6 +77,7 @@ export default defineComponent({
   data() {
     return {
       tabulator: undefined as Tabulator | undefined,
+      initialized: 0 as number,
     }
   },
   computed: {
@@ -139,6 +145,18 @@ export default defineComponent({
           return col
         }),
       })
+    this.tabulator.on("tableBuilt", () => {
+      if (this.initialized < 3) {
+        this.initialized += 1
+        this.selectDefaultRow()
+      }
+    });
+    },
+    selectDefaultRow() {
+      if (this.defaultRow >= 0) {
+          this.tabulator?.selectRow([this.defaultRow])
+          this.onTableClick()
+      }
     },
     onTableClick() {
       const selectedRow = this.tabulator?.getSelectedRows()[0]?.getIndex()

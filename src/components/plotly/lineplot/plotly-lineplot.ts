@@ -1,4 +1,4 @@
 export type PlotlyLineArguments = {
-  componentName: 'PlotlyLineplot'
+  componentName: 'PlotlyLineplot' | 'PlotlyLineplotTagger'
   title: string
 }

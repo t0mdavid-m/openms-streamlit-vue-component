@@ -1,23 +1,19 @@
 <template>
   <div class="d-flex justify-center">
-    <h4>Internal Fragment Map</h4>
+    <h4>Internal Fragment View</h4>
   </div>
   <div class="d-flex justify-space-between">
     <div class="d-flex justify-start align-center px-4 mb-4">
-      <div class="by-fragment-legend mr-2" style="border: 1px solid white"></div>
+      <div class="by-fragment mr-2" style="border: 1px solid white" :style="fragmentStyle"></div>
       <div class="mr-4">by/cz</div>
-      <div class="bz-fragment-legend mr-2" style="border: 1px solid white"></div>
+      <div class="bz-fragment mr-2" style="border: 1px solid white" :style="fragmentStyle"></div>
       <div class="mr-4">bz</div>
-      <div class="cy-fragment-legend mr-2" style="border: 1px solid white"></div>
+      <div class="cy-fragment mr-2" style="border: 1px solid white" :style="fragmentStyle"></div>
       <div class="mr-4">cy</div>
     </div>
     <div class="d-flex justify-end px-4 mb-4" style="max-width: 97%">
-      <v-btn id="internal-frag-settings-button" variant="text" icon="mdi-cog" size="medium"></v-btn>
-      <v-menu
-        :close-on-content-click="false"
-        activator="#internal-frag-settings-button"
-        location="bottom"
-      >
+      <v-btn id="settings-button" variant="text" icon="mdi-cog" size="medium"></v-btn>
+      <v-menu :close-on-content-click="false" activator="#settings-button" location="bottom">
         <v-card min-width="300">
           <v-list>
             <v-list-item>
@@ -157,12 +153,13 @@ import { useStreamlitDataStore } from '@/stores/streamlit-data'
 import { useSelectionStore } from '@/stores/selection'
 import type { InternalFragmentData } from '@/types/internal-fragment-data'
 import type { CSSProperties } from 'vue'
-import type { StyleValue } from 'vue'
+
+
 
 type CombinedFragmentData = { mass: number; start: number; end: number }
 
 export default defineComponent({
-  name: 'InternalFragmentMap',
+  name: 'InternalFragmentViewTagger',
   props: {
     index: {
       type: Number,
@@ -198,7 +195,7 @@ export default defineComponent({
       return this.streamlitData.internalFragmentData 
     },
     sequence() {
-      return this.streamlitData.sequenceData?.sequence
+      return this.internalFragmentData?.sequence
     },
     fragmentStyle() {
       return {
@@ -213,7 +210,7 @@ export default defineComponent({
         //'--amino-acid-cell-color': this.theme?.textColor ?? '#fff',
       }
     },
-    fragmentTypeOverlayStyle(): StyleValue {
+    fragmentTypeOverlayStyle() : CSSProperties {
       return {
         position: this.fragmentDisplayOverlay ? 'absolute' : 'static',
       }
@@ -390,39 +387,24 @@ export default defineComponent({
   opacity: var(--frag-block-opacity-value);
 }
 
-.by-fragment-legend:extend(.by-fragment) {
-  height: 10px;
-}
-
 .cy-fragment:extend(.fragment-segment) {
   background: #12871d;
 }
-
 .cy-fragment-overlayed:extend(.cy-fragment) {
   opacity: var(--frag-block-opacity-value);
-}
-
-.cy-fragment-legend:extend(.cy-fragment) {
-  height: 10px;
 }
 
 .bz-fragment:extend(.fragment-segment) {
   background: #7831cc;
 }
-
 .bz-fragment-overlayed:extend(.bz-fragment) {
   opacity: var(--frag-block-opacity-value);
-}
-
-.bz-fragment-legend:extend(.bz-fragment) {
-  height: 10px;
 }
 
 .not-in-fragment:extend(.fragment-segment) {
   background: transparent;
   aspect-ratio: 1;
 }
-
 .v-input.textFieldFontSize {
   width: 100px;
 }
