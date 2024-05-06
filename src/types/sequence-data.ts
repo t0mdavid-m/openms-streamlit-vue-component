@@ -12,6 +12,4 @@ export type SequenceData = {
   fragment_masses_z: number[]
 }
 
-export type SequenceDataDictionary = {
-  [key: number]: SequenceData;
-};
+export type SequenceDataDictionary = Record<number, SequenceData>
