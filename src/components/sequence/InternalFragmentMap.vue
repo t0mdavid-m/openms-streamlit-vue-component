@@ -195,10 +195,10 @@ export default defineComponent({
       return this.streamlitData.theme
     },
     internalFragmentData() {
-      return this.streamlitData.internalFragmentData 
+      return this.streamlitData.internalFragmentData
     },
     sequence() {
-      return this.streamlitData.sequenceData?.sequence
+      return this.streamlitData.sequenceData?.[0].sequence
     },
     fragmentStyle() {
       return {
@@ -256,7 +256,6 @@ export default defineComponent({
         combinedByData
       )
 
-
       return combinedByData
     },
     cyData(): CombinedFragmentData[] {
@@ -288,7 +287,6 @@ export default defineComponent({
         combinedByData
       )
 
-
       return combinedByData
     },
     bzData(): CombinedFragmentData[] {
@@ -319,7 +317,6 @@ export default defineComponent({
         this.internalFragmentData.end_indices_bz,
         combinedByData
       )
-
 
       return combinedByData
     },

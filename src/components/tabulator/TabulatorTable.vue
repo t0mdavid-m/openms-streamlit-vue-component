@@ -65,7 +65,7 @@ export default defineComponent({
     },
     defaultRow: {
       type: Number,
-      required: true,
+      required: false,
       default: () => 0,
     },
   },
@@ -145,17 +145,17 @@ export default defineComponent({
           return col
         }),
       })
-    this.tabulator.on("tableBuilt", () => {
-      if (this.initialized < 3) {
-        this.initialized += 1
-        this.selectDefaultRow()
-      }
-    });
+      this.tabulator.on('tableBuilt', () => {
+        if (this.initialized < 3) {
+          this.initialized += 1
+          this.selectDefaultRow()
+        }
+      })
     },
     selectDefaultRow() {
       if (this.defaultRow >= 0) {
-          this.tabulator?.selectRow([this.defaultRow])
-          this.onTableClick()
+        this.tabulator?.selectRow([this.defaultRow])
+        this.onTableClick()
       }
     },
     onTableClick() {
