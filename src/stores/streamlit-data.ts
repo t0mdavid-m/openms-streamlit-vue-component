@@ -24,14 +24,12 @@ export const useStreamlitDataStore = defineStore('streamlit-data', {
   actions: {
     updateRenderData(newData: RenderData) {
       this.renderData = newData
-      console.log(newData)
 
       // Parse dataframes as streamlit sends them as a string
       const newDataframes = (newData.args as GridLayout).data_for_drawing
       Object.entries(newDataframes).forEach((df) => {
         this.dataForDrawing[df[0] as DATAFRAMES] = JSON.parse(df[1])
       })
-      console.log(this.dataForDrawing)
     },
   },
 })
