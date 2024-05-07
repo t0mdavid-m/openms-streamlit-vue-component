@@ -25,27 +25,51 @@
               <v-list>
                 <v-list-item>
                   <v-list-item-title># amino acids per row</v-list-item-title>
-                  <v-slider v-model="rowWidth" :ticks="tickLabels" :min="20" :max="40" step="5" show-ticks="always"
-                    tick-size="4"></v-slider>
+                  <v-slider
+                    v-model="rowWidth"
+                    :ticks="tickLabels"
+                    :min="20"
+                    :max="40"
+                    step="5"
+                    show-ticks="always"
+                    tick-size="4"
+                  ></v-slider>
                 </v-list-item>
                 <v-list-item>
                   <v-list-item-title>Fragment ion types</v-list-item-title>
                   <div class="d-flex justify-space-evenly">
-                    <v-checkbox v-for="(category, ionIndex) in ionTypes" :key="category.text" v-model="category.selected"
-                      hide-details density="comfortable" :label="category.text" @click="toggleIonTypeSelected(ionIndex)">
+                    <v-checkbox
+                      v-for="(category, ionIndex) in ionTypes"
+                      :key="category.text"
+                      v-model="category.selected"
+                      hide-details
+                      density="comfortable"
+                      :label="category.text"
+                      @click="toggleIonTypeSelected(ionIndex)"
+                    >
                     </v-checkbox>
                   </div>
                   <div class="d-flex justify-space-evenly">
-                    <v-checkbox v-for="category in Object.keys(ionTypesExtra)" :key="category"
-                      v-model="ionTypesExtra[category as ExtraFragmentType]" hide-details density="comfortable"
-                      :label="category">
+                    <v-checkbox
+                      v-for="category in Object.keys(ionTypesExtra)"
+                      :key="category"
+                      v-model="ionTypesExtra[category as ExtraFragmentType]"
+                      hide-details
+                      density="comfortable"
+                      :label="category"
+                    >
                     </v-checkbox>
                   </div>
                 </v-list-item>
                 <v-list-item>
                   <v-list-item-title>Fragment mass tolerance</v-list-item-title>
-                  <v-text-field v-model="fragmentMassTolerance" type="number" hide-details="auto"
-                    label="mass tolerance in ppm" @change="updateMassTolerance"></v-text-field>
+                  <v-text-field
+                    v-model="fragmentMassTolerance"
+                    type="number"
+                    hide-details="auto"
+                    label="mass tolerance in ppm"
+                    @change="updateMassTolerance"
+                  ></v-text-field>
                   <!-- TODO: add "required" -->
                 </v-list-item>
               </v-list>
@@ -55,27 +79,46 @@
       </div>
       <div class="pb-4 px-2" :class="gridClasses" style="width: 100%; max-width: 100%">
         <template v-for="(aminoAcidObj, aa_index) in sequenceObjects" :key="aa_index">
-          <div v-if="aa_index !== 0 && aa_index % rowWidth === 0" class="d-flex justify-center align-center">
+          <div
+            v-if="aa_index !== 0 && aa_index % rowWidth === 0"
+            class="d-flex justify-center align-center"
+          >
             {{ aa_index + 1 }}
           </div>
           <ProteinTerminalCell v-if="aa_index === 0" protein-terminal="N-term" :index="-1" />
-          <AminoAcidCell :index="aa_index" :sequence-object="aminoAcidObj"
-            :fixed-modification="fixedModification(aminoAcidObj.aminoAcid)" @selected="aminoAcidSelected" />
-          <div v-if="aa_index % rowWidth === rowWidth - 1 && aa_index !== sequence.length - 1"
-            class="d-flex justify-center align-center">
+          <AminoAcidCell
+            :index="aa_index"
+            :sequence-object="aminoAcidObj"
+            :fixed-modification="fixedModification(aminoAcidObj.aminoAcid)"
+            @selected="aminoAcidSelected"
+          />
+          <div
+            v-if="aa_index % rowWidth === rowWidth - 1 && aa_index !== sequence.length - 1"
+            class="d-flex justify-center align-center"
+          >
             {{ aa_index + 1 }}
           </div>
-          <ProteinTerminalCell v-if="aa_index === sequence.length - 1" protein-terminal="C-term"
-            :index="sequence.length" />
+          <ProteinTerminalCell
+            v-if="aa_index === sequence.length - 1"
+            protein-terminal="C-term"
+            :index="sequence.length"
+          />
         </template>
       </div>
     </div>
     <div id="sequence-view-table">
       <template v-if="fragmentTableTitle !== ''">
-        <TabulatorTable :table-data="fragmentTableData" :column-definitions="fragmentTableColumnDefinitions"
-          :index="index" :selected-row-index-from-listening="selectedFragTableRowIndex" table-layout-param="fitColumns">
+        <TabulatorTable
+          :table-data="fragmentTableData"
+          :column-definitions="fragmentTableColumnDefinitions"
+          :index="index"
+          :selected-row-index-from-listening="selectedFragTableRowIndex"
+          table-layout-param="fitColumns"
+        >
           <template #default>{{ fragmentTableTitle }}</template>
-          <template #end-title-row>% Residue cleavage: {{ residueCleavagePercentage.toFixed(3) }}%</template>
+          <template #end-title-row
+            >% Residue cleavage: {{ residueCleavagePercentage.toFixed(3) }}%</template
+          >
         </TabulatorTable>
       </template>
     </div>
@@ -163,13 +206,13 @@ export default defineComponent({
       return this.streamlitDataStore.theme
     },
     sequence(): string[] {
-      return this.streamlitDataStore.sequenceData?.sequence ?? []
+      return this.streamlitDataStore.sequenceData?.[0].sequence ?? []
     },
     theoreticalMass(): number {
-      return this.streamlitDataStore.sequenceData?.theoretical_mass ?? 0
+      return this.streamlitDataStore.sequenceData?.[0].theoretical_mass ?? 0
     },
     fixedModificationSites(): string[] {
-      return this.streamlitDataStore.sequenceData?.fixed_modifications ?? []
+      return this.streamlitDataStore.sequenceData?.[0].fixed_modifications ?? []
     },
     variableModifications(): Record<number, number> {
       return this.variableModData.variableModifications ?? {}
@@ -245,6 +288,11 @@ export default defineComponent({
     this.prepareFragmentTable()
   },
   methods: {
+    getFragmentMasses(iontype: string): number[] {
+      return this.streamlitDataStore.sequenceData?.[0][
+        `fragment_masses_${iontype}` as keyof SequenceData
+      ] as number[]
+    },
     updateMassTolerance(event: Event) {
       this.fragmentMassTolerance = Number.parseInt((event.target as any).value as string)
     },
@@ -306,9 +354,7 @@ export default defineComponent({
       this.ionTypes
         .filter((iontype) => iontype.selected)
         .forEach((iontype) => {
-          const theoretical_frags = this.streamlitDataStore.sequenceData?.[
-            `fragment_masses_${iontype.text}` as keyof SequenceData
-          ] as number[]
+          const theoretical_frags = this.getFragmentMasses(iontype.text)
 
           for (
             let theoIndex = 0, FragSize = theoretical_frags.length;
@@ -436,7 +482,7 @@ export default defineComponent({
   grid-template-rows: auto;
   gap: 4px 4px;
 
-  >div {
+  > div {
     aspect-ratio: 1;
   }
 }

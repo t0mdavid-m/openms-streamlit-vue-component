@@ -1,6 +1,12 @@
 <template>
-  <div :id="id" class="d-flex justify-center align-center rounded-lg" :class="aminoAcidCellClass"
-    :style="aminoAcidCellStyles" @click="selectCell" @contextmenu.prevent="toggleMenuOpen">
+  <div
+    :id="id"
+    class="d-flex justify-center align-center rounded-lg"
+    :class="aminoAcidCellClass"
+    :style="aminoAcidCellStyles"
+    @click="selectCell"
+    @contextmenu.prevent="toggleMenuOpen"
+  >
     <div v-if="sequenceObject.aIon" class="frag-marker-container-a">
       <svg viewBox="0 0 10 10">
         <path stroke="green" d="M7, 1 L9, 3 L9, 7 L9, 3 L7, 1 z" stroke-width="1.5" />
@@ -39,19 +45,38 @@
     <div class="aa-text">
       {{ aminoAcid }}
     </div>
-    <v-menu v-model="menuOpen" activator="parent" location="end" :open-on-click="false" :close-on-content-click="false"
-      width="200px">
+    <v-menu
+      v-model="menuOpen"
+      activator="parent"
+      location="end"
+      :open-on-click="false"
+      :close-on-content-click="false"
+      width="200px"
+    >
       <v-list>
         <v-list-item>
-          <v-select v-model="selectedModification" clearable="true" label="Modification" density="compact"
-            :items="modificationsForSelect" @update:model-value="updateSelectedModification"
-            @click:clear="selectedModification = undefined">
+          <v-select
+            v-model="selectedModification"
+            clearable="true"
+            label="Modification"
+            density="compact"
+            :items="modificationsForSelect"
+            @update:model-value="updateSelectedModification"
+            @click:clear="selectedModification = undefined"
+          >
           </v-select>
         </v-list-item>
         <v-list-item v-if="customSelected">
           <v-form @submit.prevent>
-            <v-text-field v-model="customModMass" hide-details label="Monoisotopic mass in Da" type="number" />
-            <v-btn type="submit" block="true" class="mt-2" @click="updateCustomModification">Submit</v-btn>
+            <v-text-field
+              v-model="customModMass"
+              hide-details
+              label="Monoisotopic mass in Da"
+              type="number"
+            />
+            <v-btn type="submit" block="true" class="mt-2" @click="updateCustomModification"
+              >Submit</v-btn
+            >
           </v-form>
         </v-list-item>
       </v-list>
@@ -59,7 +84,7 @@
     <v-tooltip activator="parent">
       {{ `Prefix: ${index + 1}` }}
       <br />
-      {{ `Suffix: ${(streamlitData.sequenceData?.sequence.length ?? 0) - index}` }}
+      {{ `Suffix: ${(streamlitData.sequenceData?.[0].sequence.length ?? 0) - index}` }}
       <br />
       <div v-if="DoesThisAAHaveExtraFragTypes">
         {{ sequenceObject.extraTypes.join(', ') }}
