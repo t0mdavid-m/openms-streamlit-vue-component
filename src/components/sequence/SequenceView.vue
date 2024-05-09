@@ -163,13 +163,13 @@ export default defineComponent({
       return this.streamlitDataStore.theme
     },
     sequence(): string[] {
-      return this.streamlitDataStore.sequenceData?.sequence ?? []
+      return this.streamlitDataStore.sequenceData ? this.streamlitDataStore.sequenceData[0].sequence : []
     },
     theoreticalMass(): number {
-      return this.streamlitDataStore.sequenceData?.theoretical_mass ?? 0
+      return this.streamlitDataStore.sequenceData?.[0]?.theoretical_mass ?? 0
     },
     fixedModificationSites(): string[] {
-      return this.streamlitDataStore.sequenceData?.fixed_modifications ?? []
+      return this.streamlitDataStore.sequenceData?.[0]?.fixed_modifications ?? []
     },
     variableModifications(): Record<number, number> {
       return this.variableModData.variableModifications ?? {}
@@ -306,7 +306,7 @@ export default defineComponent({
       this.ionTypes
         .filter((iontype) => iontype.selected)
         .forEach((iontype) => {
-          const theoretical_frags = this.streamlitDataStore.sequenceData?.[
+          const theoretical_frags = this.streamlitDataStore.sequenceData?.[0]?.[
             `fragment_masses_${iontype.text}` as keyof SequenceData
           ] as number[]
 

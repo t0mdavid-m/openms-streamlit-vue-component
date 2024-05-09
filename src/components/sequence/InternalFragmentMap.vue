@@ -193,8 +193,8 @@ export default defineComponent({
     internalFragmentData() {
       return this.streamlitData.internalFragmentData 
     },
-    sequence() {
-      return this.streamlitData.sequenceData?.sequence
+    sequence() : string[] {
+      return this.streamlitData.sequenceData ? this.streamlitData.sequenceData[0].sequence : []
     },
     fragmentStyle() {
       return {
