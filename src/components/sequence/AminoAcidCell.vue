@@ -140,9 +140,6 @@ export default defineComponent({
     id(): string {
       return `${this.aminoAcid}${this.index}`
     },
-    sequence(): string[] {
-      return this.streamlitData.sequenceData ? this.streamlitData.sequenceData[0].sequence : []
-    }, 
     theme(): Theme | undefined {
       return this.streamlitData.theme
     },
