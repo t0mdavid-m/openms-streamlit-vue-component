@@ -12,8 +12,12 @@
       <div class="mr-4">cy</div>
     </div>
     <div class="d-flex justify-end px-4 mb-4" style="max-width: 97%">
-      <v-btn id="settings-button" variant="text" icon="mdi-cog" size="medium"></v-btn>
-      <v-menu :close-on-content-click="false" activator="#settings-button" location="bottom">
+      <v-btn id="internal-frag-settings-button" variant="text" icon="mdi-cog" size="medium"></v-btn>
+      <v-menu
+        :close-on-content-click="false"
+        activator="#internal-frag-settings-button"
+        location="bottom"
+      >
         <v-card min-width="300">
           <v-list>
             <v-list-item>
@@ -191,10 +195,10 @@ export default defineComponent({
       return this.streamlitData.theme
     },
     internalFragmentData() {
-      return this.streamlitData.internalFragmentData 
+      return this.streamlitData.internalFragmentData
     },
-    sequence() : string[] {
-      return this.streamlitData.sequenceData ? this.streamlitData.sequenceData[0].sequence : []
+    sequence() {
+      return this.streamlitData.sequenceData?.[0].sequence
     },
     fragmentStyle() {
       return {
@@ -252,7 +256,6 @@ export default defineComponent({
         combinedByData
       )
 
-
       return combinedByData
     },
     cyData(): CombinedFragmentData[] {
@@ -284,7 +287,6 @@ export default defineComponent({
         combinedByData
       )
 
-
       return combinedByData
     },
     bzData(): CombinedFragmentData[] {
@@ -315,7 +317,6 @@ export default defineComponent({
         this.internalFragmentData.end_indices_bz,
         combinedByData
       )
-
 
       return combinedByData
     },

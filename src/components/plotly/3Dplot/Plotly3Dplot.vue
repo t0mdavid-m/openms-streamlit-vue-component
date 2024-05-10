@@ -50,23 +50,26 @@ export default defineComponent({
       return this.selectionStore.selectedMassIndex
     },
     dataForDrawing(): Plotly.Data[] {
-      if (this.selectedMassRow === undefined && this.selectedScanRow === undefined) return []
+      if (this.selectedScanRow === undefined) return []
 
       // Get selected row entry and filter by required columns
-      const selected_scan_info = this.selectedScanRow
-        ? this.streamlitDataStore.allDataForDrawing.per_scan_data[this.selectedScanRow]
-        : {}
+      const selected_scan_info =
+        this.streamlitDataStore.allDataForDrawing.per_scan_data[this.selectedScanRow] ?? {}
       // get signal & noise array for drawing
       let signals_for_drawing: Record<string, number[]> = {}
 
-      if (this.selectedMassRow === undefined && this.selectedScanRow !== undefined) {
+      if (this.selectedMassRow === undefined) {
         // when scan is selected
         signals_for_drawing = this.getPrecursorSignal(selected_scan_info)
-      } else if (this.selectedMassRow !== undefined) {
+      } else {
         // when mass is selected
         signals_for_drawing = this.getSignalNoiseObject(
-          (selected_scan_info.SignalPeaks as Array<number[][]>)[this.selectedMassRow],
-          (selected_scan_info.NoisyPeaks as Array<number[][]>)[this.selectedMassRow]
+          (selected_scan_info.SignalPeaks as Array<number[][]> | undefined)?.[
+            this.selectedMassRow
+          ] ?? [[]],
+          (selected_scan_info.NoisyPeaks as Array<number[][]> | undefined)?.[
+            this.selectedMassRow
+          ] ?? [[]]
         )
       }
 
@@ -74,9 +77,7 @@ export default defineComponent({
       if (Object.keys(signals_for_drawing).length === 0) return []
 
       // save max z value for layout
-      this.maximumIntensity = signals_for_drawing.signal_z
-        .concat(signals_for_drawing.noise_z)
-        .reduce((a, b) => Math.max(a, b), -Infinity)
+      this.updateMaximumIntensity(signals_for_drawing)
 
       return [
         {
@@ -138,18 +139,30 @@ export default defineComponent({
     this.graph()
   },
   methods: {
+    updateMaximumIntensity(signals_for_drawing: Record<string, number[]>) {
+      this.maximumIntensity = signals_for_drawing.signal_z
+        .concat(signals_for_drawing.noise_z)
+        .reduce((a, b) => Math.max(a, b), -Infinity)
+    },
     async graph() {
       // 3Dplot TODO: 1. add "markers" 2. draw signals from mass table (not precursor)
       await Plotly.newPlot(this.id, this.dataForDrawing, this.layout, {
         modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'],
-        modeBarButtonsToAdd: [{
-          title: 'Download as SVG',
-          name: 'toImageSvg',
-          icon: Plotly.Icons.camera,
-          click: function (plotlyElement) {
-            Plotly.downloadImage(plotlyElement, { filename: 'FLASHViewer-3d-plot', height: 800, width: 800, format: 'svg' })
-          }
-        }]
+        modeBarButtonsToAdd: [
+          {
+            title: 'Download as SVG',
+            name: 'toImageSvg',
+            icon: Plotly.Icons.camera,
+            click: function (plotlyElement) {
+              Plotly.downloadImage(plotlyElement, {
+                filename: 'FLASHViewer-3d-plot',
+                height: 800,
+                width: 800,
+                format: 'svg',
+              })
+            },
+          },
+        ],
       })
     },
     getPrecursorSignal(selected_scan: Record<string, unknown>): Record<string, number[]> {
@@ -181,6 +194,8 @@ export default defineComponent({
       signal_peaks: number[][],
       noisy_peaks: number[][]
     ): Record<string, number[]> {
+      console.log('get signal peaks', signal_peaks)
+      console.log('get noisy peaks', noisy_peaks)
       // signal peaks
       let signal_object = this.get3DplotInputFromSNRPeaks(signal_peaks, true)
       // noise peaks
