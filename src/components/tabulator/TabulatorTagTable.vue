@@ -51,8 +51,9 @@ export default defineComponent({
         { title: 'Sequence', field: 'TagSequence'},
         { title: 'Length', field: 'Length' },
         { title: 'Score', field: 'Score' },
-        //{ title: 'N mass', field: 'Nmass'},
-        //{ title: 'C mass', field: 'Cmass' },
+        { title: 'N mass', field: 'Nmass'},
+        { title: 'C mass', field: 'Cmass' },
+        { title: 'Δ mass', field: 'DeltaMass' },
       ] as ColumnDefinition[],
       selectedTagIndex: undefined as number | undefined,
     }

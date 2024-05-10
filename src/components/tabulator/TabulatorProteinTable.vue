@@ -46,6 +46,10 @@ export default defineComponent({
         { title: 'Accession', field: 'accession'},
         { title: 'Description', field: 'description'},
         { title: 'Length', field: 'length'},
+        { title: '#Matched Amino Acids', field: 'MatchedAminoAcidCount'},
+        { title: 'Coverage (%)', field: 'Coverage(%)'},
+        { title: 'Score', field: 'ProteinScore'},
+        { title: 'Q-Value', field: 'ProteinQvalue'},
       ] as ColumnDefinition[],
     }
   },
