@@ -194,8 +194,6 @@ export default defineComponent({
       signal_peaks: number[][],
       noisy_peaks: number[][]
     ): Record<string, number[]> {
-      console.log('get signal peaks', signal_peaks)
-      console.log('get noisy peaks', noisy_peaks)
       // signal peaks
       let signal_object = this.get3DplotInputFromSNRPeaks(signal_peaks, true)
       // noise peaks
