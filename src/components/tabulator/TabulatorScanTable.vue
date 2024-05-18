@@ -52,17 +52,10 @@ export default defineComponent({
   },
   computed: {
     tableData(): Record<string, unknown>[] {
-      const relevantFields = ['Scan', 'MSLevel', 'RT', 'PrecursorMass', '#Masses']
-      const rows = this.streamlitDataStore.allDataForDrawing.per_scan_data.map(row => {
-        let filteredRow: Record<string, unknown> = {}
-        relevantFields.forEach(field => {
-          filteredRow[field] = row[field]
-        })
-        filteredRow['id'] = row['index']
-        return filteredRow;
-    })
-    return rows
-  },
+      const rows = this.streamlitDataStore.allDataForDrawing.per_scan_data
+      rows.forEach((row) => (row['id'] = row['index']))
+      return rows
+    },
   },
   methods: {
     updateSelectedScan(selectedRow?: number) {
