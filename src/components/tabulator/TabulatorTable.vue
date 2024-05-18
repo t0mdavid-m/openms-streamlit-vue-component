@@ -28,7 +28,6 @@
 import { defineComponent, type PropType } from 'vue'
 import { TabulatorFull as Tabulator, type ColumnDefinition, type Options } from 'tabulator-tables'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
-import type { stringify } from 'querystring'
 
 export default defineComponent({
   name: 'TabulatorTable',
