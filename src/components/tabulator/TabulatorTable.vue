@@ -28,6 +28,7 @@
 import { defineComponent, type PropType } from 'vue'
 import { TabulatorFull as Tabulator, type ColumnDefinition, type Options } from 'tabulator-tables'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
+import type { stringify } from 'querystring'
 
 export default defineComponent({
   name: 'TabulatorTable',
@@ -101,13 +102,28 @@ export default defineComponent({
       }
     },
     preparedTableData(): Record<string, unknown>[] {
-      if (this.tableData.length > 0 && this.tableData[0][this.tableIndexField] === undefined) {
+
+      const columns = this.columnDefinitions.map(col => col.field)
+      if ((this.tableData !== undefined) && (this.tableData.length > 0)) {
         const tableDataWithId: Record<string, unknown>[] = []
         this.tableData.forEach((row, index) => {
-          tableDataWithId.push({
-            ...row,
-            [this.tableIndexField]: index,
+          const filteredRow : Record<string, unknown> = {}
+          columns.forEach(column => {
+            if (column !== undefined) {
+              filteredRow[column] = row[column];
+            }
           })
+          if (this.tableData[0][this.tableIndexField] === undefined) {
+            tableDataWithId.push({
+              ...filteredRow,
+              [this.tableIndexField]: index,
+            })
+          }
+          else {
+            tableDataWithId.push({
+              ...filteredRow
+            })
+          }
         })
         return tableDataWithId
       }
