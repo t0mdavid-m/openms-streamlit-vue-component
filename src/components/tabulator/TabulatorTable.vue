@@ -102,7 +102,7 @@ export default defineComponent({
     },
     preparedTableData(): Record<string, unknown>[] {
 
-      const columns = this.columnDefinitions.map(col => col.field)
+      const columns = [...this.columnDefinitions.map(col => col.field), 'id']
       if ((this.tableData !== undefined) && (this.tableData.length > 0)) {
         const tableDataWithId: Record<string, unknown>[] = []
         this.tableData.forEach((row, index) => {

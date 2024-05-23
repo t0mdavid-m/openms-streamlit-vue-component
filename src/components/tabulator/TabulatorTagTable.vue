@@ -45,7 +45,6 @@ export default defineComponent({
     return {
       columnDefinitions: [
         { title: 'Scan Number', field: 'Scan' },
-        //{ title: 'Tag Index', field: 'TagIndex' },
         { title: 'Start Position', field: 'StartPos' },
         { title: 'End Position', field: 'EndPos' },
         { title: 'Sequence', field: 'TagSequence'},

@@ -42,7 +42,6 @@ export default defineComponent({
   data() {
     return {
       columnDefinitions: [
-        //{ title: 'Index', field: 'id' },
         { title: 'Accession', field: 'accession'},
         { title: 'Description', field: 'description'},
         { title: 'Length', field: 'length'},
