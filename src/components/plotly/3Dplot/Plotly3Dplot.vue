@@ -1,5 +1,5 @@
 <template>
-  <div :id="id" style="width: 100%"></div>
+  <div :id="id" style="width: 100%; border: 1px solid #cccccc; box-sizing: border-box;"></div>
 </template>
 
 <script lang="ts">
