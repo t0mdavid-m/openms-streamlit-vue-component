@@ -43,7 +43,7 @@ export default defineComponent({
     return {
       columnDefinitions: [
         { title: 'Accession', field: 'accession'},
-        { title: 'Description', field: 'description'},
+        { title: 'Description', field: 'description', responsive: 10},
         { title: 'Length', field: 'length'},
         { title: '#Matched Amino Acids', field: 'MatchedAminoAcidCount'},
         { title: 'Coverage (%)', field: 'Coverage(%)'},

@@ -149,6 +149,7 @@ export default defineComponent({
         data: this.preparedTableData,
         minHeight: 50,
         maxHeight: this.title ? 320 : 310,
+        responsiveLayout : 'collapse',
         layout: this.tableLayoutParam,
         selectable: 1,
         columnDefaults: {
