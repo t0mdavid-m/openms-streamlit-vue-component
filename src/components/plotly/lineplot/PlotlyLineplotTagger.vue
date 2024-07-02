@@ -11,8 +11,6 @@ import type { Theme } from 'streamlit-component-lib'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
 import type { PlotlyLineArguments } from './plotly-lineplot'
 import { useSelectionStore } from '@/stores/selection'
-import { PassThrough } from 'stream'
-import { initCustomFormatter } from 'vue'
 
 type PlotData = {
   unhighlighted_x: number[]
@@ -268,6 +266,15 @@ export default defineComponent({
         'highlighted_y' : highlighted_y,
       }
     },
+    xPosScalingFactor() : number {
+      return 27.5
+    },
+    xPosScalingThreshold() : number {
+      return 40
+    },
+    maxAnnotationRange() : number {
+      return this.xPosScalingFactor * this.xPosScalingThreshold
+    },
     annotationData() : PlotAnnotations {
 
       let buttonTraces : Plotly.Data[] = []
@@ -278,7 +285,7 @@ export default defineComponent({
       const ypos_low = ymax*1.18
       const ypos = ymax*1.25
       const ypos_high = ymax*1.32
-      const xpos_scaling = (this.xRange[1] - this.xRange[0])/27.5
+      const xpos_scaling = (this.xRange[1] - this.xRange[0])/this.xPosScalingFactor
 
       if (this.args.title === 'Annotated Spectrum') {
 
@@ -360,7 +367,7 @@ export default defineComponent({
 
       let arrowAnnotations: Partial<Plotly.Annotations>[] = []
       
-      if (xpos_scaling > 40) {
+      if (xpos_scaling > this.xPosScalingThreshold) {
         return {
           shapes : buttonShapes,
           annotations : buttonAnnotations,
@@ -574,7 +581,18 @@ export default defineComponent({
       if ((this.args.title === "Annotated Spectrum") && (this.selectedMass !== undefined)) {
         return [Math.min(...this.highlightedValues[this.selectedMass].mzs)*0.98, Math.max(...this.highlightedValues[this.selectedMass].mzs)*1.02]
       }
-      return [Math.min(...this.highlightedValues.map(a => a.mass))*0.98, Math.max(...this.highlightedValues.map(a => a.mass))*1.02]
+      let xmin_full = Math.min(...this.highlightedValues.map(a => a.mass))*0.98
+      let xmax_full = Math.max(...this.highlightedValues.map(a => a.mass))*1.02
+      
+      if ((xmax_full-xmin_full) < this.maxAnnotationRange) {
+        return [xmin_full, xmax_full]
+      }
+
+      // Center of all highlighted masses
+      let xcenter = this.highlightedValues.reduce((accumulator, currentValue) => accumulator + currentValue.mass, 0) / this.highlightedValues.length
+      let offset = 0.5 * 0.9 * this.maxAnnotationRange
+      return [xcenter-offset, xcenter+offset]
+
     },
     yRange(): number[] {
       return this.computeYRange(this.xRange)
