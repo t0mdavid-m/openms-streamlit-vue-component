@@ -70,7 +70,7 @@
         </template>
       </div>
     </div>
-    <div class="scale-container" title="Coverage">
+    <div v-if="maxCoverage > 0" class="scale-container" title="Coverage">
       <div class="scale-text"> {{ maxCoverage + "x" }}</div>
       <div class="scale"></div>
       <div class="scale-text">1x</div>
