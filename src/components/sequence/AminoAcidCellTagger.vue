@@ -120,7 +120,7 @@ export default defineComponent({
       menuOpen: false,
       selectedModification: undefined as KnownModification | undefined,
       customSelected: false,
-      customModMass: '0' as string
+      customModMass: '0' as string,
     }
   },
   computed: {
@@ -152,7 +152,7 @@ export default defineComponent({
     },
     aminoAcidCellStyles(): Record<string, string> {
       // Get coverage and scale between 0.1 and 1.0
-      let alpha : number = typeof this.sequenceObject.coverage === 'number' ? this.sequenceObject.coverage : 0.9
+      let alpha : number = typeof this.sequenceObject.coverage === 'number' ? this.sequenceObject.coverage : 0
       if (alpha !== 0) {
         alpha = (alpha * 0.9) + 0.1
       }
