@@ -460,11 +460,13 @@ export default defineComponent({
           aminoAcid: aa,
           coverage: cov,
           aIon: false,
-          bIon: end,
+          bIon: false,
           cIon: false,
           xIon: false,
-          yIon: start,
+          yIon: false,
           zIon: false,
+          tagStart: start,
+          tagEnd : end,
           extraTypes: [],
         })
       })

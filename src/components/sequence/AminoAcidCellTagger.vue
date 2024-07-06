@@ -8,7 +8,7 @@
     </div>
     <div v-if="sequenceObject.bIon" class="frag-marker-container-b">
       <svg viewBox="0 0 10 10">
-        <path stroke="#669BBC" d="M10, 0 V5 M10, 0 H5 z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path stroke="blue" d="M10, 0 V5 M10, 0 H5 z" stroke-width="3" />
       </svg>
     </div>
     <div v-if="sequenceObject.cIon" class="frag-marker-container-c">
@@ -23,12 +23,22 @@
     </div>
     <div v-if="sequenceObject.yIon" class="frag-marker-container-y">
       <svg viewBox="0 0 10 10">
-        <path stroke="#669BBC" d="M0, 10 V5 M0, 10 H5 z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path stroke="blue" d="M0, 10 V5 M0, 10 H5 z" stroke-width="3" />
       </svg>
     </div>
     <div v-if="sequenceObject.zIon" class="frag-marker-container-z">
       <svg viewBox="0 0 10 10">
         <path stroke="red" d="M1, 3 L1, 7 L6, 9 L1, 7 L1, 3 z" stroke-width="1.5" />
+      </svg>
+    </div>
+    <div v-if="sequenceObject.tagStart" class="frag-marker-container-y">
+      <svg viewBox="0 0 10 10">
+        <path stroke="#669BBC" d="M0, 10 V5 M0, 10 H5 z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div v-if="sequenceObject.tagEnd" class="frag-marker-container-b">
+      <svg viewBox="0 0 10 10">
+        <path stroke="#669BBC" d="M10, 0 V5 M10, 0 H5 z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
     </div>
     <div v-if="DoesThisAAHaveExtraFragTypes" class="frag-marker-extra-type">
