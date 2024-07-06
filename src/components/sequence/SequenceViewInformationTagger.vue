@@ -69,7 +69,7 @@ import { useStreamlitDataStore } from '@/stores/streamlit-data'
 import type { Theme } from 'streamlit-component-lib'
 import { defineComponent } from 'vue'
 import AminoAcidCellTagger from '@/components/sequence/AminoAcidCellTagger.vue'
-import type { SequenceObject } from '@/types/sequence-objectTagger'
+import type { SequenceObject } from '@/types/sequence-object'
 
 export default defineComponent({
   name: 'SequenceViewInformationTagger',

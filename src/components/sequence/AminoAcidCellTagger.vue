@@ -72,7 +72,7 @@
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
 import { useModificationStore } from '@/stores/variable-modification'
 import { useSelectionStore } from '@/stores/selection'
-import type { SequenceObject } from '@/types/sequence-objectTagger'
+import type { SequenceObject } from '@/types/sequence-object'
 import type { Theme } from 'streamlit-component-lib'
 import type { PropType } from 'vue'
 import { defineComponent } from 'vue'
@@ -131,7 +131,11 @@ export default defineComponent({
       return this.sequenceObject.aminoAcid
     },
     coverage(): number {
-      return this.sequenceObject.coverage
+      if (this.sequenceObject.coverage !== undefined) 
+      {
+        return this.sequenceObject.coverage
+      }
+      return -1
     },
     modificationsForSelect(): string[] {
       return ['None', 'Custom', ...this.potentialModifications]
