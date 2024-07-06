@@ -53,7 +53,7 @@ export default defineComponent({
         { title: 'Coverage (%)', field: 'Coverage(%)', responsive: 7},
         { title: 'No. of Modifications', field: 'ModificationCount'},
         { title: 'No. of Tags', field: 'TagCount'},
-        { title: 'Score', field: 'ProteoformScore'},
+        { title: 'Score', field: 'Score'},
         { title: 'Q-Value (Protein Level)', field: 'ProteinLevelQvalue'},
       ] as ColumnDefinition[],
     }
