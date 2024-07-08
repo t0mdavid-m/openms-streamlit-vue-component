@@ -70,8 +70,6 @@ export default defineComponent({
   },
   methods: {
     updateSelectedProtein(selectedRow?: number) {
-      console.log('SelectedProtein!!')
-      console.log(selectedRow)
       if (selectedRow !== undefined) {
         this.selectionStore.updateSelectedProtein(selectedRow)
         this.selectionStore.updateSelectedTag(undefined)

@@ -231,8 +231,6 @@ export default defineComponent({
       return -1
     },
     isHighlighted(): boolean {
-      console.log(this.index)
-      console.log(this.selectionStore.selectedAApos)
       return (this.index === this.selectionStore.selectedAApos)
     },
     DoesThisAAHaveSequenceTags() : boolean {
