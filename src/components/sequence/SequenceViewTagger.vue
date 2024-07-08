@@ -19,7 +19,7 @@
       <div class="d-flex justify-end px-4 mb-4">
         <div>
           <SvgScreenshot element-id="sequence-part" />
-          <SequenceViewInformationTagger />
+          <SequenceViewInformation />
           <v-btn id="settings-button" variant="text" icon="mdi-cog" size="large"></v-btn>
           <v-menu :close-on-content-click="false" activator="#settings-button" location="bottom">
             <v-card min-width="300">
@@ -109,14 +109,14 @@ import type { ColumnDefinition } from 'tabulator-tables'
 import type { SequenceData } from '@/types/sequence-data'
 import type { SequenceObject } from '@/types/sequence-object'
 import SvgScreenshot from '../ui/SvgScreenshot.vue'
-import SequenceViewInformationTagger from '@/components/sequence/SequenceViewInformationTagger.vue'
+import SequenceViewInformation from '@/components/sequence/SequenceViewInformation.vue'
 import { extraFragmentTypeObject, type ExtraFragmentType } from '@/components/sequence/modification'
 import { toFixedFormatter } from '@/components/tabulator/tabulator-formatters'
 
 export default defineComponent({
   name: 'SequenceViewTagger',
   components: {
-    SequenceViewInformationTagger,
+    SequenceViewInformation,
     TabulatorTable,
     AminoAcidCell,
     ProteinTerminalCell,
