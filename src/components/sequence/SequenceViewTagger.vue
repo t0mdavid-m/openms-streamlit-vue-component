@@ -50,7 +50,7 @@
             {{ aa_index + 1 }}
           </div>
           <ProteinTerminalCell v-if="aa_index === 0" protein-terminal="N-term" :index="-1" />
-          <AminoAcidCellTagger
+          <AminoAcidCell
             :index="aa_index"
             :sequence-object="aminoAcidObj"
             :fixed-modification="fixedModification(aminoAcidObj.aminoAcid)"
@@ -103,7 +103,7 @@ import { useSelectionStore, type TagData } from '@/stores/selection'
 import { useModificationStore } from '@/stores/variable-modification'
 import type { Theme } from 'streamlit-component-lib'
 import TabulatorTable from '@/components/tabulator/TabulatorTable.vue'
-import AminoAcidCellTagger from './AminoAcidCellTagger.vue'
+import AminoAcidCell from './AminoAcidCell.vue'
 import ProteinTerminalCell from './ProteinTerminalCell.vue'
 import type { ColumnDefinition } from 'tabulator-tables'
 import type { SequenceData } from '@/types/sequence-data'
@@ -118,7 +118,7 @@ export default defineComponent({
   components: {
     SequenceViewInformationTagger,
     TabulatorTable,
-    AminoAcidCellTagger,
+    AminoAcidCell,
     ProteinTerminalCell,
     SvgScreenshot,
   },

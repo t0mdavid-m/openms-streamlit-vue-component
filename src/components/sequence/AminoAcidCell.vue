@@ -1,12 +1,12 @@
 <template>
   <div
-    :id="id"
-    class="d-flex justify-center align-center rounded-lg"
-    :class="aminoAcidCellClass"
-    :style="aminoAcidCellStyles"
-    @click="selectCell"
-    @contextmenu.prevent="toggleMenuOpen"
-  >
+   :id="id"
+   class="d-flex justify-center align-center rounded-lg"
+   :class="[aminoAcidCellClass, { highlighted: isHighlighted }]"
+   :style="aminoAcidCellStyles"
+   @click="selectCell"
+   @contextmenu.prevent="toggleMenuOpen"
+   >
     <div v-if="sequenceObject.aIon" class="frag-marker-container-a">
       <svg viewBox="0 0 10 10">
         <path stroke="green" d="M7, 1 L9, 3 L9, 7 L9, 3 L7, 1 z" stroke-width="1.5" />
@@ -35,6 +35,16 @@
     <div v-if="sequenceObject.zIon" class="frag-marker-container-z">
       <svg viewBox="0 0 10 10">
         <path stroke="red" d="M1, 3 L1, 7 L6, 9 L1, 7 L1, 3 z" stroke-width="1.5" />
+      </svg>
+    </div>
+    <div v-if="sequenceObject.tagStart" class="frag-marker-container-y">
+      <svg viewBox="0 0 10 10">
+        <path stroke="#669BBC" d="M0, 10 V5 M0, 10 H5 z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div v-if="sequenceObject.tagEnd" class="frag-marker-container-b">
+      <svg viewBox="0 0 10 10">
+        <path stroke="#669BBC" d="M10, 0 V5 M10, 0 H5 z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
     </div>
     <div v-if="DoesThisAAHaveExtraFragTypes" class="frag-marker-extra-type">
@@ -84,7 +94,7 @@
     <v-tooltip activator="parent">
       {{ `Prefix: ${index + 1}` }}
       <br />
-      {{ `Suffix: ${(streamlitData.sequenceData?.[0].sequence.length ?? 0) - index}` }}
+      {{ `Suffix: ${(streamlitData.sequenceData?.[selectedSequence].sequence.length ?? 0) - index}` }}
       <br />
       <div v-if="DoesThisAAHaveExtraFragTypes">
         {{ sequenceObject.extraTypes.join(', ') }}
@@ -96,6 +106,7 @@
 <script lang="ts">
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
 import { useModificationStore } from '@/stores/variable-modification'
+import { useSelectionStore } from '@/stores/selection'
 import type { SequenceObject } from '@/types/sequence-object'
 import type { Theme } from 'streamlit-component-lib'
 import type { PropType } from 'vue'
@@ -126,7 +137,8 @@ export default defineComponent({
   setup() {
     const streamlitData = useStreamlitDataStore()
     const variableModData = useModificationStore()
-    return { streamlitData, variableModData }
+    const selectionStore = useSelectionStore()
+    return { streamlitData, variableModData, selectionStore }
   },
   data() {
     return {
@@ -150,9 +162,26 @@ export default defineComponent({
       return ['None', 'Custom', ...this.potentialModifications]
     },
     aminoAcidCellStyles(): Record<string, string> {
+      // Get coverage and scale between 0.1 and 1.0
+      let alpha = this.coverage
+
+      if (alpha < 0) {
+        return {
+          '--amino-acid-cell-color': this.theme?.textColor ?? '#fff',
+          '--amino-acid-cell-bg-color': this.theme?.secondaryBackgroundColor ?? '#000',
+          '--amino-acid-cell-hover-color': this.theme?.textColor ?? '#fff',
+          '--amino-acid-cell-hover-bg-color': this.theme?.backgroundColor ?? '#000',
+          position: 'relative',
+        }
+      }
+
+      if (alpha !== 0) {
+        alpha = (alpha * 0.9) + 0.1
+      }
+      
       return {
         '--amino-acid-cell-color': this.theme?.textColor ?? '#fff',
-        '--amino-acid-cell-bg-color': this.theme?.secondaryBackgroundColor ?? '#000',
+        '--amino-acid-cell-bg-color': `rgba(228, 87, 46, ${alpha})`,
         '--amino-acid-cell-hover-color': this.theme?.textColor ?? '#fff',
         '--amino-acid-cell-hover-bg-color': this.theme?.backgroundColor ?? '#000',
         position: 'relative',
@@ -188,12 +217,41 @@ export default defineComponent({
     DoesThisAAHaveExtraFragTypes(): boolean {
       return this.sequenceObject.extraTypes.length > 0
     },
+    selectedSequence(): number {
+      if (this.selectionStore.selectedProteinIndex !== undefined) {
+        return this.selectionStore.selectedProteinIndex
+      }
+      return 0
+    },
+    coverage(): number {
+      if (this.sequenceObject.coverage !== undefined) 
+      {
+        return this.sequenceObject.coverage
+      }
+      return -1
+    },
+    isHighlighted(): boolean {
+      console.log(this.index)
+      console.log(this.selectionStore.selectedAApos)
+      return (this.index === this.selectionStore.selectedAApos)
+    },
+    DoesThisAAHaveSequenceTags() : boolean {
+      return this.coverage > 0
+    },
   },
   methods: {
     toggleMenuOpen(): void {
       this.menuOpen = !this.menuOpen
     },
     selectCell(): void {
+      if (this.DoesThisAAHaveSequenceTags) {
+        if (this.selectionStore.selectedAApos === this.index) {
+          this.selectionStore.updateSelectedAA(undefined)
+        }
+        else {
+          this.selectionStore.updateSelectedAA(this.index)
+        }
+      }
       if (this.DoesThisAAHaveMatchingFragments) {
         this.$emit('selected', this.index)
       }
@@ -223,6 +281,15 @@ export default defineComponent({
 </script>
 
 <style scoped lang="less">
+
+.sequence-amino-acid-highlighted, .sequence-amino-acid.highlighted {
+  /* New style for highlighted state */
+  background-color: #F3A712; /* Gold background for highlighted state */
+  color: #000000; /* Black text for highlighted state */
+  outline: 3px solid #29335C; /* Thicker border for highlighted state */
+  font-weight: bold;
+}
+
 .sequence-amino-acid {
   background-color: var(--amino-acid-cell-bg-color);
   color: var(--amino-acid-cell-color);
@@ -235,7 +302,7 @@ export default defineComponent({
 
 .sequence-amino-acid-highlighted {
   background-color: var(--amino-acid-cell-bg-color);
-  color: #f0a441;
+  color: #F3A712;
 
   &:hover {
     background-color: var(--amino-acid-cell-hover-bg-color);

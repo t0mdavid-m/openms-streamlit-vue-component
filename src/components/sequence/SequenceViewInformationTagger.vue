@@ -8,7 +8,7 @@
         <div class="text-h6 d-flex justify-center">Legend for Sequence Map</div>
         <div class="d-flex justify-center">
           <div class="sequence-grid pa-6" style="width: 150px; max-width: 100%">
-            <AminoAcidCellTagger :index="0" :sequence-object="aaSequenceObject" @selected.stop />
+            <AminoAcidCell :index="0" :sequence-object="aaSequenceObject" @selected.stop />
           </div>
         </div>
         Fragment ion types
@@ -68,12 +68,12 @@
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
 import type { Theme } from 'streamlit-component-lib'
 import { defineComponent } from 'vue'
-import AminoAcidCellTagger from '@/components/sequence/AminoAcidCellTagger.vue'
+import AminoAcidCell from '@/components/sequence/AminoAcidCell.vue'
 import type { SequenceObject } from '@/types/sequence-object'
 
 export default defineComponent({
   name: 'SequenceViewInformationTagger',
-  components: { AminoAcidCellTagger },
+  components: { AminoAcidCell },
   setup() {
     const streamlitDataStore = useStreamlitDataStore()
     return { streamlitDataStore }
