@@ -1,6 +1,12 @@
 <template>
-  <div :id="id" class="d-flex justify-center align-center rounded-lg" :class="[aminoAcidCellClass, { highlighted: isHighlighted }]"
-    :style="aminoAcidCellStyles" @click="selectCell" @contextmenu.prevent="toggleMenuOpen">
+  <div
+   :id="id"
+   class="d-flex justify-center align-center rounded-lg"
+   :class="[aminoAcidCellClass, { highlighted: isHighlighted }]"
+   :style="aminoAcidCellStyles"
+   @click="selectCell"
+   @contextmenu.prevent="toggleMenuOpen"
+   >
     <div v-if="sequenceObject.aIon" class="frag-marker-container-a">
       <svg viewBox="0 0 10 10">
         <path stroke="green" d="M7, 1 L9, 3 L9, 7 L9, 3 L7, 1 z" stroke-width="1.5" />
@@ -49,19 +55,38 @@
     <div class="aa-text">
       {{ aminoAcid }}
     </div>
-    <v-menu v-model="menuOpen" activator="parent" location="end" :open-on-click="false" :close-on-content-click="false"
-      width="200px">
+    <v-menu
+      v-model="menuOpen"
+      activator="parent"
+      location="end"
+      :open-on-click="false"
+      :close-on-content-click="false"
+      width="200px"
+      >
       <v-list>
         <v-list-item>
-          <v-select v-model="selectedModification" clearable="true" label="Modification" density="compact"
-            :items="modificationsForSelect" @update:model-value="updateSelectedModification"
-            @click:clear="selectedModification = undefined">
+          <v-select
+            v-model="selectedModification"
+            clearable="true"
+            label="Modification"
+            density="compact"
+            :items="modificationsForSelect"
+            @update:model-value="updateSelectedModification"
+            @click:clear="selectedModification = undefined"
+            >
           </v-select>
         </v-list-item>
         <v-list-item v-if="customSelected">
           <v-form @submit.prevent>
-            <v-text-field v-model="customModMass" hide-details label="Monoisotopic mass in Da" type="number" />
-            <v-btn type="submit" block="true" class="mt-2" @click="updateCustomModification">Submit</v-btn>
+            <v-text-field
+              v-model="customModMass"
+              hide-details
+              label="Monoisotopic mass in Da"
+              type="number"
+            />
+            <v-btn type="submit" block="true" class="mt-2" @click="updateCustomModification"
+              >Submit</v-btn
+            >
           </v-form>
         </v-list-item>
       </v-list>
@@ -127,32 +152,18 @@ export default defineComponent({
     id(): string {
       return `${this.aminoAcid}${this.index}`
     },
-    selectedSequence(): number {
-      const pid = this.selectionStore.selectedProteinIndex
-      if (typeof pid === 'number') {
-        return pid
-      }
-      return 1
-    },
     theme(): Theme | undefined {
       return this.streamlitData.theme
     },
     aminoAcid(): string {
       return this.sequenceObject.aminoAcid
     },
-    coverage(): number {
-      if (this.sequenceObject.coverage !== undefined) 
-      {
-        return this.sequenceObject.coverage
-      }
-      return -1
-    },
     modificationsForSelect(): string[] {
       return ['None', 'Custom', ...this.potentialModifications]
     },
     aminoAcidCellStyles(): Record<string, string> {
       // Get coverage and scale between 0.1 and 1.0
-      let alpha : number = typeof this.sequenceObject.coverage === 'number' ? this.sequenceObject.coverage : 0
+      let alpha = this.coverage
       if (alpha !== 0) {
         alpha = (alpha * 0.9) + 0.1
       }
@@ -192,14 +203,27 @@ export default defineComponent({
         this.sequenceObject.zIon
       )
     },
-    DoesThisAAHaveSequenceTags() : boolean {
-      return this.coverage > 0
-    },
     DoesThisAAHaveExtraFragTypes(): boolean {
       return this.sequenceObject.extraTypes.length > 0
     },
+    selectedSequence(): number {
+      if (this.selectionStore.selectedAApos !== undefined) {
+        return this.selectionStore.selectedAApos
+      }
+      return 0
+    },
+    coverage(): number {
+      if (this.sequenceObject.coverage !== undefined) 
+      {
+        return this.sequenceObject.coverage
+      }
+      return 0
+    },
     isHighlighted(): boolean {
       return (this.index === this.selectionStore.selectedAApos)
+    },
+    DoesThisAAHaveSequenceTags() : boolean {
+      return this.coverage > 0
     },
   },
   methods: {
@@ -207,7 +231,6 @@ export default defineComponent({
       this.menuOpen = !this.menuOpen
     },
     selectCell(): void {
-
       if (this.DoesThisAAHaveSequenceTags) {
         if (this.selectionStore.selectedAApos === this.index) {
           this.selectionStore.updateSelectedAA(undefined)
@@ -216,9 +239,9 @@ export default defineComponent({
           this.selectionStore.updateSelectedAA(this.index)
         }
       }
-      //if (this.DoesThisAAHaveMatchingFragments) {
-      //  this.$emit('selected', this.index)
-      //}
+      if (this.DoesThisAAHaveMatchingFragments) {
+        this.$emit('selected', this.index)
+      }
     },
     updateSelectedModification(modification: 'None' | 'Custom' | KnownModification) {
       if (modification === 'None') {
@@ -245,7 +268,6 @@ export default defineComponent({
 </script>
 
 <style scoped lang="less">
-
 
 .sequence-amino-acid-highlighted, .sequence-amino-acid.highlighted {
   /* New style for highlighted state */
