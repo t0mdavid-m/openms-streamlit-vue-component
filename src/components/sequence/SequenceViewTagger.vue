@@ -36,6 +36,43 @@
                     tick-size="4"
                   ></v-slider>
                 </v-list-item>
+                <v-list-item>
+                  <v-list-item-title>Fragment ion types</v-list-item-title>
+                  <div class="d-flex justify-space-evenly">
+                    <v-checkbox
+                      v-for="(category, ionIndex) in ionTypes"
+                      :key="category.text"
+                      v-model="category.selected"
+                      hide-details
+                      density="comfortable"
+                      :label="category.text"
+                      @click="toggleIonTypeSelected(ionIndex)"
+                    >
+                    </v-checkbox>
+                  </div>
+                  <div class="d-flex justify-space-evenly">
+                    <v-checkbox
+                      v-for="category in Object.keys(ionTypesExtra)"
+                      :key="category"
+                      v-model="ionTypesExtra[category as ExtraFragmentType]"
+                      hide-details
+                      density="comfortable"
+                      :label="category"
+                    >
+                    </v-checkbox>
+                  </div>
+                </v-list-item>
+                <v-list-item>
+                  <v-list-item-title>Fragment mass tolerance</v-list-item-title>
+                  <v-text-field
+                    v-model="fragmentMassTolerance"
+                    type="number"
+                    hide-details="auto"
+                    label="mass tolerance in ppm"
+                    @change="updateMassTolerance"
+                  ></v-text-field>
+                  <!-- TODO: add "required" -->
+                </v-list-item>
               </v-list>
             </v-card>
           </v-menu>
@@ -93,7 +130,6 @@
       </template>
     </div>
   </v-sheet>
-  
 </template>
 
 <script lang="ts">
@@ -181,17 +217,17 @@ export default defineComponent({
       if (typeof pid === 'number') {
         return pid
       }
-      return undefined
+      return 0
     },
     selectedTag(): TagData | undefined {
       return this.selectionStore.selectedTag
     },
     sequence(): string[] {
-      const key = this.selectedSequence;
-      if (typeof key === 'number') {
-        return this.streamlitDataStore.sequenceData?.[key]?.sequence ?? []
+      let key = this.selectedSequence;
+      if (key === undefined) {
+        key = 0
       }
-      return []
+      return this.streamlitDataStore.sequenceData?.[key]?.sequence ?? []
     },
     coverage(): number[] {
       const key = this.selectedSequence;
@@ -208,18 +244,18 @@ export default defineComponent({
       return -1
     },
     theoreticalMass(): number {
-      const key = this.selectedSequence;
-      if (typeof key === 'number') {
-        return this.streamlitDataStore.sequenceData?.[key]?.theoretical_mass ?? 0
+      let key = this.selectedSequence;
+      if (key === undefined) {
+        key = 0
       }
-      return 0
+      return this.streamlitDataStore.sequenceData?.[key]?.theoretical_mass ?? 0
     },
     fixedModificationSites(): string[] {
-      const key = this.selectedSequence;
-      if (typeof key === 'number') {
-        return this.streamlitDataStore.sequenceData?.[key]?.fixed_modifications ?? []
+      let key = this.selectedSequence;
+      if (key === undefined) {
+        key = 0
       }
-      return []
+      return this.streamlitDataStore.sequenceData?.[key]?.fixed_modifications ?? []
     },
     variableModifications(): Record<number, number> {
       return this.variableModData.variableModifications ?? {}
@@ -245,8 +281,11 @@ export default defineComponent({
         '--amino-acid-cell-hover-bg-color': this.theme?.secondaryBackgroundColor ?? '#000',
       }
     },
-    selectedScanIndex(): number | undefined {
-      return this.selectionStore.selectedScanIndex
+    selectedScanIndex(): number {
+      if (this.selectionStore.selectedScanIndex !== undefined) {
+        return this.selectionStore.selectedScanIndex
+      }
+      return 0
     },
     calculateCleavagePercentage(): number {
       let explained_cleavage = 0
@@ -261,45 +300,58 @@ export default defineComponent({
     },
   },
   watch: {
-    sequence() {
-      this.selectionStore.updateSelectedAA(undefined)
+    selectedScanIndex() {
       this.preparePrecursorInfo()
       this.initializeSequenceObjects()
-      //this.prepareFragmentTable()
+      this.prepareFragmentTable()
+    },
+    sequence() {
+      this.selectionStore.updateSelectedAA(undefined)
+      this.initializeSequenceObjects()
     },
     selectedTag() {
       this.initializeSequenceObjects()
+      this.prepareFragmentTable()
     },
     fragmentMassTolerance() {
-      //this.prepareFragmentTable()
+      this.prepareFragmentTable()
     },
     ionTypes: {
       handler() {
         this.initializeSequenceObjects()
-        //this.prepareFragmentTable()
+        this.prepareFragmentTable()
       },
       deep: true,
     },
     ionTypesExtra: {
       handler() {
         this.initializeSequenceObjects()
-        //this.prepareFragmentTable()
+        this.prepareFragmentTable()
       },
       deep: true,
     },
     variableModifications() {
       this.preparePrecursorInfo()
       this.initializeSequenceObjects()
-      //this.prepareFragmentTable()
+      this.prepareFragmentTable()
     },
   },
   mounted() {
     this.selectionStore.updateSelectedAA(undefined)
     this.initializeSequenceObjects()
     this.preparePrecursorInfo()
-    //this.prepareFragmentTable()
+    this.prepareFragmentTable()
   },
   methods: {
+    getFragmentMasses(iontype: string): number[] {
+      let key = this.selectedSequence;
+      if (key === undefined) {
+        key = 0
+      }
+      return this.streamlitDataStore.sequenceData?.[key][
+        `fragment_masses_${iontype}` as keyof SequenceData
+      ] as number[]
+    },
     updateMassTolerance(event: Event) {
       this.fragmentMassTolerance = Number.parseInt((event.target as any).value as string)
     },
@@ -331,12 +383,11 @@ export default defineComponent({
       }
       const deltaMassDa = Math.abs(theoreticalMass - observedMass)
 
-      // this.precursorData = [
-      //   `Theoretical mass: ${theoreticalMass.toFixed(2)}`,
-      //   `Observed mass :${observedMass.toFixed(2)}`,
-      //   `Δ Mass (Da) :${deltaMassDa.toFixed(2)}`,
-      // ]
-      
+      this.precursorData = [
+        `Theoretical mass: ${theoreticalMass.toFixed(2)}`,
+        `Observed mass :${observedMass.toFixed(2)}`,
+        `Δ Mass (Da) :${deltaMassDa.toFixed(2)}`,
+      ]
     },
     prepareFragmentTable(): void {
       if (this.selectedScanIndex == undefined) {
@@ -353,7 +404,6 @@ export default defineComponent({
         return
       }
 
-
       // get the observed mass table info
       const observed_masses = selectedScanInfo.MonoMass as number[]
 
@@ -363,14 +413,7 @@ export default defineComponent({
       this.ionTypes
         .filter((iontype) => iontype.selected)
         .forEach((iontype) => {
-
-
-          const propName = `fragment_masses_${iontype.text}` as keyof SequenceData;
-          let theoretical_frags: number[] = [];
-
-          if (typeof this.streamlitDataStore.sequenceData !== 'undefined') {
-            theoretical_frags = (this.streamlitDataStore.sequenceData as any)[propName] as number[];
-}
+          const theoretical_frags = this.getFragmentMasses(iontype.text)
 
           for (
             let theoIndex = 0, FragSize = theoretical_frags.length;
