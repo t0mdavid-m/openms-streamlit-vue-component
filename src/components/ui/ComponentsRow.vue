@@ -49,10 +49,6 @@
         v-else-if="component.componentArgs.componentName === 'SequenceView'"
         :index="componentIndex(index)"
       />
-      <SequenceViewTagger
-        v-else-if="component.componentArgs.componentName === 'SequenceViewTagger'"
-        :index="componentIndex(index)"
-      />
       <InternalFragmentMap
         v-else-if="component.componentArgs.componentName === 'InternalFragmentMap'"
         :index="componentIndex(index)"
@@ -72,7 +68,6 @@ import TabulatorMassTable from '@/components/tabulator/TabulatorMassTable.vue'
 import TabulatorProteinTable from '@/components/tabulator/TabulatorProteinTable.vue'
 import TabulatorTagTable from '@/components/tabulator/TabulatorTagTable.vue'
 import SequenceView from '@/components/sequence/SequenceView.vue'
-import SequenceViewTagger from '@/components/sequence/SequenceViewTagger.vue'
 import { defineComponent, type PropType } from 'vue'
 import type { FlashViewerComponent } from '@/types/grid-layout'
 import FLASHQuantView from '@/components/flashQuant/FLASHQuantView.vue'
@@ -92,7 +87,6 @@ export default defineComponent({
     TabulatorProteinTable,
     TabulatorTagTable,
     SequenceView,
-    SequenceViewTagger,
   },
   props: {
     components: {
@@ -116,7 +110,6 @@ export default defineComponent({
         PlotlyHeatmap: 'height-any',
         Plotly3Dplot: 'height-any',
         SequenceView: 'height-any',
-        SequenceViewTagger: 'height-any',
         InternalFragmentMap: 'height-any',
       } as Record<
         FlashViewerComponent['componentArgs']['componentName'],

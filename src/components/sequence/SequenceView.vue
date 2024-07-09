@@ -4,6 +4,7 @@
   </div>
 
   <v-sheet class="pa-4 rounded-lg" style="max-width: 97%" :theme="theme?.base ?? 'light'" border>
+    <div class="sequence-and-scale">
     <div id="sequence-part">
       <div class="d-flex justify-space-evenly">
         <template v-if="precursorData.length != 0">
@@ -106,6 +107,12 @@
         </template>
       </div>
     </div>
+    <div v-if="maxCoverage > 0" class="scale-container" title="Coverage">
+      <div class="scale-text"> {{ maxCoverage + "x" }}</div>
+      <div class="scale"></div>
+      <div class="scale-text">1x</div>
+    </div>
+  </div>
     <div id="sequence-view-table">
       <template v-if="fragmentTableTitle !== ''">
         <TabulatorTable
@@ -128,7 +135,7 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
-import { useSelectionStore } from '@/stores/selection'
+import { useSelectionStore, type TagData } from '@/stores/selection'
 import { useModificationStore } from '@/stores/variable-modification'
 import type { Theme } from 'streamlit-component-lib'
 import TabulatorTable from '@/components/tabulator/TabulatorTable.vue'
@@ -205,14 +212,50 @@ export default defineComponent({
     theme(): Theme | undefined {
       return this.streamlitDataStore.theme
     },
+    selectedSequence(): number | undefined {
+      const pid = this.selectionStore.selectedProteinIndex
+      if (typeof pid === 'number') {
+        return pid
+      }
+      return 0
+    },
+    selectedTag(): TagData | undefined {
+      return this.selectionStore.selectedTag
+    },
     sequence(): string[] {
-      return this.streamlitDataStore.sequenceData?.[0].sequence ?? []
+      let key = this.selectedSequence;
+      if (key === undefined) {
+        key = 0
+      }
+      return this.streamlitDataStore.sequenceData?.[key]?.sequence ?? []
+    },
+    coverage(): number[] {
+      const key = this.selectedSequence;
+      if (typeof key === 'number') {
+        return this.streamlitDataStore.sequenceData?.[key]?.coverage ?? []
+      }
+      return []
+    },
+    maxCoverage() : number {
+      const key = this.selectedSequence;
+      if (typeof key === 'number') {
+        return  this.streamlitDataStore.sequenceData?.[key]?.maxCoverage ?? -1
+      }
+      return -1
     },
     theoreticalMass(): number {
-      return this.streamlitDataStore.sequenceData?.[0].theoretical_mass ?? 0
+      let key = this.selectedSequence;
+      if (key === undefined) {
+        key = 0
+      }
+      return this.streamlitDataStore.sequenceData?.[key]?.theoretical_mass ?? 0
     },
     fixedModificationSites(): string[] {
-      return this.streamlitDataStore.sequenceData?.[0].fixed_modifications ?? []
+      let key = this.selectedSequence;
+      if (key === undefined) {
+        key = 0
+      }
+      return this.streamlitDataStore.sequenceData?.[key]?.fixed_modifications ?? []
     },
     variableModifications(): Record<number, number> {
       return this.variableModData.variableModifications ?? {}
@@ -238,8 +281,11 @@ export default defineComponent({
         '--amino-acid-cell-hover-bg-color': this.theme?.secondaryBackgroundColor ?? '#000',
       }
     },
-    selectedScanIndex(): number | undefined {
-      return this.selectionStore.selectedScanIndex
+    selectedScanIndex(): number {
+      if (this.selectionStore.selectedScanIndex !== undefined) {
+        return this.selectionStore.selectedScanIndex
+      }
+      return 0
     },
     calculateCleavagePercentage(): number {
       let explained_cleavage = 0
@@ -256,6 +302,15 @@ export default defineComponent({
   watch: {
     selectedScanIndex() {
       this.preparePrecursorInfo()
+      this.initializeSequenceObjects()
+      this.prepareFragmentTable()
+    },
+    sequence() {
+      this.selectionStore.updateSelectedAA(undefined)
+      this.initializeSequenceObjects()
+      this.prepareFragmentTable()
+    },
+    selectedTag() {
       this.initializeSequenceObjects()
       this.prepareFragmentTable()
     },
@@ -283,13 +338,18 @@ export default defineComponent({
     },
   },
   mounted() {
+    this.selectionStore.updateSelectedAA(undefined)
     this.initializeSequenceObjects()
     this.preparePrecursorInfo()
     this.prepareFragmentTable()
   },
   methods: {
     getFragmentMasses(iontype: string): number[] {
-      return this.streamlitDataStore.sequenceData?.[0][
+      let key = this.selectedSequence;
+      if (key === undefined) {
+        key = 0
+      }
+      return this.streamlitDataStore.sequenceData?.[key][
         `fragment_masses_${iontype}` as keyof SequenceData
       ] as number[]
     },
@@ -436,15 +496,21 @@ export default defineComponent({
     },
     initializeSequenceObjects(): void {
       this.sequenceObjects = []
-      this.sequence.forEach((aa) => {
+      this.sequence.forEach((aa, index) => {
+        const cov = this.coverage[index]
+        const start = this.selectedTag?.startPos == index
+        const end = this.selectedTag?.endPos == index
         this.sequenceObjects.push({
           aminoAcid: aa,
+          coverage: cov,
           aIon: false,
           bIon: false,
           cIon: false,
           xIon: false,
           yIon: false,
           zIon: false,
+          tagStart: start,
+          tagEnd : end,
           extraTypes: [],
         })
       })
@@ -513,4 +579,40 @@ export default defineComponent({
 .grid-width-40 {
   grid-template-columns: repeat(42, 1fr);
 }
+
+.sequence-and-scale {
+    display: flex;
+    align-items: center;
+  }
+
+  .scale-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #sequence-part {
+    flex-grow: 1;
+  }
+
+  .scale {
+    width: 60px;
+    height: 100px; /* Adjust the width as needed */
+    background: linear-gradient(
+      to top, 
+      rgba(228, 87, 46, 0.1),
+      rgba(228, 87, 46, 0.2) 10%,
+      rgba(228, 87, 46, 0.4) 20%,
+      rgba(228, 87, 46, 0.6) 40%,
+      rgba(228, 87, 46, 0.8) 70%,
+      rgba(228, 87, 46, 1) 100%
+    );
+  }
+
+  .scale-text {
+    text-align: center;
+    font-size: 14pt;
+    font-weight: bold;
+  }
 </style>
+@/types/sequence-data
