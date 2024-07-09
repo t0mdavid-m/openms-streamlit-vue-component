@@ -37,16 +37,8 @@
         <path stroke="red" d="M1, 3 L1, 7 L6, 9 L1, 7 L1, 3 z" stroke-width="1.5" />
       </svg>
     </div>
-    <div v-if="sequenceObject.tagStart" class="frag-marker-container-y">
-      <svg viewBox="0 0 10 10">
-        <path stroke="#669BBC" d="M0, 10 V5 M0, 10 H5 z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </div>
-    <div v-if="sequenceObject.tagEnd" class="frag-marker-container-b">
-      <svg viewBox="0 0 10 10">
-        <path stroke="#669BBC" d="M10, 0 V5 M10, 0 H5 z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-      </svg>
-    </div>
+    <div v-if="sequenceObject.tagStart" class="rounded-lg tag-marker tag-start"></div>
+    <div v-if="sequenceObject.tagEnd" class="rounded-lg tag-marker tag-end"></div>
     <div v-if="DoesThisAAHaveExtraFragTypes" class="frag-marker-extra-type">
       <svg viewBox="0 0 10 10">
         <circle cx="5" cy="5" r="0.5" stroke="black" stroke-width="0.3" fill="gold" />
@@ -358,5 +350,29 @@ export default defineComponent({
 
 .aa-text {
   position: absolute;
+}
+
+.tag-marker {
+  position: absolute;
+  top: -7.5%;
+  left: -7.5%;
+  width: 115%;
+  height: 115%;
+  display: flex;
+  align-items: center;
+  justify-content: right;
+  border-top: 0.3em solid black;
+  border-right: 0.3em solid black;
+  border-bottom: 0.3em solid black;
+  border-left: 0.3em solid black;
+  z-index: 1100;
+}
+
+.tag-start {
+  clip-path: inset(0 50% 0 0);
+}
+
+.tag-end {
+  clip-path: inset(0 0 0 50%);
 }
 </style>
