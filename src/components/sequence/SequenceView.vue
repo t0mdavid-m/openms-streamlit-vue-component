@@ -311,8 +311,7 @@ export default defineComponent({
       this.prepareFragmentTable()
     },
     selectedTag() {
-      this.initializeSequenceObjects()
-      this.prepareFragmentTable()
+      this.updateTagPosition()
     },
     fragmentMassTolerance() {
       this.prepareFragmentTable()
@@ -498,8 +497,6 @@ export default defineComponent({
       this.sequenceObjects = []
       this.sequence.forEach((aa, index) => {
         const cov = this.coverage[index]
-        const start = this.selectedTag?.startPos == index
-        const end = this.selectedTag?.endPos == index
         this.sequenceObjects.push({
           aminoAcid: aa,
           coverage: cov,
@@ -509,8 +506,8 @@ export default defineComponent({
           xIon: false,
           yIon: false,
           zIon: false,
-          tagStart: start,
-          tagEnd : end,
+          tagStart: false,
+          tagEnd : false,
           extraTypes: [],
         })
       })
@@ -537,6 +534,14 @@ export default defineComponent({
       this.selectionStore.selectedAminoAcid(
         this.fragmentTableData[this.selectedFragTableRowIndex].ObservedMass as number
       )
+    },
+    updateTagPosition() {
+      this.sequence.forEach((aa, index) => {
+        const start = this.selectedTag?.startPos == index
+        const end = this.selectedTag?.endPos == index
+        this.sequenceObjects[index].tagStart = start
+        this.sequenceObjects[index].tagEnd = end
+      })
     },
   },
 })
