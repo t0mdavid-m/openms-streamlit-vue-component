@@ -359,7 +359,7 @@ export default defineComponent({
           ++explained_cleavage
         }
       }
-      return (explained_cleavage / (this.sequenceObjects.length - 1)) * 100
+      return (explained_cleavage / (this.sequence_end - this.sequence_start)) * 100
     },
     disableVariableModifications(): boolean {
       if (this.displayTnT) {
