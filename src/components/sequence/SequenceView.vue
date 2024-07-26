@@ -670,6 +670,7 @@ export default defineComponent({
           modEnd : false,
           modCenter : false,
           modMass : '',
+          modLabels : '',
           extraTypes: [],
         })
       })
@@ -713,6 +714,7 @@ export default defineComponent({
         const start = modification.start
         const end = modification.end
         const mass = modification.mass_diff.toFixed(2)
+        const labels = modification.labels
         const mass_display = parseFloat(mass).toLocaleString('en-US', { signDisplay: 'always' })
         for (let index = start; index <= end; index++) {
           if (index == start) {
@@ -721,6 +723,7 @@ export default defineComponent({
           if (index == end) {
             this.sequenceObjects[index].modEnd = true
             this.sequenceObjects[index].modMass = mass_display
+            this.sequenceObjects[index].modLabels = labels
           }
           if ((index != start) && (index != end)) {
             this.sequenceObjects[index].modCenter = true

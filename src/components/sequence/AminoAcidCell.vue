@@ -44,7 +44,12 @@
     <div v-if="showModifications && sequenceObject.modStart && !sequenceObject.modEnd" class="mod-marker mod-start-cont"></div>
     <div v-if="showModifications && !sequenceObject.modStart && sequenceObject.modEnd" class="mod-marker mod-end-cont"></div>
     <div v-if="showModifications && sequenceObject.modCenter" class="mod-marker mod-center-cont"></div>
-    <div v-if="showModifications && sequenceObject.modEnd" class="rounded-lg mod-mass">{{ sequenceObject.modMass }}</div>
+    <div v-if="showModifications && sequenceObject.modEnd" class="rounded-lg mod-mass">{{ sequenceObject.modMass }}
+      <v-tooltip activator="parent">
+        {{ `Possible Modifications: ${sequenceObject.modLabels}` }}
+        <br />
+      </v-tooltip>
+    </div>
     <div v-if="showModifications && DoesThisAAHaveExtraFragTypes" class="frag-marker-extra-type">
       <svg viewBox="0 0 10 10">
         <circle cx="5" cy="5" r="0.5" stroke="black" stroke-width="0.3" fill="gold" />

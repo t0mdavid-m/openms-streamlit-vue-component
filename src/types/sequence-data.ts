@@ -20,6 +20,7 @@ export type ModificationData = {
   start : number
   end : number
   mass_diff : number
+  labels : string
 }
 
 export type SequenceDataDictionary = Record<number, SequenceData>

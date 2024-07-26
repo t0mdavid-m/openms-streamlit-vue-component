@@ -8,6 +8,7 @@ export type SequenceObject = {
   modCenter? : boolean
   modEnd? : boolean
   modMass? : string
+  modLabels? : string
   aIon: boolean
   bIon: boolean
   cIon: boolean
