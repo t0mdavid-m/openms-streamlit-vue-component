@@ -7,10 +7,10 @@
     <div class="sequence-and-scale">
     <div id="sequence-part">
       <div class="d-flex justify-space-evenly">
-        <template v-if="precursorData.length != 0">
-          <h3>Precursor</h3>
+        <template v-if="massData.length != 0">
+          <h3>{{massTitle}}</h3>
           <v-divider :vertical="true"></v-divider>
-          <template v-for="(item, p_index) in precursorData" :key="p_index">
+          <template v-for="(item, p_index) in massData" :key="p_index">
             {{ item }}
             <v-divider :vertical="true"></v-divider>
           </template>
@@ -35,6 +35,19 @@
                     show-ticks="always"
                     tick-size="4"
                   ></v-slider>
+                </v-list-item>
+                <v-list-item>
+                  <v-list-item-title>Visibility</v-list-item-title>
+                  <div class="d-flex justify-space-evenly">
+                    <v-checkbox
+                      v-for="visibilityOption in visibilityOptions"
+                      :key="visibilityOption.text"
+                      v-model="visibilityOption.selected"
+                      hide-details
+                      density="comfortable"
+                      :label="visibilityOption.text"
+                    ></v-checkbox>
+                  </div>
                 </v-list-item>
                 <v-list-item>
                   <v-list-item-title>Fragment ion types</v-list-item-title>
@@ -86,11 +99,12 @@
           >
             {{ aa_index + 1 }}
           </div>
-          <ProteinTerminalCell v-if="aa_index === 0" protein-terminal="N-term" :index="-1" />
+          <ProteinTerminalCell v-if="aa_index === 0" protein-terminal="N-term" :truncated=n_truncation :index="-1" />
           <AminoAcidCell
             :index="aa_index"
             :sequence-object="aminoAcidObj"
             :fixed-modification="fixedModification(aminoAcidObj.aminoAcid)"
+            :disable-variable-modification-selection="disableVariableModifications"
             @selected="aminoAcidSelected"
           />
           <div
@@ -101,7 +115,7 @@
           </div>
           <ProteinTerminalCell
             v-if="aa_index === sequence.length - 1"
-            protein-terminal="C-term"
+            protein-terminal="C-term" :truncated=c_truncation
             :index="sequence.length"
           />
         </template>
@@ -138,6 +152,7 @@ import { useStreamlitDataStore } from '@/stores/streamlit-data'
 import { useSelectionStore, type TagData } from '@/stores/selection'
 import { useModificationStore } from '@/stores/variable-modification'
 import type { Theme } from 'streamlit-component-lib'
+import type { ModificationData } from '@/types/sequence-data'
 import TabulatorTable from '@/components/tabulator/TabulatorTable.vue'
 import AminoAcidCell from './AminoAcidCell.vue'
 import ProteinTerminalCell from './ProteinTerminalCell.vue'
@@ -173,7 +188,8 @@ export default defineComponent({
   data() {
     return {
       rowWidth: 35 as number,
-      precursorData: [] as string[],
+      massData: [] as string[],
+      massTitle: "" as string,
       ionTypes: [
         { text: 'a', selected: false },
         { text: 'b', selected: true },
@@ -188,6 +204,10 @@ export default defineComponent({
         'proton loss/addition': true,
       } as Record<ExtraFragmentType, boolean>,
       fragmentMassTolerance: 10 as number,
+      visibilityOptions: [
+        { text: 'Fragments', selected: true },
+        { text: 'Modifications', selected: true },
+      ],
       fragmentTableColumnDefinitions: [
         { title: 'Name', field: 'Name' },
         { title: 'Ion type', field: 'IonType' },
@@ -229,6 +249,33 @@ export default defineComponent({
       }
       return this.streamlitDataStore.sequenceData?.[key]?.sequence ?? []
     },
+    sequence_start(): number {
+      let key = this.selectedSequence;
+      if (key === undefined) {
+        key = 0
+      }
+      return this.streamlitDataStore.sequenceData?.[key]?.proteoform_start ?? 0
+    },
+    n_truncation(): boolean {
+      return this.sequence_start > 0
+    },
+    sequence_end(): number {
+      let key = this.selectedSequence;
+      if (key === undefined) {
+        key = 0
+      }
+      return this.streamlitDataStore.sequenceData?.[key]?.proteoform_end ?? this.sequence.length-1
+    },
+    c_truncation(): boolean {
+      return this.sequence_end < (this.sequence.length - 1)
+    },
+    modifications(): ModificationData[] {
+      let key = this.selectedSequence;
+      if (key === undefined) {
+        key = 0
+      }
+      return this.streamlitDataStore.sequenceData?.[key]?.modifications ?? []
+    },
     coverage(): number[] {
       const key = this.selectedSequence;
       if (typeof key === 'number') {
@@ -250,6 +297,13 @@ export default defineComponent({
       }
       return this.streamlitDataStore.sequenceData?.[key]?.theoretical_mass ?? 0
     },
+    computedMass(): number | undefined {
+      let key = this.selectedSequence;
+      if (key === undefined) {
+        key = 0
+      }
+      return this.streamlitDataStore.sequenceData?.[key]?.computed_mass
+    },
     fixedModificationSites(): string[] {
       let key = this.selectedSequence;
       if (key === undefined) {
@@ -258,7 +312,8 @@ export default defineComponent({
       return this.streamlitDataStore.sequenceData?.[key]?.fixed_modifications ?? []
     },
     variableModifications(): Record<number, number> {
-      return this.variableModData.variableModifications ?? {}
+      return {}
+      //return this.variableModData.variableModifications ?? {}
     },
     tickLabels(): Record<number, string> {
       return {
@@ -298,17 +353,32 @@ export default defineComponent({
       }
       return (explained_cleavage / (this.sequenceObjects.length - 1)) * 100
     },
+    disableVariableModifications(): boolean {
+      if (this.displayTnT) {
+        return true
+      }
+      return false
+    },
+    displayTnT(): boolean {
+      if (this.computedMass !== undefined) {
+        return true
+      }
+      return false
+    },
   },
   watch: {
     selectedScanIndex() {
       this.preparePrecursorInfo()
       this.initializeSequenceObjects()
       this.prepareFragmentTable()
+      this.prepareAmbigiousModifications()
     },
     sequence() {
       this.selectionStore.updateSelectedAA(undefined)
+      this.preparePrecursorInfo()
       this.initializeSequenceObjects()
       this.prepareFragmentTable()
+      this.prepareAmbigiousModifications()
     },
     selectedTag() {
       this.updateTagPosition()
@@ -320,6 +390,7 @@ export default defineComponent({
       handler() {
         this.initializeSequenceObjects()
         this.prepareFragmentTable()
+        this.prepareAmbigiousModifications()
       },
       deep: true,
     },
@@ -327,6 +398,7 @@ export default defineComponent({
       handler() {
         this.initializeSequenceObjects()
         this.prepareFragmentTable()
+        this.prepareAmbigiousModifications()
       },
       deep: true,
     },
@@ -334,6 +406,7 @@ export default defineComponent({
       this.preparePrecursorInfo()
       this.initializeSequenceObjects()
       this.prepareFragmentTable()
+      this.prepareAmbigiousModifications()
     },
   },
   mounted() {
@@ -341,16 +414,17 @@ export default defineComponent({
     this.initializeSequenceObjects()
     this.preparePrecursorInfo()
     this.prepareFragmentTable()
+    this.prepareAmbigiousModifications()
   },
   methods: {
-    getFragmentMasses(iontype: string): number[] {
+    getFragmentMasses(iontype: string): number[][] {
       let key = this.selectedSequence;
       if (key === undefined) {
         key = 0
       }
       return this.streamlitDataStore.sequenceData?.[key][
         `fragment_masses_${iontype}` as keyof SequenceData
-      ] as number[]
+      ] as number[][]
     },
     updateMassTolerance(event: Event) {
       this.fragmentMassTolerance = Number.parseInt((event.target as any).value as string)
@@ -360,8 +434,31 @@ export default defineComponent({
     },
     preparePrecursorInfo(): void {
       if (this.selectedScanIndex == undefined) {
-        this.precursorData = [] // if no scan is selected, nothing to show
+        this.massData = [] // if no scan is selected, nothing to show
         return
+      }
+
+      if (this.computedMass !== undefined) {
+        console.log('this mass')
+        console.log(this.computedMass)
+        this.massTitle = 'Proteoform'
+        let proteoform_mass = '-'
+        let delta_mass = '-'
+        if (this.computedMass > 0) {
+          proteoform_mass = this.computedMass.toFixed(2)
+          delta_mass = Math.abs(this.theoreticalMass - this.computedMass).toFixed(2)
+        }
+
+
+        this.massData = [
+          `Theoretical protein mass : ${this.theoreticalMass.toFixed(2)}`,
+          `Observed proteoform mass : ${proteoform_mass}`,
+          `Δ Mass (Da) : ${delta_mass}`,
+        ]
+
+        this.visibilityOptions.push({ text: 'Tags', selected: true })
+        return
+
       }
 
       const selectedScanInfo =
@@ -369,7 +466,7 @@ export default defineComponent({
       const observedMass = selectedScanInfo.PrecursorMass as number
       if (observedMass === 0) {
         // if selected scan is not eligible for this view
-        this.precursorData = []
+        this.massData = []
         return
       }
 
@@ -382,14 +479,20 @@ export default defineComponent({
         })
       }
       const deltaMassDa = Math.abs(theoreticalMass - observedMass)
-
-      this.precursorData = [
-        `Theoretical mass: ${theoreticalMass.toFixed(2)}`,
-        `Observed mass :${observedMass.toFixed(2)}`,
-        `Δ Mass (Da) :${deltaMassDa.toFixed(2)}`,
+      this.massTitle = 'Precursor'
+      this.massData = [
+        `Theoretical mass : ${theoreticalMass.toFixed(2)}`,
+        `Observed mass : ${observedMass.toFixed(2)}`,
+        `Δ Mass (Da) : ${deltaMassDa.toFixed(2)}`,
       ]
     },
     prepareFragmentTable(): void {
+
+      if (this.sequence.length <= 0) {
+        this.fragmentTableTitle = '' // if no sequence is selected, nothing to show
+        return
+      }
+
       if (this.selectedScanIndex == undefined) {
         this.fragmentTableTitle = '' // if no scan is selected, nothing to show
         return
@@ -409,7 +512,8 @@ export default defineComponent({
 
       // calculate matching masses
       let matching_fragments: Record<string, unknown>[] = []
-      const sequence_size = this.sequence.length - 1
+      const sequence_size = this.sequence_end
+
       this.ionTypes
         .filter((iontype) => iontype.selected)
         .forEach((iontype) => {
@@ -420,20 +524,21 @@ export default defineComponent({
             theoIndex < FragSize;
             ++theoIndex
           ) {
+            const aaIndex = theoIndex + this.sequence_start
             let theoretical_mass = theoretical_frags[theoIndex]
-            // if any variable modifications are given, change the theoretical mass accordingly
+              // if any variable modifications are given, change the theoretical mass accordingly
             if (!this.variableModData.isEmpty) {
               if (iontype.text === 'a' || iontype.text === 'b' || iontype.text === 'c')
                 // if this is prefix, add modification mass starting from the theoretical index
                 Object.entries(this.variableModifications).forEach(([varIndex, varMass]) => {
-                  if (parseInt(varIndex) <= theoIndex) {
+                  if (parseInt(varIndex) <= aaIndex) {
                     theoretical_mass += varMass
                   }
                 })
               if (iontype.text === 'x' || iontype.text === 'y' || iontype.text === 'z')
                 // if this is suffix, add modification mass string from the theoretical index (reverse)
                 Object.entries(this.variableModifications).forEach(([varIndex, varMass]) => {
-                  if (sequence_size - parseInt(varIndex) <= theoIndex) {
+                  if (sequence_size - parseInt(varIndex) <= aaIndex) {
                     theoretical_mass += varMass
                   }
                 })
@@ -472,7 +577,7 @@ export default defineComponent({
                 }
                 matching_fragments.push(matched)
                 // setting the fragment mark for fragment map
-                let aa_index = theoIndex
+                let aa_index = aaIndex
                 if (iontype.text === 'a' || iontype.text === 'b' || iontype.text === 'c')
                   this.sequenceObjects[aa_index][`${iontype.text}Ion`] = true
                 if (iontype.text === 'x' || iontype.text === 'y' || iontype.text === 'z') {
@@ -480,7 +585,7 @@ export default defineComponent({
                   aa_index = sequence_size - theoIndex
                 }
                 if (typeName) {
-                  this.sequenceObjects[aa_index]['extraTypes'].push(`${iontype.text}${typeName}`)
+                  this.sequenceObjects[aaIndex]['extraTypes'].push(`${iontype.text}${typeName}`)
                 }
               })
             }
@@ -497,9 +602,15 @@ export default defineComponent({
       this.sequenceObjects = []
       this.sequence.forEach((aa, index) => {
         const cov = this.coverage[index]
+        let truncated = false
+        if ((this.sequence_start > index) || (this.sequence_end < index)) {
+          truncated = true
+        }
+        
         this.sequenceObjects.push({
           aminoAcid: aa,
           coverage: cov,
+          truncated: truncated,
           aIon: false,
           bIon: false,
           cIon: false,
@@ -508,6 +619,10 @@ export default defineComponent({
           zIon: false,
           tagStart: false,
           tagEnd : false,
+          modStart : false,
+          modEnd : false,
+          modCenter : false,
+          modMass : '',
           extraTypes: [],
         })
       })
@@ -516,17 +631,17 @@ export default defineComponent({
       let ionName = ''
       const this_seqObj = this.sequenceObjects[aaIndex]
       if (this_seqObj.aIon) {
-        ionName = `a${aaIndex + 1}`
+        ionName = `a${aaIndex - this.sequence_start + 1}`
       } else if (this_seqObj.bIon) {
-        ionName = `b${aaIndex + 1}`
+        ionName = `b${aaIndex - this.sequence_start + 1}`
       } else if (this_seqObj.cIon) {
-        ionName = `c${aaIndex + 1}`
+        ionName = `c${aaIndex - this.sequence_start + 1}`
       } else if (this_seqObj.xIon) {
-        ionName = `x${this.sequence.length - aaIndex}`
+        ionName = `x${this.sequence_end - aaIndex + 1}`
       } else if (this_seqObj.yIon) {
-        ionName = `y${this.sequence.length - aaIndex}`
+        ionName = `y${this.sequence_end - aaIndex + 1}`
       } else {
-        ionName = `z${this.sequence.length - aaIndex}`
+        ionName = `z${this.sequence_end - aaIndex + 1}`
       }
       // find matching fragments from the table
       this.selectedFragTableRowIndex = this.fragmentTableData.findIndex((x) => x.Name === ionName)
@@ -536,11 +651,34 @@ export default defineComponent({
       )
     },
     updateTagPosition() {
+      if (this.sequenceObjects.length <= 0) {
+        return
+      }
       this.sequence.forEach((aa, index) => {
         const start = this.selectedTag?.startPos == index
         const end = this.selectedTag?.endPos == index
         this.sequenceObjects[index].tagStart = start
         this.sequenceObjects[index].tagEnd = end
+      })
+    },
+    prepareAmbigiousModifications() {
+      this.modifications.forEach((modification) => {
+        const start = modification.start
+        const end = modification.end
+        const mass = modification.mass_diff.toFixed(2)
+        const mass_display = parseFloat(mass).toLocaleString('en-US', { signDisplay: 'always' })
+        for (let index = start; index <= end; index++) {
+          if (index == start) {
+            this.sequenceObjects[index].modStart = true
+          }
+          if (index == end) {
+            this.sequenceObjects[index].modEnd = true
+            this.sequenceObjects[index].modMass = mass_display
+          }
+          if ((index != start) && (index != end)) {
+            this.sequenceObjects[index].modCenter = true
+          }
+        }
       })
     },
   },

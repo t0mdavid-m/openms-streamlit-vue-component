@@ -1,7 +1,7 @@
 <template>
   <div class="d-flex justify-center align-center rounded-lg" :class="proteinTerminalCellClasses"
     :style="proteinTerminalCellStyles" @click.stop @contextmenu.prevent="toggleMenuOpen">
-    <div>
+    <div :class="['terminal-text', { truncated: truncated }]">
       {{ proteinTerminalText }}
     </div>
     <v-menu activator="parent" v-model="menuOpen" location="end" :open-on-click="false" :close-on-content-click="false"
@@ -45,6 +45,11 @@ export default defineComponent({
     index: {
       type: Number,
       required: true,
+    },
+    truncated: {
+      type: Boolean,
+      required: false,
+      default: false,
     },
   },
   setup() {
@@ -130,6 +135,14 @@ export default defineComponent({
   }
 }
 
+
+.terminal-text {
+  &.truncated {
+    color: grey; 
+    outline: grey;
+  }
+}
+
 .protein-terminal-modified:extend(.protein-terminal) {
   background-color: #9c1e1e;
   color: var(--amino-acid-cell-color);
@@ -139,3 +152,4 @@ export default defineComponent({
   }
 }
 </style>
+

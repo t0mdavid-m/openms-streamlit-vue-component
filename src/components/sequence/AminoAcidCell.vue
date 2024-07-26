@@ -2,7 +2,7 @@
   <div
    :id="id"
    class="d-flex justify-center align-center rounded-lg"
-   :class="[aminoAcidCellClass, { highlighted: isHighlighted }]"
+   :class="[aminoAcidCellClass, { highlighted: isHighlighted }, { truncated: isTruncated }]"
    :style="aminoAcidCellStyles"
    @click="selectCell"
    @contextmenu.prevent="toggleMenuOpen"
@@ -39,6 +39,12 @@
     </div>
     <div v-if="sequenceObject.tagStart" class="rounded-lg tag-marker tag-start"></div>
     <div v-if="sequenceObject.tagEnd" class="rounded-lg tag-marker tag-end"></div>
+    <div v-if="sequenceObject.modStart" class="rounded-lg mod-marker mod-start"></div>
+    <div v-if="sequenceObject.modEnd" class="rounded-lg mod-marker mod-end"></div>
+    <div v-if="sequenceObject.modStart && !sequenceObject.modEnd" class="mod-marker mod-start-cont"></div>
+    <div v-if="!sequenceObject.modStart && sequenceObject.modEnd" class="mod-marker mod-end-cont"></div>
+    <div v-if="sequenceObject.modCenter" class="mod-marker mod-center-cont"></div>
+    <div v-if="sequenceObject.modEnd" class="rounded-lg mod-mass">{{ sequenceObject.modMass }}</div>
     <div v-if="DoesThisAAHaveExtraFragTypes" class="frag-marker-extra-type">
       <svg viewBox="0 0 10 10">
         <circle cx="5" cy="5" r="0.5" stroke="black" stroke-width="0.3" fill="gold" />
@@ -84,10 +90,22 @@
       </v-list>
     </v-menu>
     <v-tooltip activator="parent">
-      {{ `Prefix: ${index + 1}` }}
-      <br />
-      {{ `Suffix: ${(streamlitData.sequenceData?.[selectedSequence].sequence.length ?? 0) - index}` }}
-      <br />
+      <template v-if="prefix !== undefined">
+        {{ `Prefix: ${prefix}` }}
+        <br />
+      </template>
+      <template v-if="truncated_prefix !== undefined">
+        {{ `Truncated Prefix: ${truncated_prefix}` }}
+        <br />
+      </template>
+      <template v-if="suffix !== undefined">
+        {{ `Suffix: ${suffix}` }}
+        <br />
+      </template>
+      <template v-if="truncated_suffix !== undefined">
+        {{ `Truncated Suffix: ${truncated_suffix}` }}
+        <br />
+      </template>
       <div v-if="DoesThisAAHaveExtraFragTypes">
         {{ sequenceObject.extraTypes.join(', ') }}
       </div>
@@ -124,6 +142,10 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    disableVariableModificationSelection: {
+      type: Boolean,
+      default: false,
+    },
   },
   emits: ['selected'],
   setup() {
@@ -149,6 +171,53 @@ export default defineComponent({
     },
     aminoAcid(): string {
       return this.sequenceObject.aminoAcid
+    },
+    start(): number | undefined {
+      return this.streamlitData.sequenceData?.[this.selectedSequence].proteoform_start
+    },
+    end(): number | undefined {
+      return this.streamlitData.sequenceData?.[this.selectedSequence].proteoform_end
+    },
+    length(): number | undefined {
+      return this.streamlitData.sequenceData?.[this.selectedSequence].sequence.length
+    },
+    prefix(): number | undefined {
+      if ((this.start === undefined) && (this.end === undefined)) {
+        return this.index + 1
+      }
+      else if ((this.end !== undefined) && (this.index > this.end)) {
+        return undefined
+      }
+      else if ((this.start !== undefined) && (this.index >= this.start)) {
+        return this.index + 1 - this.start
+      }
+      return undefined
+    },
+    truncated_prefix(): number | undefined {
+      if ((this.start === undefined) || (this.index >= this.start)) {
+        return undefined
+      }
+      return this.index + 1
+    },
+    suffix(): number | undefined {
+      if ((this.start === undefined) && (this.end === undefined)) {
+        return (length ?? 0) - this.index
+      }
+      else if ((this.start !== undefined) && (this.index < this.start)) {
+        return undefined
+      }
+      else if ((this.end !== undefined) && (this.index <= this.end)) {
+        return this.end + 1 - this.index
+      }
+      return undefined
+    },
+    truncated_suffix(): number | undefined {
+      const end = this.streamlitData.sequenceData?.[this.selectedSequence].proteoform_end
+      const length = this.streamlitData.sequenceData?.[this.selectedSequence].sequence.length
+      if ((end == undefined) || (this.index <= end)) {
+        return undefined
+      }
+      return (length ?? 0) - this.index
     },
     modificationsForSelect(): string[] {
       return ['None', 'Custom', ...this.potentialModifications]
@@ -183,7 +252,6 @@ export default defineComponent({
       return {
         'sequence-amino-acid': !this.fixedModification,
         'sequence-amino-acid-highlighted': this.fixedModification,
-        'sequence-amino-acid-modified': this.isThisAAmodified,
       }
     },
     potentialModifications(): KnownModification[] {
@@ -225,12 +293,18 @@ export default defineComponent({
     isHighlighted(): boolean {
       return (this.index === this.selectionStore.selectedAApos)
     },
+    isTruncated(): boolean {
+      return this.sequenceObject.truncated
+    },
     DoesThisAAHaveSequenceTags() : boolean {
       return this.coverage > 0
     },
   },
   methods: {
     toggleMenuOpen(): void {
+      if (this.disableVariableModificationSelection) {
+        return
+      }
       this.menuOpen = !this.menuOpen
     },
     selectCell(): void {
@@ -267,6 +341,21 @@ export default defineComponent({
       this.toggleMenuOpen()
     },
   },
+  watch: {
+    isThisAAmodified() {
+      this.sequenceObject.modStart = true
+      this.sequenceObject.modEnd = true
+    },
+    customModMass() {
+      this.sequenceObject.modMass = parseFloat(this.customModMass).toLocaleString('en-US', { signDisplay: 'always' })
+    },
+    selectedModification() {
+      if ((this.selectedModification !== undefined) && (modificationMassMap[this.selectedModification] !== undefined)) {
+        this.sequenceObject.modMass = parseFloat(modificationMassMap[this.selectedModification].toFixed(2)).toLocaleString('en-US', { signDisplay: 'always' })
+      }
+      
+    }
+  },
 })
 </script>
 
@@ -278,6 +367,12 @@ export default defineComponent({
   color: #000000; /* Black text for highlighted state */
   outline: 3px solid #29335C; /* Thicker border for highlighted state */
   font-weight: bold;
+}
+
+.sequence-amino-acid-truncated, .sequence-amino-acid.truncated .aa-text {
+  color: grey;
+  outline: grey;
+  text-decoration: line-through !important;
 }
 
 .sequence-amino-acid {
@@ -300,10 +395,10 @@ export default defineComponent({
 }
 
 .sequence-amino-acid-modified {
-  background-color: #9c1e1e;
+  background-color: #a79c91;
 
   &:hover {
-    background-color: #ff1e1e;
+    background-color: #C5BAAF;
   }
 }
 
@@ -375,4 +470,69 @@ export default defineComponent({
 .tag-end {
   clip-path: inset(0 0 0 50%);
 }
+
+.mod-marker {
+  position: absolute;
+  top: -7.5%;
+  left: -7.5%;
+  width: 115%;
+  height: 115%;
+  display: flex;
+  align-items: center;
+  justify-content: right;
+  border-top: 0.2em solid #a79c91;
+  border-right: 0.2em solid #a79c91;
+  border-bottom: 0.2em solid #a79c91;
+  border-left: 0.2em solid #a79c91;
+  z-index: 900;
+}
+
+.mod-mass {
+  background-color: white;
+  display: inline-block;
+  position: absolute;
+  top: -15%;
+  right: -25%;
+  //width: 125%;
+  height: 45%;
+  display: flex;
+  align-items: center;
+  justify-content: right;
+  border-top: 0.1em solid #a79c91;
+  border-right: 0.1em solid #a79c91;
+  border-bottom: 0.1em solid #a79c91;
+  border-left: 0.1em solid #a79c91;
+  font-size: 0.7em;
+  z-index: 1100;
+}
+
+.mod-start {
+  clip-path: inset(0 50% 0 0);
+}
+
+.mod-end {
+  clip-path: inset(0 0 0 50%);
+}
+
+.mod-start-cont {
+  border-right: none;
+  border-left: none;
+  clip-path: inset(0 0 0 50%);
+}
+
+.mod-end-cont {
+  border-right: none;
+  border-left: none;
+  clip-path: inset(0 50% 0 0);
+}
+
+.mod-center-cont {
+  border-right: none;
+  border-left: none;
+  width: 150%;
+}
+
+// mod-start-cont
+// mod-end-cont
+// mod-center-cont
 </style>
