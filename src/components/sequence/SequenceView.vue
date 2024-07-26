@@ -102,7 +102,7 @@
           >
           {{ showTruncations ? aa_index + 1 : aa_index - sequence_start + 1 }}
           </div>
-          <ProteinTerminalCell v-if="aa_index === 0" protein-terminal="N-term" :truncated=n_truncation :index="-1" />
+          <ProteinTerminalCell v-if="aa_index === 0" protein-terminal="N-term" :truncated=n_truncation :index="-1" :disable-variable-modification-selection="disableVariableModifications"/>
           <AminoAcidCell
             :index="aa_index"
             :sequence-object="aminoAcidObj"
@@ -124,6 +124,7 @@
             v-if="aa_index === sequence.length - 1"
             protein-terminal="C-term" :truncated=c_truncation
             :index="sequence.length"
+            :disable-variable-modification-selection="disableVariableModifications"
           />
           </template>
       </div>

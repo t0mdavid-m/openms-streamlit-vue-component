@@ -51,6 +51,10 @@ export default defineComponent({
       required: false,
       default: false,
     },
+    disableVariableModificationSelection: {
+      type: Boolean,
+      default: false,
+    },
   },
   setup() {
     const streamlitData = useStreamlitDataStore()
@@ -101,6 +105,9 @@ export default defineComponent({
   },
   methods: {
     toggleMenuOpen(): void {
+      if (this.disableVariableModificationSelection) {
+        return
+      }
       this.menuOpen = !this.menuOpen
     },
     updateSelectedModification(modification: 'None' | 'Custom' | KnownModification) {
