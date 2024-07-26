@@ -60,6 +60,7 @@
                       density="comfortable"
                       :label="category.text"
                       @click="toggleIonTypeSelected(ionIndex)"
+                      :disabled="!showFragments"
                     >
                     </v-checkbox>
                   </div>
@@ -71,6 +72,7 @@
                       hide-details
                       density="comfortable"
                       :label="category"
+                      :disabled="!showFragments"
                     >
                     </v-checkbox>
                   </div>
@@ -83,6 +85,7 @@
                     hide-details="auto"
                     label="mass tolerance in ppm"
                     @change="updateMassTolerance"
+                    :disabled="!showFragments"
                   ></v-text-field>
                   <!-- TODO: add "required" -->
                 </v-list-item>
@@ -94,10 +97,10 @@
       <div class="pb-4 px-2" :class="gridClasses" style="width: 100%; max-width: 100%">
         <template v-for="(aminoAcidObj, aa_index) in sequenceObjects" :key="aa_index">
           <div
-            v-if="aa_index !== 0 && aa_index % rowWidth === 0"
+            v-if="(showTruncations && (aa_index !== 0) && (aa_index % rowWidth === 0)) || (!showTruncations && ((aa_index - sequence_start) !== 0) && ((aa_index - sequence_start) % rowWidth === 0) && (aa_index < sequence_end) && (aa_index > sequence_start))"
             class="d-flex justify-center align-center"
           >
-            {{ aa_index + 1 }}
+          {{ showTruncations ? aa_index + 1 : aa_index - sequence_start + 1 }}
           </div>
           <ProteinTerminalCell v-if="aa_index === 0" protein-terminal="N-term" :truncated=n_truncation :index="-1" />
           <AminoAcidCell
@@ -105,30 +108,34 @@
             :sequence-object="aminoAcidObj"
             :fixed-modification="fixedModification(aminoAcidObj.aminoAcid)"
             :disable-variable-modification-selection="disableVariableModifications"
+            :showTags="showTags"
+            :showFragments="showFragments"
+            :showModifications="showModifications"
             @selected="aminoAcidSelected"
+            v-if="showTruncations || ((sequence_start <= aa_index) && (sequence_end >= aa_index))"
           />
           <div
-            v-if="aa_index % rowWidth === rowWidth - 1 && aa_index !== sequence.length - 1"
+            v-if="(showTruncations && (aa_index % rowWidth === rowWidth - 1 && aa_index !== sequence.length - 1)) || (!showTruncations && ((aa_index - sequence_start) % rowWidth === rowWidth - 1) && (aa_index < sequence_end) && (aa_index > sequence_start))"
             class="d-flex justify-center align-center"
           >
-            {{ aa_index + 1 }}
+            {{ showTruncations ? aa_index + 1 : aa_index - sequence_start + 1 }}
           </div>
           <ProteinTerminalCell
             v-if="aa_index === sequence.length - 1"
             protein-terminal="C-term" :truncated=c_truncation
             :index="sequence.length"
           />
-        </template>
+          </template>
       </div>
     </div>
-    <div v-if="maxCoverage > 0" class="scale-container" title="Coverage">
+    <div v-if="(maxCoverage > 0) && showTags" class="scale-container" title="Coverage">
       <div class="scale-text"> {{ maxCoverage + "x" }}</div>
       <div class="scale"></div>
       <div class="scale-text">1x</div>
     </div>
   </div>
     <div id="sequence-view-table">
-      <template v-if="fragmentTableTitle !== ''">
+      <template v-if="(fragmentTableTitle !== '') && showFragments">
         <TabulatorTable
           :table-data="fragmentTableData"
           :column-definitions="fragmentTableColumnDefinitions"
@@ -207,7 +214,7 @@ export default defineComponent({
       visibilityOptions: [
         { text: 'Fragments', selected: true },
         { text: 'Modifications', selected: true },
-      ],
+      ] as { text: string; selected: boolean }[],
       fragmentTableColumnDefinitions: [
         { title: 'Name', field: 'Name' },
         { title: 'Ion type', field: 'IonType' },
@@ -365,6 +372,39 @@ export default defineComponent({
       }
       return false
     },
+    showTags(): boolean {
+      if (!this.displayTnT) {
+        return false
+      }
+      if (this.visibilityOptions.find(option => option.text === 'Tags')?.selected) {
+        return true
+      }
+      return false
+    },
+    showTruncations(): boolean {
+      if (!this.displayTnT) {
+        return false
+      }
+      if (this.visibilityOptions.find(option => option.text === 'Truncations')?.selected) {
+        return true
+      }
+      return false
+    },
+    showModifications(): boolean {
+      if (!this.displayTnT) {
+        return false
+      }
+      if (this.visibilityOptions.find(option => option.text === 'Modifications')?.selected) {
+        return true
+      }
+      return false
+    },
+    showFragments(): boolean {
+      if (this.visibilityOptions.find(option => option.text === 'Fragments')?.selected) {
+        return true
+      }
+      return false
+    },
   },
   watch: {
     selectedScanIndex() {
@@ -455,8 +495,14 @@ export default defineComponent({
           `Observed proteoform mass : ${proteoform_mass}`,
           `Δ Mass (Da) : ${delta_mass}`,
         ]
+        if (!this.visibilityOptions.some(option => option.text === 'Tags')) {
+          this.visibilityOptions.push({ text: 'Truncations', selected: true })
+          this.visibilityOptions.push({ text: 'Tags', selected: true })
+        }
 
-        this.visibilityOptions.push({ text: 'Tags', selected: true })
+        this.ionTypesExtra['ammonium loss'] = false
+        this.ionTypesExtra['water loss'] = false
+        this.ionTypesExtra['proton loss/addition'] = false
         return
 
       }

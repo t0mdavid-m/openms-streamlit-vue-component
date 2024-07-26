@@ -7,45 +7,45 @@
    @click="selectCell"
    @contextmenu.prevent="toggleMenuOpen"
    >
-    <div v-if="sequenceObject.aIon" class="frag-marker-container-a">
+    <div v-if="showFragments && sequenceObject.aIon" class="frag-marker-container-a">
       <svg viewBox="0 0 10 10">
         <path stroke="green" d="M7, 1 L9, 3 L9, 7 L9, 3 L7, 1 z" stroke-width="1.5" />
       </svg>
     </div>
-    <div v-if="sequenceObject.bIon" class="frag-marker-container-b">
+    <div v-if="showFragments && sequenceObject.bIon" class="frag-marker-container-b">
       <svg viewBox="0 0 10 10">
         <path stroke="blue" d="M10, 0 V5 M10, 0 H5 z" stroke-width="3" />
       </svg>
     </div>
-    <div v-if="sequenceObject.cIon" class="frag-marker-container-c">
+    <div v-if="showFragments && sequenceObject.cIon" class="frag-marker-container-c">
       <svg viewBox="0 0 10 10">
         <path stroke="red" d="M4, 1 L9, 3 L9, 7 L9, 3 L4, 1 z" stroke-width="1.5" />
       </svg>
     </div>
-    <div v-if="sequenceObject.xIon" class="frag-marker-container-x">
+    <div v-if="showFragments && sequenceObject.xIon" class="frag-marker-container-x">
       <svg viewBox="0 0 10 10">
         <path stroke="green" d="M1, 3 L1, 7 L3, 9 L1, 7 L1, 3 z" stroke-width="1.5" />
       </svg>
     </div>
-    <div v-if="sequenceObject.yIon" class="frag-marker-container-y">
+    <div v-if="showFragments && sequenceObject.yIon" class="frag-marker-container-y">
       <svg viewBox="0 0 10 10">
         <path stroke="blue" d="M0, 10 V5 M0, 10 H5 z" stroke-width="3" />
       </svg>
     </div>
-    <div v-if="sequenceObject.zIon" class="frag-marker-container-z">
+    <div v-if="showFragments && sequenceObject.zIon" class="frag-marker-container-z">
       <svg viewBox="0 0 10 10">
         <path stroke="red" d="M1, 3 L1, 7 L6, 9 L1, 7 L1, 3 z" stroke-width="1.5" />
       </svg>
     </div>
-    <div v-if="sequenceObject.tagStart" class="rounded-lg tag-marker tag-start"></div>
-    <div v-if="sequenceObject.tagEnd" class="rounded-lg tag-marker tag-end"></div>
-    <div v-if="sequenceObject.modStart" class="rounded-lg mod-marker mod-start"></div>
-    <div v-if="sequenceObject.modEnd" class="rounded-lg mod-marker mod-end"></div>
-    <div v-if="sequenceObject.modStart && !sequenceObject.modEnd" class="mod-marker mod-start-cont"></div>
-    <div v-if="!sequenceObject.modStart && sequenceObject.modEnd" class="mod-marker mod-end-cont"></div>
-    <div v-if="sequenceObject.modCenter" class="mod-marker mod-center-cont"></div>
-    <div v-if="sequenceObject.modEnd" class="rounded-lg mod-mass">{{ sequenceObject.modMass }}</div>
-    <div v-if="DoesThisAAHaveExtraFragTypes" class="frag-marker-extra-type">
+    <div v-if="showTags && sequenceObject.tagStart" class="rounded-lg tag-marker tag-start"></div>
+    <div v-if="showTags && sequenceObject.tagEnd" class="rounded-lg tag-marker tag-end"></div>
+    <div v-if="showModifications && sequenceObject.modStart" class="rounded-lg mod-marker mod-start"></div>
+    <div v-if="showModifications && sequenceObject.modEnd" class="rounded-lg mod-marker mod-end"></div>
+    <div v-if="showModifications && sequenceObject.modStart && !sequenceObject.modEnd" class="mod-marker mod-start-cont"></div>
+    <div v-if="showModifications && !sequenceObject.modStart && sequenceObject.modEnd" class="mod-marker mod-end-cont"></div>
+    <div v-if="showModifications && sequenceObject.modCenter" class="mod-marker mod-center-cont"></div>
+    <div v-if="showModifications && sequenceObject.modEnd" class="rounded-lg mod-mass">{{ sequenceObject.modMass }}</div>
+    <div v-if="showModifications && DoesThisAAHaveExtraFragTypes" class="frag-marker-extra-type">
       <svg viewBox="0 0 10 10">
         <circle cx="5" cy="5" r="0.5" stroke="black" stroke-width="0.3" fill="gold" />
       </svg>
@@ -146,6 +146,18 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    showTags: {
+      type: Boolean,
+      default: false,
+    },
+    showModifications: {
+      type: Boolean,
+      default: false,
+    },
+    showFragments: {
+      type: Boolean,
+      default: true,
+    },
   },
   emits: ['selected'],
   setup() {
@@ -236,7 +248,10 @@ export default defineComponent({
         }
       }
 
-      if (alpha !== 0) {
+      if (!this.showTags) {
+        alpha = 0
+      }
+      else if (alpha !== 0) {
         alpha = (alpha * 0.9) + 0.1
       }
       
@@ -308,8 +323,8 @@ export default defineComponent({
       this.menuOpen = !this.menuOpen
     },
     selectCell(): void {
-      if (this.DoesThisAAHaveSequenceTags) {
-        if (this.selectionStore.selectedAApos === this.index) {
+      if (this.DoesThisAAHaveSequenceTags && this.showTags) {
+        if ((this.selectionStore.selectedAApos === this.index)){
           this.selectionStore.updateSelectedAA(undefined)
         }
         else {
@@ -353,8 +368,12 @@ export default defineComponent({
       if ((this.selectedModification !== undefined) && (modificationMassMap[this.selectedModification] !== undefined)) {
         this.sequenceObject.modMass = parseFloat(modificationMassMap[this.selectedModification].toFixed(2)).toLocaleString('en-US', { signDisplay: 'always' })
       }
-      
-    }
+    },
+    showTags() {
+      if (!this.showTags) {
+        this.selectionStore.updateSelectedAA(undefined)
+      }
+    },
   },
 })
 </script>
