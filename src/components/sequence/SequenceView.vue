@@ -699,7 +699,12 @@ export default defineComponent({
       )
     },
     updateTagPosition() {
+      // No sequences in data
       if (this.sequenceObjects.length <= 0) {
+        return
+      }
+      // Protein without sequence selected
+      if (this.sequence.length <= 0) {
         return
       }
       this.sequence.forEach((aa, index) => {
