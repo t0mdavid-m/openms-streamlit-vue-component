@@ -52,9 +52,9 @@
         <br />
       </v-tooltip>
     </div>
-    <div v-if="showFragments && showModifications && sequenceObject.modEnd && sequenceObject.aIon && !sequenceObject.bIon" class="rounded-lg mod-mass-a"></div>
-    <div v-if="showFragments && showModifications && sequenceObject.modEnd && sequenceObject.bIon" class="rounded-lg mod-mass-b"></div>
-    <div v-if="showFragments && showModifications && sequenceObject.modEnd && sequenceObject.cIon && !sequenceObject.bIon" class="rounded-lg mod-mass-c"></div>
+    <div v-if="showFragments && showModifications && sequenceObject.modEnd && sequenceObject.aIon && !sequenceObject.bIon" class="rounded-lg mod-mass-a">{{ sequenceObject.modMass }}</div>
+    <div v-if="showFragments && showModifications && sequenceObject.modEnd && sequenceObject.bIon" class="rounded-lg mod-mass-b">{{ sequenceObject.modMass }}</div>
+    <div v-if="showFragments && showModifications && sequenceObject.modEnd && sequenceObject.cIon && !sequenceObject.bIon" class="rounded-lg mod-mass-c">{{ sequenceObject.modMass }}</div>
 
     
     <div v-if="showModifications && DoesThisAAHaveExtraFragTypes" class="frag-marker-extra-type">
@@ -164,7 +164,7 @@ export default defineComponent({
     },
     showModifications: {
       type: Boolean,
-      default: false,
+      default: true,
     },
     showFragments: {
       type: Boolean,
@@ -525,7 +525,7 @@ export default defineComponent({
   top: -15%;
   right: -25%;
   //width: 125%;
-  height: 45%;
+  //height: 45%;
   display: flex;
   align-items: center;
   justify-content: right;
@@ -534,67 +534,68 @@ export default defineComponent({
   border-bottom: 0.1em solid #a79c91;
   border-left: 0.1em solid #a79c91;
   font-size: 0.7em;
+  padding: 0.0em 0.2em 0.0em 0.2em;
   z-index: 1100;
 }
 
 .mod-mass-a {
   display: inline-block;
   position: absolute;
-  top: -16%;
-  right: -26%;
-  height: 47%;
-  width: 127%;
+  top: -15%;
+  right: -25%;
   display: flex;
   align-items: center;
-  border-top: 0.15em solid green;
-  border-right: 0.15em solid green;
-  border-bottom: 0.15em solid green;
+  border-top: 0.2em solid green;
+  border-right: 0.2em solid green;
+  border-bottom: 0.2em solid green;
   border-top-right-radius: 0.5rem; /* Ensure the pseudo-element also has rounded corners */
   border-top-left-radius: 0.5rem;
   border-bottom-right-radius: 0.5rem;
   border-bottom-left-radius: 0.5rem;
-  clip-path: polygon(100% 0%, 66% 0%, 79% 100%, 100% 100%);
+  padding: 0.0em 0.2em 0.0em 0.2em;
   z-index: 1200;
+  font-size: 0.7em;
+  color: rgba(0, 0, 0, 0);
 }
 
 .mod-mass-b {
   display: inline-block;
   position: absolute;
-  top: -16%;
-  right: -26%;
-  height: 47%;
-  width: 127%;
+  top: -15%;
+  right: -25%;
   display: flex;
   align-items: center;
-  border-top: 0.15em solid blue;
-  border-right: 0.15em solid blue;
-  border-bottom: 0.15em solid blue;
+  border-top: 0.2em solid blue;
+  border-right: 0.2em solid blue;
+  border-bottom: 0.2em solid blue;
   border-top-right-radius: 0.5rem; /* Ensure the pseudo-element also has rounded corners */
   border-top-left-radius: 0.5rem;
   border-bottom-right-radius: 0.5rem;
   border-bottom-left-radius: 0.5rem;
-  clip-path: polygon(100% 0%, 55% 0%, 79% 100%, 100% 100%);
   z-index: 1200;
+  padding: 0.0em 0.2em 0.0em 0.2em;
+  font-size: 0.7em;
+  color: rgba(0, 0, 0, 0);
 }
 
 .mod-mass-c {
   display: inline-block;
   position: absolute;
-  top: -16%;
-  right: -26%;
-  height: 47%;
-  width: 127%;
+  top: -15%;
+  right: -25%;
   display: flex;
   align-items: center;
-  border-top: 0.15em solid red;
-  border-right: 0.15em solid red;
-  border-bottom: 0.15em solid red;
+  border-top: 0.2em solid red;
+  border-right: 0.2em solid red;
+  border-bottom: 0.2em solid red;
   border-top-right-radius: 0.5rem; /* Ensure the pseudo-element also has rounded corners */
   border-top-left-radius: 0.5rem;
   border-bottom-right-radius: 0.5rem;
   border-bottom-left-radius: 0.5rem;
-  clip-path: polygon(100% 0%, 52.5% 0%, 79% 100%, 100% 100%);
   z-index: 1200;
+  font-size: 0.7em;
+  padding: 0.0em 0.2em 0.0em 0.2em;
+  color: rgba(0, 0, 0, 0);
 }
 
 
