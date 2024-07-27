@@ -425,7 +425,10 @@ export default defineComponent({
       this.updateTagPosition()
     },
     fragmentMassTolerance() {
+      this.preparePrecursorInfo()
+      this.initializeSequenceObjects()
       this.prepareFragmentTable()
+      this.prepareAmbigiousModifications()
     },
     ionTypes: {
       handler() {

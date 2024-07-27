@@ -46,10 +46,17 @@
     <div v-if="showModifications && sequenceObject.modCenter" class="mod-marker mod-center-cont"></div>
     <div v-if="showModifications && sequenceObject.modEnd" class="rounded-lg mod-mass">{{ sequenceObject.modMass }}
       <v-tooltip activator="parent">
+        {{ `Modification Mass: ${sequenceObject.modMass} Da` }}
+        <br />
         {{ `Possible Modifications: ${sequenceObject.modLabels}` }}
         <br />
       </v-tooltip>
     </div>
+    <div v-if="showModifications && sequenceObject.modEnd && sequenceObject.aIon && !sequenceObject.bIon" class="rounded-lg mod-mass-a"></div>
+    <div v-if="showModifications && sequenceObject.modEnd && sequenceObject.bIon" class="rounded-lg mod-mass-b"></div>
+    <div v-if="showModifications && sequenceObject.modEnd && sequenceObject.cIon && !sequenceObject.bIon" class="rounded-lg mod-mass-c"></div>
+
+    
     <div v-if="showModifications && DoesThisAAHaveExtraFragTypes" class="frag-marker-extra-type">
       <svg viewBox="0 0 10 10">
         <circle cx="5" cy="5" r="0.5" stroke="black" stroke-width="0.3" fill="gold" />
@@ -529,6 +536,72 @@ export default defineComponent({
   font-size: 0.7em;
   z-index: 1100;
 }
+
+.mod-mass-a {
+  display: inline-block;
+  position: absolute;
+  top: -16%;
+  right: -26%;
+  height: 47%;
+  width: 127%;
+  display: flex;
+  align-items: center;
+  border-top: 0.15em solid green;
+  border-right: 0.15em solid green;
+  border-bottom: 0.15em solid green;
+  border-top-right-radius: 0.5rem; /* Ensure the pseudo-element also has rounded corners */
+  border-top-left-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+  border-bottom-left-radius: 0.5rem;
+  clip-path: polygon(100% 0%, 66% 0%, 79% 100%, 100% 100%);
+  z-index: 1200;
+}
+
+.mod-mass-b {
+  display: inline-block;
+  position: absolute;
+  top: -16%;
+  right: -26%;
+  height: 47%;
+  width: 127%;
+  display: flex;
+  align-items: center;
+  border-top: 0.15em solid blue;
+  border-right: 0.15em solid blue;
+  border-bottom: 0.15em solid blue;
+  border-top-right-radius: 0.5rem; /* Ensure the pseudo-element also has rounded corners */
+  border-top-left-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+  border-bottom-left-radius: 0.5rem;
+  clip-path: polygon(100% 0%, 55% 0%, 79% 100%, 100% 100%);
+  z-index: 1200;
+}
+
+.mod-mass-c {
+  display: inline-block;
+  position: absolute;
+  top: -16%;
+  right: -26%;
+  height: 47%;
+  width: 127%;
+  display: flex;
+  align-items: center;
+  border-top: 0.15em solid red;
+  border-right: 0.15em solid red;
+  border-bottom: 0.15em solid red;
+  border-top-right-radius: 0.5rem; /* Ensure the pseudo-element also has rounded corners */
+  border-top-left-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+  border-bottom-left-radius: 0.5rem;
+  clip-path: polygon(100% 0%, 52.5% 0%, 79% 100%, 100% 100%);
+  z-index: 1200;
+}
+
+
+
+
+
+
 
 .mod-start {
   clip-path: inset(0 50% 0 0);
