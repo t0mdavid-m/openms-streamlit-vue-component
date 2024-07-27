@@ -52,9 +52,9 @@
         <br />
       </v-tooltip>
     </div>
-    <div v-if="showModifications && sequenceObject.modEnd && sequenceObject.aIon && !sequenceObject.bIon" class="rounded-lg mod-mass-a"></div>
-    <div v-if="showModifications && sequenceObject.modEnd && sequenceObject.bIon" class="rounded-lg mod-mass-b"></div>
-    <div v-if="showModifications && sequenceObject.modEnd && sequenceObject.cIon && !sequenceObject.bIon" class="rounded-lg mod-mass-c"></div>
+    <div v-if="showFragments && showModifications && sequenceObject.modEnd && sequenceObject.aIon && !sequenceObject.bIon" class="rounded-lg mod-mass-a"></div>
+    <div v-if="showFragments && showModifications && sequenceObject.modEnd && sequenceObject.bIon" class="rounded-lg mod-mass-b"></div>
+    <div v-if="showFragments && showModifications && sequenceObject.modEnd && sequenceObject.cIon && !sequenceObject.bIon" class="rounded-lg mod-mass-c"></div>
 
     
     <div v-if="showModifications && DoesThisAAHaveExtraFragTypes" class="frag-marker-extra-type">
