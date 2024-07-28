@@ -563,11 +563,16 @@ export default defineComponent({
       // calculate matching masses
       let matching_fragments: Record<string, unknown>[] = []
       const sequence_size = this.sequence_end
+      
+      console.log(observed_masses)
 
       this.ionTypes
         .filter((iontype) => iontype.selected)
         .forEach((iontype) => {
           const theoretical_frags = this.getFragmentMasses(iontype.text)
+          
+          console.log(iontype.text)
+          console.log(theoretical_frags)
 
           for (
             let theoIndex = 0, FragSize = theoretical_frags.length;
@@ -575,7 +580,8 @@ export default defineComponent({
             ++theoIndex
           ) {
             const aaIndex = theoIndex + this.sequence_start
-            let theoretical_mass = theoretical_frags[theoIndex]
+
+            theoretical_frags[theoIndex].forEach((theoretical_mass) => {
               // if any variable modifications are given, change the theoretical mass accordingly
             if (!this.variableModData.isEmpty) {
               if (iontype.text === 'a' || iontype.text === 'b' || iontype.text === 'c')
@@ -639,7 +645,8 @@ export default defineComponent({
                 }
               })
             }
-          }
+          })
+        }
         })
       this.residueCleavagePercentage = this.calculateCleavagePercentage
       this.fragmentTableData = matching_fragments
