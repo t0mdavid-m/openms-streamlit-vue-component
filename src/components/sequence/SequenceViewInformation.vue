@@ -108,6 +108,10 @@ export default defineComponent({
         xIon: this.xIon,
         yIon: this.yIon,
         zIon: this.zIon,
+        modStart: this.variable_mod,
+        modEnd: this.variable_mod,
+        modMass: "+134.99",
+        truncated: false,
         extraTypes: this.extraFragTypes(),
       }
     },
@@ -123,7 +127,6 @@ export default defineComponent({
         let class_string = this.originalAAClasses
 
         if (this.fixed_mod) class_string = 'sequence-amino-acid-highlighted ' + class_string
-        if (this.variable_mod) class_string = 'sequence-amino-acid-modified ' + class_string
 
         foundID.setAttribute('class', class_string)
       }

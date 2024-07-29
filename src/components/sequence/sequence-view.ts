@@ -1,3 +1,3 @@
 export type SequenceViewArgs = {
-  componentName: 'SequenceView' | 'SequenceViewTagger'
+  componentName: 'SequenceView'
 }

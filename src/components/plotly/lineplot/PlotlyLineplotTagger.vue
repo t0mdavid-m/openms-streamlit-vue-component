@@ -270,7 +270,7 @@ export default defineComponent({
       return 27.5
     },
     xPosScalingThreshold() : number {
-      return 40
+      return 30
     },
     maxAnnotationRange() : number {
       return this.xPosScalingFactor * this.xPosScalingThreshold
