@@ -483,8 +483,6 @@ export default defineComponent({
       }
 
       if (this.computedMass !== undefined) {
-        console.log('this mass')
-        console.log(this.computedMass)
         this.massTitle = 'Proteoform'
         let proteoform_mass = '-'
         let delta_mass = '-'
@@ -564,15 +562,10 @@ export default defineComponent({
       let matching_fragments: Record<string, unknown>[] = []
       const sequence_size = this.sequence_end
       
-      console.log(observed_masses)
-
       this.ionTypes
         .filter((iontype) => iontype.selected)
         .forEach((iontype) => {
           const theoretical_frags = this.getFragmentMasses(iontype.text)
-          
-          console.log(iontype.text)
-          console.log(theoretical_frags)
 
           for (
             let theoIndex = 0, FragSize = theoretical_frags.length;
