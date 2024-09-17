@@ -44,9 +44,6 @@ export default defineComponent({
       columnDefinitions: [
         { title: 'Accession', field: 'accession'},
         { title: 'Description', field: 'description', responsive: 10},
-        // TODO: Remove this Field after visualizing truncation
-        { title: 'Start Position', field: 'StartPosition', responsive: 9},
-        { title: 'End Position', field: 'EndPosition', responsive: 9},
         { title: 'Length', field: 'length', responsive: 6},
         { title: 'Mass', field: 'ProteoformMass', responsive: 8},
         { title: '#Matched Amino Acids', field: 'MatchedAminoAcidCount'},
