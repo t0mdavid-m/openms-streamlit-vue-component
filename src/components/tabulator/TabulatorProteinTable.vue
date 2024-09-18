@@ -44,17 +44,14 @@ export default defineComponent({
       columnDefinitions: [
         { title: 'Accession', field: 'accession'},
         { title: 'Description', field: 'description', responsive: 10},
-        // TODO: Remove this Field after visualizing truncation
-        { title: 'Start Position', field: 'StartPosition', responsive: 9},
-        { title: 'End Position', field: 'EndPosition', responsive: 9},
         { title: 'Length', field: 'length', responsive: 6},
         { title: 'Mass', field: 'ProteoformMass', responsive: 8},
         { title: '#Matched Amino Acids', field: 'MatchedAminoAcidCount'},
         { title: 'Coverage (%)', field: 'Coverage(%)', responsive: 7},
-        { title: 'No. of Modifications', field: 'ModificationCount'},
+        { title: 'No. of Modifications', field: 'ModCount'},
         { title: 'No. of Tags', field: 'TagCount'},
         { title: 'Score', field: 'Score'},
-        { title: 'Q-Value (Protein Level)', field: 'ProteinLevelQvalue'},
+        { title: 'Q-Value (Proteoform Level)', field: 'ProteoformLevelQvalue'},
       ] as ColumnDefinition[],
     }
   },
