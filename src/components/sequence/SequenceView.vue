@@ -483,8 +483,7 @@ export default defineComponent({
       }
 
       if (this.computedMass !== undefined) {
-        console.log('this mass')
-        console.log(this.computedMass)
+        
         this.massTitle = 'Proteoform'
         let proteoform_mass = '-'
         let delta_mass = '-'
@@ -551,7 +550,7 @@ export default defineComponent({
       const selectedScanInfo =
         this.streamlitDataStore.allDataForDrawing.per_scan_data[this.selectedScanIndex]
       const observedMass = selectedScanInfo.PrecursorMass as number
-      if (observedMass === 0) {
+      if ((observedMass === 0) && (!this.displayTnT)) {
         // if selected scan is not eligible for this view
         this.fragmentTableTitle = ''
         return
