@@ -26,7 +26,7 @@
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
-import { TabulatorFull as Tabulator, type ColumnDefinition, type Options } from 'tabulator-tables'
+import { TabulatorFull as Tabulator, type ColumnDefinition, type Options, type Sorter } from 'tabulator-tables'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
 
 export default defineComponent({
@@ -67,6 +67,11 @@ export default defineComponent({
       type: Number,
       required: false,
       default: () => 0,
+    },
+    initialSort: {
+      type: Array as PropType<Sorter[]>,
+      required: false,
+      default: () => undefined
     },
   },
   emits: ['rowSelected'],
@@ -160,6 +165,7 @@ export default defineComponent({
           col.headerTooltip = true
           return col
         }),
+        initialSort: this.initialSort
       })
       this.tabulator.on('tableBuilt', () => {
         if (this.initialized < 3) {

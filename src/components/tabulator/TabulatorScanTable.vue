@@ -41,12 +41,12 @@ export default defineComponent({
   data() {
     return {
       columnDefinitions: [
-        { title: 'Index', field: 'id' },
-        { title: 'Scan Number', field: 'Scan' },
-        { title: 'MS Level', field: 'MSLevel' },
-        { title: 'Retention time', field: 'RT', formatter: toFixedFormatter() },
-        { title: 'Precursor Mass', field: 'PrecursorMass', formatter: toFixedFormatter() },
-        { title: '#Masses', field: '#Masses' },
+        { title: 'Index', field: 'id', sorter: 'number'},
+        { title: 'Scan Number', field: 'Scan', sorter: 'number'},
+        { title: 'MS Level', field: 'MSLevel', sorter: 'number'},
+        { title: 'Retention time', field: 'RT', formatter: toFixedFormatter(), sorter: 'number' },
+        { title: 'Precursor Mass', field: 'PrecursorMass', formatter: toFixedFormatter(), sorter: 'number'},
+        { title: '#Masses', field: '#Masses', sorter: 'number'},
       ] as ColumnDefinition[],
     }
   },

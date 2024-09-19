@@ -219,15 +219,16 @@ export default defineComponent({
       fragmentTableColumnDefinitions: [
         { title: 'Name', field: 'Name' },
         { title: 'Ion type', field: 'IonType' },
-        { title: 'Ion number', field: 'IonNumber' },
-        { title: 'Theoretical mass', field: 'TheoreticalMass' },
+        { title: 'Ion number', field: 'IonNumber', sorter: 'number' },
+        { title: 'Theoretical mass', field: 'TheoreticalMass', sorter: 'number' },
         {
           title: 'Observed mass',
           field: 'ObservedMass',
           formatter: toFixedFormatter(),
+          sorter: 'number'
         },
-        { title: 'Mass difference (Da)', field: 'MassDiffDa' },
-        { title: 'Mass difference (ppm)', field: 'MassDiffPpm' },
+        { title: 'Mass difference (Da)', field: 'MassDiffDa', sorter: 'number' },
+        { title: 'Mass difference (ppm)', field: 'MassDiffPpm', sorter: 'number' },
       ] as ColumnDefinition[],
       fragmentTableData: [] as Record<string, unknown>[],
       fragmentTableTitle: '' as string,
@@ -483,8 +484,7 @@ export default defineComponent({
       }
 
       if (this.computedMass !== undefined) {
-        console.log('this mass')
-        console.log(this.computedMass)
+
         this.massTitle = 'Proteoform'
         let proteoform_mass = '-'
         let delta_mass = '-'
@@ -499,9 +499,22 @@ export default defineComponent({
           `Observed proteoform mass : ${proteoform_mass}`,
           `Δ Mass (Da) : ${delta_mass}`,
         ]
+
+        // Ensures this is only executed once
         if (!this.visibilityOptions.some(option => option.text === 'Tags')) {
           this.visibilityOptions.push({ text: 'Truncations', selected: true })
           this.visibilityOptions.push({ text: 'Tags', selected: true })
+
+          if (this.streamlitDataStore.settings?.ion_types !== undefined) {
+            this.ionTypes.forEach(item => {
+              item.selected = this.streamlitDataStore!.settings!.ion_types.includes(item.text);
+            })
+          }
+
+          if (this.streamlitDataStore.settings?.tolerance !== undefined) {
+            this.fragmentMassTolerance = this.streamlitDataStore.settings.tolerance            
+          }
+          
         }
 
         this.ionTypesExtra['ammonium loss'] = false
@@ -551,7 +564,7 @@ export default defineComponent({
       const selectedScanInfo =
         this.streamlitDataStore.allDataForDrawing.per_scan_data[this.selectedScanIndex]
       const observedMass = selectedScanInfo.PrecursorMass as number
-      if (observedMass === 0) {
+      if ((observedMass === 0) && (!this.displayTnT)) {
         // if selected scan is not eligible for this view
         this.fragmentTableTitle = ''
         return
@@ -564,16 +577,11 @@ export default defineComponent({
       let matching_fragments: Record<string, unknown>[] = []
       const sequence_size = this.sequence_end
       
-      console.log(observed_masses)
-
       this.ionTypes
         .filter((iontype) => iontype.selected)
         .forEach((iontype) => {
           const theoretical_frags = this.getFragmentMasses(iontype.text)
           
-          console.log(iontype.text)
-          console.log(theoretical_frags)
-
           for (
             let theoIndex = 0, FragSize = theoretical_frags.length;
             theoIndex < FragSize;
