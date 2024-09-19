@@ -7,6 +7,7 @@
     :selected-row-index-from-listening="selectedRow"
     @row-selected="updateSelectedTag"
     :default-row=1
+    :initial-sort="initialSort"
   />
 </template>
 
@@ -16,7 +17,7 @@ import { useStreamlitDataStore } from '@/stores/streamlit-data'
 import type { TabulatorTableArguments } from './tabulator-table'
 import { useSelectionStore } from '@/stores/selection'
 import TabulatorTable from './TabulatorTable.vue'
-import type { ColumnDefinition } from 'tabulator-tables'
+import type { ColumnDefinition, Sorter } from 'tabulator-tables'
 import { toFixedFormatter } from '@/components/tabulator/tabulator-formatters'
 import { timingSafeEqual } from 'crypto'
 import { start } from 'repl'
@@ -44,17 +45,21 @@ export default defineComponent({
   data() {
     return {
       columnDefinitions: [
-        { title: 'Scan Number', field: 'Scan' },
-        { title: 'Start Position', field: 'StartPos' },
-        { title: 'End Position', field: 'EndPos' },
-        { title: 'Sequence', field: 'TagSequence'},
-        { title: 'Length', field: 'Length' },
-        { title: 'Score', field: 'Score' },
-        { title: 'N mass', field: 'Nmass'},
-        { title: 'C mass', field: 'Cmass' },
-        { title: 'Δ mass', field: 'DeltaMass' },
+        { title: 'Scan Number', field: 'Scan', sorter: 'number'},
+        { title: 'Start Position', field: 'StartPos', sorter: 'number'},
+        { title: 'End Position', field: 'EndPos' , sorter: 'number'},
+        { title: 'Sequence', field: 'TagSequence', sorter: 'number'},
+        { title: 'Length', field: 'Length' , sorter: 'number'},
+        { title: 'Score', field: 'Score' , sorter: 'number'},
+        { title: 'N mass', field: 'Nmass' , sorter: 'number'},
+        { title: 'C mass', field: 'Cmass' , sorter: 'number'},
+        { title: 'Δ mass', field: 'DeltaMass' , sorter: 'number'},
       ] as ColumnDefinition[],
+      initialSort: [
+        {column: 'Score', dir: 'desc'},
+      ] as Sorter[],
       selectedTagIndex: undefined as number | undefined,
+
     }
   },
   computed: {

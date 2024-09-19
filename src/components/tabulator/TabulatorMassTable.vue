@@ -41,16 +41,16 @@ export default defineComponent({
   data() {
     return {
       columnDefinitions: [
-        { title: 'Index', field: 'id' },
-        { title: 'Monoisotopic mass', field: 'MonoMass', formatter: toFixedFormatter() },
-        { title: 'Sum intensity', field: 'SumIntensity', formatter: toFixedFormatter() },
-        { title: 'Min charge', field: 'MinCharges' },
-        { title: 'Max charge', field: 'MaxCharges' },
-        { title: 'Min isotope', field: 'MinIsotopes' },
-        { title: 'Max isotope', field: 'MaxIsotopes' },
-        { title: 'Cosine score', field: 'CosineScore', formatter: toFixedFormatter() },
-        { title: 'SNR', field: 'SNR', formatter: toFixedFormatter() },
-        { title: 'QScore', field: 'QScore', formatter: toFixedFormatter() },
+        { title: 'Index', field: 'id', sorter: 'number'},
+        { title: 'Monoisotopic mass', field: 'MonoMass', formatter: toFixedFormatter(), sorter: 'number' },
+        { title: 'Sum intensity', field: 'SumIntensity', formatter: toFixedFormatter(), sorter: 'number' },
+        { title: 'Min charge', field: 'MinCharges', sorter: 'number' },
+        { title: 'Max charge', field: 'MaxCharges', sorter: 'number' },
+        { title: 'Min isotope', field: 'MinIsotopes', sorter: 'number' },
+        { title: 'Max isotope', field: 'MaxIsotopes', sorter: 'number' },
+        { title: 'Cosine score', field: 'CosineScore', formatter: toFixedFormatter(), sorter: 'number' },
+        { title: 'SNR', field: 'SNR', formatter: toFixedFormatter(), sorter: 'number' },
+        { title: 'QScore', field: 'QScore', formatter: toFixedFormatter(), sorter: 'number' },
       ] as ColumnDefinition[],
       selectedMassIndex: undefined as number | undefined,
     }
