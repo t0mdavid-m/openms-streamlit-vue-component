@@ -145,8 +145,8 @@ export default defineComponent({
 
 .terminal-text {
   &.truncated {
-    color: grey; 
-    outline: grey;
+    color: rgba(128, 128, 128, 0.4); 
+    outline: rgba(128, 128, 128, 0.4);
   }
 }
 
