@@ -14,6 +14,7 @@ export type DATAFRAMES =
   | 'quant_data'
   | 'protein_table'
   | 'tag_table'
+  | 'settings'
 
 export type FlashViewerComponent = {
   componentArgs:

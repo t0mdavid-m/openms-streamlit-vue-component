@@ -23,4 +23,9 @@ export type ModificationData = {
   labels : string
 }
 
+export type FLASHTnTSettings = {
+  tolerance : number
+  ion_types : string[]
+}
+
 export type SequenceDataDictionary = Record<number, SequenceData>
