@@ -48,7 +48,7 @@ export default defineComponent({
         { title: 'Description', field: 'description', responsive: 10},
         { title: 'Length', field: 'length', responsive: 6, sorter: 'number'},
         { title: 'Mass', field: 'ProteoformMass', responsive: 8, sorter: 'number'},
-        { title: '#Matched Amino Acids', field: 'MatchedAminoAcidCount', sorter: 'number'},
+        { title: 'No. of Matched Fragments', field: 'MatchingFragments', sorter: 'number'},
         { title: 'Coverage (%)', field: 'Coverage(%)', responsive: 7, sorter: 'number'},
         { title: 'No. of Modifications', field: 'ModCount', sorter: 'number'},
         { title: 'No. of Tags', field: 'TagCount', sorter: 'number'},
