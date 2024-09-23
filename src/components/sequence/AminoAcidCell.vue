@@ -102,6 +102,9 @@
       </v-list>
     </v-menu>
     <v-tooltip activator="parent">
+      <div>
+        {{ `Protein Position: ${protein_position}` }}
+      </div>
       <template v-if="prefix !== undefined">
         {{ `Prefix: ${prefix}` }}
         <br />
@@ -230,6 +233,9 @@ export default defineComponent({
         return this.index + 1 - this.start
       }
       return undefined
+    },
+    protein_position(): number {
+      return this.index + 1
     },
     truncated_prefix(): number | undefined {
       if ((this.start === undefined) || (this.index >= this.start)) {
