@@ -45,7 +45,7 @@
     <div v-if="showModifications && !sequenceObject.modStart && sequenceObject.modEnd" class="mod-marker mod-end-cont"></div>
     <div v-if="showModifications && sequenceObject.modCenter" class="mod-marker mod-center-cont"></div>
     <div v-if="showModifications && sequenceObject.modEnd" class="rounded-lg mod-mass">{{ sequenceObject.modMass }}
-      <v-tooltip activator="parent">
+      <v-tooltip activator="parent" class="foreground">
         {{ `Modification Mass: ${sequenceObject.modMass} Da` }}
         <br />
         {{ `Possible Modifications: ${sequenceObject.modLabels}` }}
@@ -391,6 +391,11 @@ export default defineComponent({
 </script>
 
 <style scoped lang="less">
+
+.foreground {
+  position: relative;
+  z-index: 1000; 
+}
 
 .sequence-amino-acid-highlighted, .sequence-amino-acid.highlighted {
   /* New style for highlighted state */
