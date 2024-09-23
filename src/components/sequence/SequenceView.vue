@@ -102,7 +102,7 @@
           >
           {{ showTruncations ? aa_index + 1 : aa_index - sequence_start + 1 }}
           </div>
-          <ProteinTerminalCell v-if="aa_index === 0" protein-terminal="N-term" :truncated=n_truncation :index="-1" :disable-variable-modification-selection="disableVariableModifications"/>
+          <ProteinTerminalCell v-if="aa_index === 0" protein-terminal="N-term" :truncated=n_truncation :index="-1" :disable-variable-modification-selection="disableVariableModifications" :determined="n_determined"/>
           <AminoAcidCell
             :index="aa_index"
             :sequence-object="aminoAcidObj"
@@ -125,6 +125,7 @@
             protein-terminal="C-term" :truncated=c_truncation
             :index="sequence.length"
             :disable-variable-modification-selection="disableVariableModifications"
+            :determined="c_determined"
           />
           </template>
       </div>
@@ -258,25 +259,44 @@ export default defineComponent({
       }
       return this.streamlitDataStore.sequenceData?.[key]?.sequence ?? []
     },
-    sequence_start(): number {
+    sequence_start_reported(): number {
       let key = this.selectedSequence;
       if (key === undefined) {
         key = 0
       }
       return this.streamlitDataStore.sequenceData?.[key]?.proteoform_start ?? 0
     },
+    sequence_start(): number {
+      if (this.sequence_start_reported < 0)
+      {
+        return 0
+      }
+      return this.sequence_start_reported
+    },
     n_truncation(): boolean {
       return this.sequence_start > 0
     },
-    sequence_end(): number {
+    n_determined(): boolean {
+      return this.sequence_start_reported >= 0
+    },
+    sequence_end_reported(): number {
       let key = this.selectedSequence;
       if (key === undefined) {
         key = 0
       }
       return this.streamlitDataStore.sequenceData?.[key]?.proteoform_end ?? this.sequence.length-1
     },
+    sequence_end(): number {
+      if (this.sequence_end_reported < 0) {
+        return this.sequence.length-1
+      }
+      return this.sequence_end_reported
+    },
     c_truncation(): boolean {
       return this.sequence_end < (this.sequence.length - 1)
+    },
+    c_determined(): boolean {
+      return this.sequence_end_reported >= 0
     },
     modifications(): ModificationData[] {
       let key = this.selectedSequence;
@@ -580,6 +600,13 @@ export default defineComponent({
       this.ionTypes
         .filter((iontype) => iontype.selected)
         .forEach((iontype) => {
+          
+          // Dont match fragments in FLASHTnT if end could not be determined
+          if ((iontype.text === 'a' || iontype.text === 'b' || iontype.text === 'c') && (this.sequence_start_reported < 0))
+            return
+          if ((iontype.text === 'x' || iontype.text === 'y' || iontype.text === 'z') && (this.sequence_end_reported < 0))
+            return
+
           const theoretical_frags = this.getFragmentMasses(iontype.text)
           
           for (

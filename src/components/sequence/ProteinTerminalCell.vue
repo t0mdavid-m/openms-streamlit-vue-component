@@ -4,6 +4,7 @@
     <div :class="['terminal-text', { truncated: truncated }]">
       {{ proteinTerminalText }}
     </div>
+    <div v-if="!determined" class="undetermined">??</div>
     <v-menu activator="parent" v-model="menuOpen" location="end" :open-on-click="false" :close-on-content-click="false"
       width="200px">
       <v-list>
@@ -50,6 +51,11 @@ export default defineComponent({
       type: Boolean,
       required: false,
       default: false,
+    },
+    determined: {
+      type: Boolean,
+      required: false,
+      default: true,
     },
     disableVariableModificationSelection: {
       type: Boolean,
@@ -135,13 +141,22 @@ export default defineComponent({
 </script>
 
 <style scoped lang="less">
+
+.undetermined {
+  position: relative;
+  top: -20%;
+  font-size: 0.7em;
+  font-weight: 1000;
+  color: red;
+  z-index: 1100;
+}
+
 .protein-terminal {
   &:hover {
     background-color: var(--protein-terminal-cell-hover-bg-color);
     color: var(--protein-terminal-cell-hover-color);
   }
 }
-
 
 .terminal-text {
   &.truncated {

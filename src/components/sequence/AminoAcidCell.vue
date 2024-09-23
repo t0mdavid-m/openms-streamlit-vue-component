@@ -197,10 +197,24 @@ export default defineComponent({
       return this.sequenceObject.aminoAcid
     },
     start(): number | undefined {
-      return this.streamlitData.sequenceData?.[this.selectedSequence].proteoform_start
+      const start = this.streamlitData.sequenceData?.[this.selectedSequence].proteoform_start
+      if (start === undefined) {
+        return start
+      }
+      if (start < 0) {
+        return 0
+      }
+      return start
     },
     end(): number | undefined {
-      return this.streamlitData.sequenceData?.[this.selectedSequence].proteoform_end
+      const end = this.streamlitData.sequenceData?.[this.selectedSequence].proteoform_end
+      if (end === undefined) {
+        return end
+      }
+      if ((end < 0) && (this.length !== undefined)) {
+        return this.length - 1
+      }
+      return end
     },
     length(): number | undefined {
       return this.streamlitData.sequenceData?.[this.selectedSequence].sequence.length
