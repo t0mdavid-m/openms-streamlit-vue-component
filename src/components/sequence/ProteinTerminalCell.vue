@@ -159,6 +159,7 @@ export default defineComponent({
 }
 
 .terminal-text {
+  font-weight: 1000;
   &.truncated {
     color: rgba(128, 128, 128, 0.4); 
     outline: rgba(128, 128, 128, 0.4);
