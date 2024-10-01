@@ -101,10 +101,6 @@ export default defineComponent({
         return
       }
       
-      const scan = row['Scan']
-      if (typeof scan === 'number') {
-        this.selectionStore.updateSelectedScan(scan)
-      }
       const mzs = row['mzs']
       let masses : number[] = []
       if (typeof mzs === 'string') {
