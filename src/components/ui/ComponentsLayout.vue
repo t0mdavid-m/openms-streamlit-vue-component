@@ -11,6 +11,9 @@ import { defineComponent, type PropType } from 'vue'
 import ComponentsRow from './ComponentsRow.vue'
 import type { FlashViewerComponent } from '@/types/grid-layout'
 
+
+
+
 export default defineComponent({
   name: 'ComponentsLayout',
   components: {
@@ -44,3 +47,11 @@ export default defineComponent({
   flex-direction: column;
 }
 </style>
+
+<FDRPlotly
+  v-if="streamlitDataStore.allDataForDrawing.fdr_data"
+  :args="component.componentArgs"
+  :index="componentIndex(index)"
+  :fdrData="JSON.parse(streamlitDataStore.allDataForDrawing.fdr_data)"
+/>
+

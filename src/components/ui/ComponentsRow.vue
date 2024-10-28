@@ -54,6 +54,14 @@
         :index="componentIndex(index)"
       />
       <FLASHQuantView v-else-if="component.componentArgs.componentName === 'FLASHQuantView'" />
+
+      <!-- New block added for FDRPlotly component -->
+      <FDRPlotly
+        v-else-if="component.componentArgs.componentName === 'FDRPlotly'"
+        :args="component.componentArgs"
+        :index="componentIndex(index)"
+      />
+      <!-- End of new block -->
     </div>
   </div>
 </template>
@@ -72,6 +80,9 @@ import { defineComponent, type PropType } from 'vue'
 import type { FlashViewerComponent } from '@/types/grid-layout'
 import FLASHQuantView from '@/components/flashQuant/FLASHQuantView.vue'
 import InternalFragmentMap from '@/components/sequence/InternalFragmentMap.vue'
+// Add this line to import FDR_plotly
+import FDRPlotly from '@/components/plotly/lineplot/FDR_plotly.vue'
+
 
 export default defineComponent({
   name: 'ComponentsRow',
@@ -87,6 +98,7 @@ export default defineComponent({
     TabulatorProteinTable,
     TabulatorTagTable,
     SequenceView,
+    FDRPlotly, // Register the FDRPlotly
   },
   props: {
     components: {
@@ -111,6 +123,7 @@ export default defineComponent({
         Plotly3Dplot: 'height-any',
         SequenceView: 'height-any',
         InternalFragmentMap: 'height-any',
+        FDRPlotly: 'height-any', // Added FDRPlotly height mapping
       } as Record<
         FlashViewerComponent['componentArgs']['componentName'],
         'height-1' | 'height-2' | 'height-any'
