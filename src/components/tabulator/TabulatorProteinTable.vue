@@ -43,17 +43,56 @@ export default defineComponent({
   data() {
     return {
       columnDefinitions: [
-        { title: 'Scan No.', field: 'Scan', sorter: 'number'},
-        { title: 'Accession', field: 'accession'},
-        { title: 'Description', field: 'description', responsive: 10},
-        { title: 'Length', field: 'length', responsive: 6, sorter: 'number'},
-        { title: 'Mass', field: 'ProteoformMass', responsive: 8, sorter: 'number'},
-        { title: 'No. of Matched Fragments', field: 'MatchingFragments', sorter: 'number'},
-        { title: 'Coverage (%)', field: 'Coverage(%)', responsive: 7, sorter: 'number'},
-        { title: 'No. of Modifications', field: 'ModCount', sorter: 'number'},
-        { title: 'No. of Tags', field: 'TagCount', sorter: 'number'},
-        { title: 'Score', field: 'Score', sorter: 'number'},
-        { title: 'Q-Value (Proteoform Level)', field: 'ProteoformLevelQvalue', sorter: 'number'},
+        { 
+          title: 'Scan No.', field: 'Scan', sorter: 'number',  
+          headerTooltip: 'The identifier of the mass spectrometry scan associated with the identified proteoform.'
+        },
+        { 
+          title: 'Accession', field: 'accession',
+          headerTooltip: 'The unique identifier for the protein in the reference database.'
+        },
+        { 
+          title: 'Description', field: 'description', responsive: 10
+        },
+        { 
+          title: 'Length', field: 'length', responsive: 6, sorter: 'number',
+          headerTooltip: 'The total number of amino acids in the matched protein.'
+        },
+        { 
+          title: 'Mass', field: 'ProteoformMass', responsive: 8, sorter: 'number',
+          headerTooltip: 'The calculated mass of the proteoform in Daltons.',
+          formatter: function (cell) {
+            const value = cell.getValue();
+            return value == -1 ? '-' : value;
+          }
+        },
+        { 
+          title: 'No. of Matched Fragments', field: 'MatchingFragments', sorter: 'number',
+          headerTooltip: 'The number of fragment ions that match the protein sequence.'
+        },
+        // { 
+        //   title: 'Coverage (%)', field: 'Coverage(%)', responsive: 7, sorter: 'number',
+        // },
+        { 
+          title: 'No. of Modifications', field: 'ModCount', sorter: 'number',
+          headerTooltip: 'The number of modifications identified in the protein.'
+        },
+        { 
+          title: 'No. of Tags', field: 'TagCount', sorter: 'number',
+          headerTooltip: 'The number of sequence tags associated with the proteoform match.'
+        },
+        { 
+          title: 'Score', field: 'Score', sorter: 'number',
+          headerTooltip: 'A score indicating the confidence of the protein match (higher is better).'
+        },
+        { 
+          title: 'Q-Value (Proteoform Level)', field: 'ProteoformLevelQvalue', sorter: 'number',
+          headerTooltip: 'The confidence value of the protein match at the proteoform level.',
+          formatter: function (cell) {
+            const value = cell.getValue();
+            return value == -1 ? '-' : value;
+          }
+        },
       ] as ColumnDefinition[],
       initialSort: [
         {column: 'Score', dir: 'desc'}

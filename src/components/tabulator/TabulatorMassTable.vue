@@ -41,16 +41,47 @@ export default defineComponent({
   data() {
     return {
       columnDefinitions: [
-        { title: 'Index', field: 'id', sorter: 'number'},
-        { title: 'Monoisotopic mass', field: 'MonoMass', formatter: toFixedFormatter(), sorter: 'number' },
-        { title: 'Sum intensity', field: 'SumIntensity', formatter: toFixedFormatter(), sorter: 'number' },
-        { title: 'Min charge', field: 'MinCharges', sorter: 'number' },
-        { title: 'Max charge', field: 'MaxCharges', sorter: 'number' },
-        { title: 'Min isotope', field: 'MinIsotopes', sorter: 'number' },
-        { title: 'Max isotope', field: 'MaxIsotopes', sorter: 'number' },
-        { title: 'Cosine score', field: 'CosineScore', formatter: toFixedFormatter(), sorter: 'number' },
-        { title: 'SNR', field: 'SNR', formatter: toFixedFormatter(), sorter: 'number' },
-        { title: 'QScore', field: 'QScore', formatter: toFixedFormatter(), sorter: 'number' },
+        { 
+          title: 'Index', field: 'id', sorter: 'number',
+          headerTooltip: 'The sequential index of the mass entry in the dataset.'
+        },
+        { 
+          title: 'Monoisotopic mass', field: 'MonoMass', formatter: toFixedFormatter(), sorter: 'number',
+          headerTooltip: 'The monoisotopic mass of the detected ion in Daltons.'
+        },
+        { 
+          title: 'Sum intensity', field: 'SumIntensity', formatter: toFixedFormatter(), sorter: 'number',
+          headerTooltip: 'The total intensity of the detected mass across all isotopic peaks and charges.'
+        },
+        { 
+          title: 'Min charge', field: 'MinCharges', sorter: 'number',
+          headerTooltip: 'The minimum charge state detected for the mass.'
+        },
+        { 
+          title: 'Max charge', field: 'MaxCharges', sorter: 'number',
+          headerTooltip: 'The maximum charge state detected for the mass.'
+        },
+        { 
+          title: 'Min isotope', field: 'MinIsotopes', sorter: 'number',
+          headerTooltip: 'The smallest observed isotopic shift, expressed as a multiple of the average isotopic mass difference at 55kDA.'
+
+        },
+        { 
+          title: 'Max isotope', field: 'MaxIsotopes', sorter: 'number',
+          headerTooltip: 'The largest observed isotopic shift, expressed as a multiple of the average isotopic mass difference at 55kDA.'
+        },
+        { 
+          title: 'Cosine score', field: 'CosineScore', formatter: toFixedFormatter(), sorter: 'number',
+          headerTooltip: 'The cosine similarity score comparing the observed and theoretical isotopic patterns.'
+        },
+        { 
+          title: 'SNR', field: 'SNR', formatter: toFixedFormatter(), sorter: 'number',
+          headerTooltip: 'The signal-to-noise ratio for the detected mass.'
+        },
+        { 
+          title: 'QScore', field: 'QScore', formatter: toFixedFormatter(), sorter: 'number',
+          headerTooltip: 'The quality score indicating the confidence of the mass detection (higher is better).'
+        },
       ] as ColumnDefinition[],
       selectedMassIndex: undefined as number | undefined,
     }

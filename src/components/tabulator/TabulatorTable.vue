@@ -162,7 +162,9 @@ export default defineComponent({
           hozAlign: 'right',
         },
         columns: this.columnDefinitions.map((col) => {
-          col.headerTooltip = true
+          if (col.headerTooltip === undefined) {
+              col.headerTooltip = true;
+          }
           return col
         }),
         initialSort: this.initialSort

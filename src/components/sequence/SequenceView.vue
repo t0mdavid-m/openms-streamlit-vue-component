@@ -218,18 +218,34 @@ export default defineComponent({
         { text: 'Modifications', selected: true },
       ] as { text: string; selected: boolean }[],
       fragmentTableColumnDefinitions: [
-        { title: 'Name', field: 'Name' },
-        { title: 'Ion type', field: 'IonType' },
-        { title: 'Ion number', field: 'IonNumber', sorter: 'number' },
-        { title: 'Theoretical mass', field: 'TheoreticalMass', sorter: 'number' },
-        {
-          title: 'Observed mass',
-          field: 'ObservedMass',
-          formatter: toFixedFormatter(),
-          sorter: 'number'
+        { 
+          title: 'Name', field: 'Name',
+            headerTooltip: 'The name of the fragment ion, represented in Biemann notation.'
         },
-        { title: 'Mass difference (Da)', field: 'MassDiffDa', sorter: 'number' },
-        { title: 'Mass difference (ppm)', field: 'MassDiffPpm', sorter: 'number' },
+        { 
+          title: 'Ion type', field: 'IonType',
+          headerTooltip: 'The type of fragment ion identified in the spectrum.'
+        },
+        { 
+          title: 'Ion number', field: 'IonNumber', sorter: 'number',
+          headerTooltip: 'The position of the fragment ion within the sequence.'
+        },
+        { 
+          title: 'Theoretical mass', field: 'TheoreticalMass', sorter: 'number',
+          headerTooltip: 'The expected mass of the fragment ion.'
+        },
+        {
+          title: 'Observed mass', field: 'ObservedMass', formatter: toFixedFormatter(), sorter: 'number',
+          headerTooltip: 'The mass of the fragment ion as observed in the spectrum.'
+        },
+        { 
+          title: 'Mass difference (Da)', field: 'MassDiffDa', sorter: 'number',
+          headerTooltip: 'The difference between the observed and theoretical masses of the fragment ion, in Daltons.'
+        },
+        { 
+          title: 'Mass difference (ppm)', field: 'MassDiffPpm', sorter: 'number',
+          headerTooltip: 'The difference between the observed and theoretical masses of the fragment ion, in parts per million (ppm).'
+        },
       ] as ColumnDefinition[],
       fragmentTableData: [] as Record<string, unknown>[],
       fragmentTableTitle: '' as string,
