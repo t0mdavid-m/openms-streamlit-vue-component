@@ -9,6 +9,7 @@
         :column-definitions="featureGroupTableColumnDefinitions"
         table-index-field="FeatureGroupIndex"
         @row-selected="updateSelectedFeatureGroupRow"
+        :default-row=0
       />
     </v-row>
     <div id="trace3Dplot" style="width: 90%"></div>
