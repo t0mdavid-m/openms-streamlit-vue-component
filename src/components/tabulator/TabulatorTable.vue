@@ -169,12 +169,12 @@ export default defineComponent({
         }),
         initialSort: this.initialSort
       })
-      this.tabulator.on('tableBuilt', () => {
-        if (this.initialized < 3) {
-          this.initialized += 1
-          this.selectDefaultRow()
-        }
-      })
+      // this.tabulator.on('tableBuilt', () => {
+      //   if (this.initialized < 3) {
+      //     this.initialized += 1
+      //     this.selectDefaultRow()
+      //   }
+      // })
     },
     selectDefaultRow() {
       if (this.defaultRow >= 0) {

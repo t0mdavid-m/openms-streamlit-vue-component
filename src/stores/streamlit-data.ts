@@ -10,6 +10,7 @@ export const useStreamlitDataStore = defineStore('streamlit-data', {
   state: () => ({
     renderData: null as RenderData | null,
     dataForDrawing: {} as Record<DATAFRAMES, Record<string, unknown>[]>,
+    initalized: false as boolean,
   }),
   getters: {
     args: (state): StreamlitData => state.renderData?.args,
@@ -27,6 +28,13 @@ export const useStreamlitDataStore = defineStore('streamlit-data', {
   },
   actions: {
     updateRenderData(newData: RenderData) {
+      // Current data model: Data is only loaded once!
+      // ToDo: See if data can be accessed bydirectionally
+      if (this.initalized) {
+        return
+      }
+      this.initalized = true
+
       this.renderData = newData
 
       // Convert Arrow Arrays to native Ts datatypes

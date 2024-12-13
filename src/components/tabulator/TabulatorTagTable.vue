@@ -4,7 +4,6 @@
     :column-definitions="columnDefinitions"
     title="Tag Table"
     :index="index"
-    :selected-row-index-from-listening="selectedRow"
     @row-selected="updateSelectedTag"
     :default-row=1
     :initial-sort="initialSort"
