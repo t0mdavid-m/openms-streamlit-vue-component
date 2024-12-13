@@ -5,7 +5,7 @@
     title="Tag Table"
     :index="index"
     @row-selected="updateSelectedTag"
-    :default-row=1
+    :default-row=0
     :initial-sort="initialSort"
   />
 </template>

@@ -66,7 +66,7 @@ export default defineComponent({
     defaultRow: {
       type: Number,
       required: false,
-      default: () => 0,
+      default: () => -1,
     },
     initialSort: {
       type: Array as PropType<Sorter[]>,
@@ -169,17 +169,27 @@ export default defineComponent({
         }),
         initialSort: this.initialSort
       })
-      // this.tabulator.on('tableBuilt', () => {
-      //   if (this.initialized < 3) {
-      //     this.initialized += 1
-      //     this.selectDefaultRow()
-      //   }
-      // })
+      this.tabulator.on('tableBuilt', () => {
+        this.selectDefaultRow()
+      })
     },
     selectDefaultRow() {
       if (this.defaultRow >= 0) {
-        this.tabulator?.selectRow([this.defaultRow])
-        this.onTableClick()
+        // Get the visible rows after filtering
+        const visibleRows = this.tabulator?.getRows('active');
+
+        // Select the first visible row if there are any
+        if (
+          visibleRows 
+          && visibleRows.length > 0 
+          && this.defaultRow >= 0 
+          && this.defaultRow < visibleRows.length
+        ) {
+            const firstRow = visibleRows[this.defaultRow];
+            firstRow.select();
+          this.onTableClick()
+
+        }
       }
     },
     onTableClick() {
