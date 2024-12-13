@@ -10,7 +10,7 @@ export const useStreamlitDataStore = defineStore('streamlit-data', {
   state: () => ({
     renderData: null as RenderData | null,
     dataForDrawing: {} as Record<DATAFRAMES, Record<string, unknown>[]>,
-    initalized: false as boolean,
+    dataset: '' as String,
   }),
   getters: {
     args: (state): StreamlitData => state.renderData?.args,
@@ -30,10 +30,10 @@ export const useStreamlitDataStore = defineStore('streamlit-data', {
     updateRenderData(newData: RenderData) {
       // Current data model: Data is only loaded once!
       // ToDo: See if data can be accessed bydirectionally
-      if (this.initalized) {
+      if (newData.args?.dataset === this.dataset) {
         return
       }
-      this.initalized = true
+      this.dataset = newData.args?.dataset
 
       this.renderData = newData
 
