@@ -760,14 +760,15 @@ export default defineComponent({
       )
     },
     updateTagPosition() {
-      // No sequences in data
-      if (this.sequenceObjects.length <= 0) {
-        return
-      }
       // Protein without sequence selected
       if (this.sequence.length <= 0) {
         return
       }
+      // No sequences in data
+      if (this.sequenceObjects.length !== this.sequence.length) {
+        this.initializeSequenceObjects()
+      }
+
       this.sequence.forEach((aa, index) => {
         const start = this.selectedTag?.startPos == index
         const end = this.selectedTag?.endPos == index
