@@ -6,6 +6,7 @@
     :index="index"
     table-layout-param="fitColumns"
     @row-selected="updateSelectedScan"
+    :default-row=0
   />
 </template>
 

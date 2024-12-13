@@ -5,6 +5,7 @@
     title="Mass Table"
     :index="index"
     @row-selected="updateSelectedMass"
+    :default-row=0
   />
 </template>
 
