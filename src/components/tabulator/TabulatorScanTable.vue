@@ -6,6 +6,7 @@
     :index="index"
     table-layout-param="fitColumns"
     @row-selected="updateSelectedScan"
+    :default-row=0
   />
 </template>
 
@@ -41,12 +42,31 @@ export default defineComponent({
   data() {
     return {
       columnDefinitions: [
-        { title: 'Index', field: 'id', sorter: 'number'},
-        { title: 'Scan Number', field: 'Scan', sorter: 'number'},
-        { title: 'MS Level', field: 'MSLevel', sorter: 'number'},
-        { title: 'Retention time', field: 'RT', formatter: toFixedFormatter(), sorter: 'number' },
-        { title: 'Precursor Mass', field: 'PrecursorMass', formatter: toFixedFormatter(), sorter: 'number'},
-        { title: '#Masses', field: '#Masses', sorter: 'number'},
+        { 
+          title: 'Index', field: 'id', sorter: 'number',
+          headerTooltip: 'The sequential index of the spectrum in the dataset.'
+        },
+        { 
+          title: 'Scan Number', field: 'Scan', sorter: 'number',
+          headerTooltip: 'The identifier of the mass spectrometry scan.'
+
+        },
+        { 
+          title: 'MS Level', field: 'MSLevel', sorter: 'number',
+          headerTooltip: 'The level of mass spectrometry analysis (e.g., MS1 or MS2).'
+        },
+        { 
+          title: 'Retention time', field: 'RT', formatter: toFixedFormatter(), sorter: 'number',
+          headerTooltip: 'The time at which the spectrum was detected during the chromatographic separation in seconds.'
+        },
+        { 
+          title: 'Precursor Mass', field: 'PrecursorMass', formatter: toFixedFormatter(), sorter: 'number',
+          headerTooltip: 'The mass of the precursor ion selected for fragmentation in Daltons.'
+        },
+        { 
+          title: '#Masses', field: '#Masses', sorter: 'number',
+          headerTooltip: 'The number of detected masses in the spectrum.'
+        },
       ] as ColumnDefinition[],
     }
   },
