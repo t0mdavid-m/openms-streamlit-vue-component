@@ -45,7 +45,7 @@
     <div v-if="showModifications && !sequenceObject.modStart && sequenceObject.modEnd" class="mod-marker mod-end-cont"></div>
     <div v-if="showModifications && sequenceObject.modCenter" class="mod-marker mod-center-cont"></div>
     <div v-if="showModifications && sequenceObject.modEnd" class="rounded-lg mod-mass">{{ sequenceObject.modMass }}
-      <v-tooltip activator="parent">
+      <v-tooltip activator="parent" class="foreground">
         {{ `Modification Mass: ${sequenceObject.modMass} Da` }}
         <br />
         {{ `Possible Modifications: ${sequenceObject.modLabels}` }}
@@ -102,6 +102,9 @@
       </v-list>
     </v-menu>
     <v-tooltip activator="parent">
+      <div>
+        {{ `Protein Position: ${protein_position}` }}
+      </div>
       <template v-if="prefix !== undefined">
         {{ `Prefix: ${prefix}` }}
         <br />
@@ -197,10 +200,24 @@ export default defineComponent({
       return this.sequenceObject.aminoAcid
     },
     start(): number | undefined {
-      return this.streamlitData.sequenceData?.[this.selectedSequence].proteoform_start
+      const start = this.streamlitData.sequenceData?.[this.selectedSequence].proteoform_start
+      if (start === undefined) {
+        return start
+      }
+      if (start < 0) {
+        return 0
+      }
+      return start
     },
     end(): number | undefined {
-      return this.streamlitData.sequenceData?.[this.selectedSequence].proteoform_end
+      const end = this.streamlitData.sequenceData?.[this.selectedSequence].proteoform_end
+      if (end === undefined) {
+        return end
+      }
+      if ((end < 0) && (this.length !== undefined)) {
+        return this.length - 1
+      }
+      return end
     },
     length(): number | undefined {
       return this.streamlitData.sequenceData?.[this.selectedSequence].sequence.length
@@ -216,6 +233,9 @@ export default defineComponent({
         return this.index + 1 - this.start
       }
       return undefined
+    },
+    protein_position(): number {
+      return this.index + 1
     },
     truncated_prefix(): number | undefined {
       if ((this.start === undefined) || (this.index >= this.start)) {
@@ -392,6 +412,11 @@ export default defineComponent({
 
 <style scoped lang="less">
 
+.foreground {
+  position: relative;
+  z-index: 1000; 
+}
+
 .sequence-amino-acid-highlighted, .sequence-amino-acid.highlighted {
   /* New style for highlighted state */
   background-color: #F3A712; /* Gold background for highlighted state */
@@ -401,8 +426,8 @@ export default defineComponent({
 }
 
 .sequence-amino-acid-truncated, .sequence-amino-acid.truncated .aa-text {
-  color: grey;
-  outline: grey;
+  color: rgba(128, 128, 128, 0.3);
+  outline: rgba(128, 128, 128, 0.3);
   text-decoration: line-through !important;
 }
 
@@ -504,18 +529,15 @@ export default defineComponent({
 
 .mod-marker {
   position: absolute;
-  top: -7.5%;
-  left: -7.5%;
-  width: 115%;
-  height: 115%;
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: right;
-  border-top: 0.2em solid #a79c91;
-  border-right: 0.2em solid #a79c91;
-  border-bottom: 0.2em solid #a79c91;
-  border-left: 0.2em solid #a79c91;
-  z-index: 900;
+  background-image:  radial-gradient(#676a9c 0.5px, transparent 0.5px), radial-gradient(#444cf7 0.5px, #e5e5f7 0.5px);
+  background-size: 15px 15px;
+  background-position: 0 0,10px 10px;
+  background-repeat: repeat;
 }
 
 .mod-mass {
@@ -524,8 +546,6 @@ export default defineComponent({
   position: absolute;
   top: -15%;
   right: -25%;
-  //width: 125%;
-  //height: 45%;
   display: flex;
   align-items: center;
   justify-content: right;
@@ -598,12 +618,6 @@ export default defineComponent({
   color: rgba(0, 0, 0, 0);
 }
 
-
-
-
-
-
-
 .mod-start {
   clip-path: inset(0 50% 0 0);
 }
@@ -613,24 +627,15 @@ export default defineComponent({
 }
 
 .mod-start-cont {
-  border-right: none;
-  border-left: none;
   clip-path: inset(0 0 0 50%);
 }
 
 .mod-end-cont {
-  border-right: none;
-  border-left: none;
   clip-path: inset(0 50% 0 0);
 }
 
 .mod-center-cont {
-  border-right: none;
-  border-left: none;
-  width: 150%;
+  width: 125%;
 }
 
-// mod-start-cont
-// mod-end-cont
-// mod-center-cont
 </style>

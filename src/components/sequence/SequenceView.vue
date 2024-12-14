@@ -102,7 +102,7 @@
           >
           {{ showTruncations ? aa_index + 1 : aa_index - sequence_start + 1 }}
           </div>
-          <ProteinTerminalCell v-if="aa_index === 0" protein-terminal="N-term" :truncated=n_truncation :index="-1" :disable-variable-modification-selection="disableVariableModifications"/>
+          <ProteinTerminalCell v-if="aa_index === 0" protein-terminal="N-term" :truncated=n_truncation :index="-1" :disable-variable-modification-selection="disableVariableModifications" :determined="n_determined"/>
           <AminoAcidCell
             :index="aa_index"
             :sequence-object="aminoAcidObj"
@@ -125,6 +125,7 @@
             protein-terminal="C-term" :truncated=c_truncation
             :index="sequence.length"
             :disable-variable-modification-selection="disableVariableModifications"
+            :determined="c_determined"
           />
           </template>
       </div>
@@ -217,17 +218,34 @@ export default defineComponent({
         { text: 'Modifications', selected: true },
       ] as { text: string; selected: boolean }[],
       fragmentTableColumnDefinitions: [
-        { title: 'Name', field: 'Name' },
-        { title: 'Ion type', field: 'IonType' },
-        { title: 'Ion number', field: 'IonNumber' },
-        { title: 'Theoretical mass', field: 'TheoreticalMass' },
-        {
-          title: 'Observed mass',
-          field: 'ObservedMass',
-          formatter: toFixedFormatter(),
+        { 
+          title: 'Name', field: 'Name',
+            headerTooltip: 'The name of the fragment ion, represented in Biemann notation.'
         },
-        { title: 'Mass difference (Da)', field: 'MassDiffDa' },
-        { title: 'Mass difference (ppm)', field: 'MassDiffPpm' },
+        { 
+          title: 'Ion type', field: 'IonType',
+          headerTooltip: 'The type of fragment ion identified in the spectrum.'
+        },
+        { 
+          title: 'Ion number', field: 'IonNumber', sorter: 'number',
+          headerTooltip: 'The position of the fragment ion within the sequence.'
+        },
+        { 
+          title: 'Theoretical mass', field: 'TheoreticalMass', sorter: 'number',
+          headerTooltip: 'The expected mass of the fragment ion.'
+        },
+        {
+          title: 'Observed mass', field: 'ObservedMass', formatter: toFixedFormatter(), sorter: 'number',
+          headerTooltip: 'The mass of the fragment ion as observed in the spectrum.'
+        },
+        { 
+          title: 'Mass difference (Da)', field: 'MassDiffDa', sorter: 'number',
+          headerTooltip: 'The difference between the observed and theoretical masses of the fragment ion, in Daltons.'
+        },
+        { 
+          title: 'Mass difference (ppm)', field: 'MassDiffPpm', sorter: 'number',
+          headerTooltip: 'The difference between the observed and theoretical masses of the fragment ion, in parts per million (ppm).'
+        },
       ] as ColumnDefinition[],
       fragmentTableData: [] as Record<string, unknown>[],
       fragmentTableTitle: '' as string,
@@ -257,25 +275,44 @@ export default defineComponent({
       }
       return this.streamlitDataStore.sequenceData?.[key]?.sequence ?? []
     },
-    sequence_start(): number {
+    sequence_start_reported(): number {
       let key = this.selectedSequence;
       if (key === undefined) {
         key = 0
       }
       return this.streamlitDataStore.sequenceData?.[key]?.proteoform_start ?? 0
     },
+    sequence_start(): number {
+      if (this.sequence_start_reported < 0)
+      {
+        return 0
+      }
+      return this.sequence_start_reported
+    },
     n_truncation(): boolean {
       return this.sequence_start > 0
     },
-    sequence_end(): number {
+    n_determined(): boolean {
+      return this.sequence_start_reported >= 0
+    },
+    sequence_end_reported(): number {
       let key = this.selectedSequence;
       if (key === undefined) {
         key = 0
       }
       return this.streamlitDataStore.sequenceData?.[key]?.proteoform_end ?? this.sequence.length-1
     },
+    sequence_end(): number {
+      if (this.sequence_end_reported < 0) {
+        return this.sequence.length-1
+      }
+      return this.sequence_end_reported
+    },
     c_truncation(): boolean {
       return this.sequence_end < (this.sequence.length - 1)
+    },
+    c_determined(): boolean {
+      return this.sequence_end_reported >= 0
     },
     modifications(): ModificationData[] {
       let key = this.selectedSequence;
@@ -483,8 +520,7 @@ export default defineComponent({
       }
 
       if (this.computedMass !== undefined) {
-        console.log('this mass')
-        console.log(this.computedMass)
+
         this.massTitle = 'Proteoform'
         let proteoform_mass = '-'
         let delta_mass = '-'
@@ -499,9 +535,22 @@ export default defineComponent({
           `Observed proteoform mass : ${proteoform_mass}`,
           `Δ Mass (Da) : ${delta_mass}`,
         ]
+
+        // Ensures this is only executed once
         if (!this.visibilityOptions.some(option => option.text === 'Tags')) {
           this.visibilityOptions.push({ text: 'Truncations', selected: true })
           this.visibilityOptions.push({ text: 'Tags', selected: true })
+
+          if (this.streamlitDataStore.settings?.ion_types !== undefined) {
+            this.ionTypes.forEach(item => {
+              item.selected = this.streamlitDataStore!.settings!.ion_types.includes(item.text);
+            })
+          }
+
+          if (this.streamlitDataStore.settings?.tolerance !== undefined) {
+            this.fragmentMassTolerance = this.streamlitDataStore.settings.tolerance            
+          }
+          
         }
 
         this.ionTypesExtra['ammonium loss'] = false
@@ -551,7 +600,7 @@ export default defineComponent({
       const selectedScanInfo =
         this.streamlitDataStore.allDataForDrawing.per_scan_data[this.selectedScanIndex]
       const observedMass = selectedScanInfo.PrecursorMass as number
-      if (observedMass === 0) {
+      if ((observedMass === 0) && (!this.displayTnT)) {
         // if selected scan is not eligible for this view
         this.fragmentTableTitle = ''
         return
@@ -564,16 +613,18 @@ export default defineComponent({
       let matching_fragments: Record<string, unknown>[] = []
       const sequence_size = this.sequence_end
       
-      console.log(observed_masses)
-
       this.ionTypes
         .filter((iontype) => iontype.selected)
         .forEach((iontype) => {
+          
+          // Dont match fragments in FLASHTnT if end could not be determined
+          if ((iontype.text === 'a' || iontype.text === 'b' || iontype.text === 'c') && (this.sequence_start_reported < 0))
+            return
+          if ((iontype.text === 'x' || iontype.text === 'y' || iontype.text === 'z') && (this.sequence_end_reported < 0))
+            return
+
           const theoretical_frags = this.getFragmentMasses(iontype.text)
           
-          console.log(iontype.text)
-          console.log(theoretical_frags)
-
           for (
             let theoIndex = 0, FragSize = theoretical_frags.length;
             theoIndex < FragSize;
@@ -709,14 +760,15 @@ export default defineComponent({
       )
     },
     updateTagPosition() {
-      // No sequences in data
-      if (this.sequenceObjects.length <= 0) {
-        return
-      }
       // Protein without sequence selected
       if (this.sequence.length <= 0) {
         return
       }
+      // No sequences in data
+      if (this.sequenceObjects.length !== this.sequence.length) {
+        this.initializeSequenceObjects()
+      }
+
       this.sequence.forEach((aa, index) => {
         const start = this.selectedTag?.startPos == index
         const end = this.selectedTag?.endPos == index

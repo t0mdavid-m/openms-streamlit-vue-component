@@ -60,7 +60,7 @@ export default defineComponent({
     Streamlit.setFrameHeight()
   },
   methods: {
-    async updateStreamlitData(event: EventTargetShim.Event): Promise<void> {
+    async updateStreamlitData(event: Event): Promise<void> {
       this.streamlitDataStore.updateRenderData((event as CustomEvent<RenderData>).detail)
     },
   },

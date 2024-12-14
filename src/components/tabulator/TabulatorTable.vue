@@ -26,7 +26,7 @@
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
-import { TabulatorFull as Tabulator, type ColumnDefinition, type Options } from 'tabulator-tables'
+import { TabulatorFull as Tabulator, type ColumnDefinition, type Options, type Sorter } from 'tabulator-tables'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
 
 export default defineComponent({
@@ -66,7 +66,12 @@ export default defineComponent({
     defaultRow: {
       type: Number,
       required: false,
-      default: () => 0,
+      default: () => -1,
+    },
+    initialSort: {
+      type: Array as PropType<Sorter[]>,
+      required: false,
+      default: () => undefined
     },
   },
   emits: ['rowSelected'],
@@ -157,21 +162,34 @@ export default defineComponent({
           hozAlign: 'right',
         },
         columns: this.columnDefinitions.map((col) => {
-          col.headerTooltip = true
+          if (col.headerTooltip === undefined) {
+              col.headerTooltip = true;
+          }
           return col
         }),
+        initialSort: this.initialSort
       })
       this.tabulator.on('tableBuilt', () => {
-        if (this.initialized < 3) {
-          this.initialized += 1
-          this.selectDefaultRow()
-        }
+        this.selectDefaultRow()
       })
     },
     selectDefaultRow() {
       if (this.defaultRow >= 0) {
-        this.tabulator?.selectRow([this.defaultRow])
-        this.onTableClick()
+        // Get the visible rows after filtering
+        const visibleRows = this.tabulator?.getRows('active');
+
+        // Select the first visible row if there are any
+        if (
+          visibleRows 
+          && visibleRows.length > 0 
+          && this.defaultRow >= 0 
+          && this.defaultRow < visibleRows.length
+        ) {
+            const firstRow = visibleRows[this.defaultRow];
+            firstRow.select();
+          this.onTableClick()
+
+        }
       }
     },
     onTableClick() {
