@@ -5,6 +5,7 @@
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
 import Plotly from 'plotly.js-dist-min'
+import type { PlotlyLineArguments } from './plotly-lineplot'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
 
 export default defineComponent({
