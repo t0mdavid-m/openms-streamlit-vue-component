@@ -5,12 +5,13 @@
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
 import Plotly from 'plotly.js-dist-min'
+import { useStreamlitDataStore } from '@/stores/streamlit-data'
 
 export default defineComponent({
   name: 'FDRPlotly',
   props: {
     args: {
-      type: Object as PropType<{ title: string, target_qscores?: number[], decoy_qscores?: number[] }>,
+      type: Object as PropType<PlotlyLineArguments>,
       required: true,
     },
     index: {
@@ -18,14 +19,34 @@ export default defineComponent({
       required: true,
     },
   },
+  setup() {
+    const streamlitDataStore = useStreamlitDataStore()
+    return { streamlitDataStore }
+  },
   computed: {
-    xValues(): number[] {
-      // Use the data passed in args if available; otherwise, default values
-      return this.args.target_qscores || [0.1, 0.2, 0.3, 0.4, 0.5]
+    xValues_target(): number[] {
+      if (this.streamlitDataStore.allDataForDrawing.ecdf_target === undefined) {
+        return []
+      }
+      return this.streamlitDataStore.allDataForDrawing.ecdf_target.map(r => r.x) as number[]
     },
-    yValues(): number[] {
-      // Use decoy q-scores as dummy data for the y-axis
-      return this.args.decoy_qscores || [0.15, 0.25, 0.35, 0.45, 0.55]
+    xValues_decoy(): number[] {
+      if (this.streamlitDataStore.allDataForDrawing.ecdf_decoy === undefined) {
+        return []
+      }
+      return this.streamlitDataStore.allDataForDrawing.ecdf_decoy.map(r => r.x) as number[]
+    },
+    yValues_target(): number[] {
+      if (this.streamlitDataStore.allDataForDrawing.ecdf_target === undefined) {
+        return []
+      }
+      return this.streamlitDataStore.allDataForDrawing.ecdf_target.map(r => r.y) as number[]
+    },
+    yValues_decoy(): number[] {
+      if (this.streamlitDataStore.allDataForDrawing.ecdf_decoy === undefined) {
+        return []
+      }
+      return this.streamlitDataStore.allDataForDrawing.ecdf_decoy.map(r => r.y) as number[]
     },
     id(): string {
       return `graph-${this.index}`
@@ -56,16 +77,16 @@ export default defineComponent({
     data(): Plotly.Data[] {
       return [
         {
-          x: this.xValues,
-          y: this.yValues,
+          x: this.xValues_target,
+          y: this.yValues_target,
           mode: 'lines+markers',
           type: 'scatter',
           name: 'Target QScores',
           marker: { color: 'green' },
         },
         {
-          x: this.xValues,
-          y: this.yValues.map(y => y + 0.1), // Dummy offset for decoy q-scores
+          x: this.xValues_decoy,
+          y: this.yValues_decoy, // Dummy offset for decoy q-scores
           mode: 'lines+markers',
           type: 'scatter',
           name: 'Decoy QScores',
@@ -73,6 +94,11 @@ export default defineComponent({
         },
       ]
     },
+  },
+  watch: {
+    xValues_target() {
+      this.graph()
+    }
   },
   mounted() {
     this.graph()
