@@ -33,8 +33,9 @@ export const useStreamlitDataStore = defineStore('streamlit-data', {
       if (newData.args?.dataset === this.dataset) {
         return
       }
+      // Reset everything
+      this.dataForDrawing = {} as Record<DATAFRAMES, Record<string, unknown>[]>
       this.dataset = newData.args?.dataset
-
       this.renderData = newData
 
       // Convert Arrow Arrays to native Ts datatypes

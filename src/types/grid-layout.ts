@@ -16,6 +16,8 @@ export type DATAFRAMES =
   | 'protein_table'
   | 'tag_table'
   | 'settings'
+  | 'ecdf_target'
+  | 'ecdf_decoy'
 
 export type FlashViewerComponent = {
   componentArgs:
@@ -37,5 +39,7 @@ export type StreamlitData = {
   protein_table?: ArrowTable
   tag_table?: ArrowTable
   settings?: any
+  ecdf_target?: ArrowTable
+  ecdf_decoy?: ArrowTable
   components: FlashViewerComponent[][]
 }
