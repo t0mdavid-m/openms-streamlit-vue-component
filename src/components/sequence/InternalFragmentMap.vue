@@ -194,11 +194,30 @@ export default defineComponent({
     theme() {
       return this.streamlitData.theme
     },
-    internalFragmentData() {
-      return this.streamlitData.internalFragmentData
+    internalFragmentData(): InternalFragmentData | undefined {
+      console.log(this.streamlitData.internalFragmentData)
+      return this.streamlitData.internalFragmentData?.[this.selectedSequence]
+    },
+    selectedSequence(): number {
+      const pid = this.selectionStore.selectedProteinIndex
+      if (typeof pid === 'number') {
+        return pid
+      }
+      return 0
+    },
+    displayTnT(): boolean {
+      let key = this.selectedSequence
+      return this.streamlitData.sequenceData?.[key]?.computed_mass !== undefined
     },
     sequence() {
-      return this.streamlitData.sequenceData?.[0].sequence
+      const start = this.streamlitData.sequenceData?.[this.selectedSequence].proteoform_start
+      const end = this.streamlitData.sequenceData?.[this.selectedSequence].proteoform_end
+      if (start !== undefined && end !== undefined) {
+        return this.streamlitData.sequenceData?.[this.selectedSequence].sequence.slice(
+          start, end+1
+        )
+      }
+      return this.streamlitData.sequenceData?.[this.selectedSequence].sequence
     },
     fragmentStyle() {
       return {
@@ -237,7 +256,7 @@ export default defineComponent({
         return []
 
       const observedMass = this.selectedScanInfo.PrecursorMass as number
-      if (observedMass === 0) {
+      if ((observedMass === 0) && (!this.displayTnT)) {
         // if selected scan is not eligible for this view (MS1)
         return []
       }
@@ -268,7 +287,7 @@ export default defineComponent({
         return []
 
       const observedMass = this.selectedScanInfo.PrecursorMass as number
-      if (observedMass === 0) {
+      if ((observedMass === 0) && (!this.displayTnT)) {
         // if selected scan is not eligible for this view (MS1)
         return []
       }
@@ -299,7 +318,7 @@ export default defineComponent({
         return []
 
       const observedMass = this.selectedScanInfo.PrecursorMass as number
-      if (observedMass === 0) {
+      if ((observedMass === 0) && (!this.displayTnT)) {
         // if selected scan is not eligible for this view (MS1)
         return []
       }

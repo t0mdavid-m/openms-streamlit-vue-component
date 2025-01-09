@@ -3,7 +3,7 @@ import type { SequenceDataDictionary, FLASHTnTSettings } from '@/types/sequence-
 import { defineStore } from 'pinia'
 import type { RenderData, Theme } from 'streamlit-component-lib'
 import { ArrowTable } from 'streamlit-component-lib'
-import type { InternalFragmentData } from '@/types/internal-fragment-data'
+import type { InternalFragmentData, InternalFragmentDataDictionary } from '@/types/internal-fragment-data'
 import { Vector } from 'apache-arrow';
 
 export const useStreamlitDataStore = defineStore('streamlit-data', {
@@ -22,8 +22,8 @@ export const useStreamlitDataStore = defineStore('streamlit-data', {
       state.dataForDrawing.sequence_data as unknown as SequenceDataDictionary | undefined,
     settings: (state): FLASHTnTSettings | undefined =>
       state.dataForDrawing.settings as unknown as FLASHTnTSettings | undefined,
-    internalFragmentData: (state): InternalFragmentData | undefined =>
-      state.dataForDrawing.internal_fragment_data as unknown as InternalFragmentData | undefined,
+    internalFragmentData: (state): InternalFragmentDataDictionary | undefined =>
+      state.dataForDrawing.internal_fragment_data as unknown as InternalFragmentDataDictionary | undefined,
     theme: (state): Theme | undefined => state.renderData?.theme,
   },
   actions: {
