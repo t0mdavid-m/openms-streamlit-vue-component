@@ -11,3 +11,5 @@ export type InternalFragmentData = {
   start_indices_bz: number[]
   end_indices_bz: number[]
 }
+
+export type InternalFragmentDataDictionary = Record<number, InternalFragmentData>
