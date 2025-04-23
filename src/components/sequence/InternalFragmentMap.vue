@@ -12,6 +12,7 @@
       <div class="mr-4">cy</div>
     </div>
     <div class="d-flex justify-end px-4 mb-4" style="max-width: 97%">
+      <SvgScreenshot element-id="internal-fragment-part" />
       <v-btn id="internal-frag-settings-button" variant="text" icon="mdi-cog" size="medium"></v-btn>
       <v-menu
         :close-on-content-click="false"
@@ -156,13 +157,17 @@ import { defineComponent } from 'vue'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
 import { useSelectionStore } from '@/stores/selection'
 import type { InternalFragmentData } from '@/types/internal-fragment-data'
-import type { CSSProperties } from 'vue'
+import SvgScreenshot from '../ui/SvgScreenshot.vue'
 import type { StyleValue } from 'vue'
 
 type CombinedFragmentData = { mass: number; start: number; end: number }
+type FragmentType = 'by-fragment' | 'cy-fragment' | 'bz-fragment'
 
 export default defineComponent({
   name: 'InternalFragmentMap',
+  components: {
+    SvgScreenshot,
+  },
   props: {
     index: {
       type: Number,
