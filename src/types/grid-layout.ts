@@ -16,8 +16,12 @@ export type DATAFRAMES =
   | 'protein_table'
   | 'tag_table'
   | 'settings'
-  | 'ecdf_target'
-  | 'ecdf_decoy'
+  //| 'ecdf_target'
+  //| 'ecdf_decoy'
+// 🔴 REPLACED WITH:
+  | 'density_target'
+  | 'density_decoy'
+
 
 export type FlashViewerComponent = {
   componentArgs:
@@ -39,7 +43,11 @@ export type StreamlitData = {
   protein_table?: ArrowTable
   tag_table?: ArrowTable
   settings?: any
-  ecdf_target?: ArrowTable
-  ecdf_decoy?: ArrowTable
+  //ecdf_target?: ArrowTable
+  //ecdf_decoy?: ArrowTable
+  density_target?: ArrowTable
+  density_decoy?: ArrowTable
+
+
   components: FlashViewerComponent[][]
 }
