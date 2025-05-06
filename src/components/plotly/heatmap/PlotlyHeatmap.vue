@@ -7,7 +7,8 @@ import { defineComponent, type PropType } from 'vue'
 import Plotly from 'plotly.js-dist-min'
 import type { Theme, RenderData } from 'streamlit-component-lib'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
-import { useSelectionStore, HeatmapData } from '@/stores/selection'
+import { useSelectionStore } from '@/stores/selection'
+import type { HeatmapData } from '@/stores/selection'
 import type { PlotlyHeatmapArguments } from './plotly-heatmap'
 
 export default defineComponent({
