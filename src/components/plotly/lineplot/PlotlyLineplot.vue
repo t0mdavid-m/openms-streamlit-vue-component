@@ -35,6 +35,12 @@ export default defineComponent({
       return this.streamlitDataStore.theme
     },
     selectedRow(): number | undefined {
+      if (this.selectionStore.selectedScanIndex === undefined) {
+        return undefined
+      }
+      if (this.streamlitDataStore.allDataForDrawing.per_scan_data.length === 1) {
+        return 0
+      }
       return this.selectionStore.selectedScanIndex
     },
     xAxisLabel(): string {
@@ -58,12 +64,15 @@ export default defineComponent({
       }
     },
     xValues(): number[] {
+      const data = this.streamlitDataStore.allDataForDrawing.per_scan_data
+      const row = this.selectedRow
+
       const xValues: number[] = []
-      if (this.selectedRow === undefined) {
+      if (row === undefined) {
         return xValues
       }
       ;(
-        this.streamlitDataStore.allDataForDrawing.per_scan_data[this.selectedRow][
+        data[row][
           this.xColumn
         ] as number[]
       ).forEach((num) => {
@@ -134,7 +143,7 @@ export default defineComponent({
     },
   },
   watch: {
-    selectedRow() {
+    xValues() {
       this.graph()
     },
   },

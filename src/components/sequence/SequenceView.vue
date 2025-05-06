@@ -273,6 +273,7 @@ export default defineComponent({
       if (key === undefined) {
         key = 0
       }
+
       return this.streamlitDataStore.sequenceData?.[key]?.sequence ?? []
     },
     sequence_start_reported(): number {
@@ -381,11 +382,14 @@ export default defineComponent({
         '--amino-acid-cell-hover-bg-color': this.theme?.secondaryBackgroundColor ?? '#000',
       }
     },
-    selectedScanIndex(): number {
+    selectedScanIndex(): number | undefined {
       if (this.selectionStore.selectedScanIndex !== undefined) {
+        if (this.streamlitDataStore.allDataForDrawing.per_scan_data.length === 1) {
+          return 0
+        }
         return this.selectionStore.selectedScanIndex
       }
-      return 0
+      return undefined
     },
     calculateCleavagePercentage(): number {
       let explained_cleavage = 0
@@ -457,6 +461,7 @@ export default defineComponent({
       this.initializeSequenceObjects()
       this.prepareFragmentTable()
       this.prepareAmbigiousModifications()
+      this.updateSettings()
     },
     selectedTag() {
       this.updateTagPosition()
@@ -510,6 +515,17 @@ export default defineComponent({
     updateMassTolerance(event: Event) {
       this.fragmentMassTolerance = Number.parseInt((event.target as any).value as string)
     },
+    updateSettings() {
+      if (this.streamlitDataStore.settings?.ion_types !== undefined) {
+            this.ionTypes.forEach(item => {
+              item.selected = this.streamlitDataStore!.settings!.ion_types.includes(item.text);
+            })
+          }
+
+      if (this.streamlitDataStore.settings?.tolerance !== undefined) {
+        this.fragmentMassTolerance = this.streamlitDataStore.settings.tolerance            
+      }
+    },
     toggleIonTypeSelected(index: number) {
       this.ionTypes[index].selected = !this.ionTypes[index].selected
     },
@@ -540,16 +556,7 @@ export default defineComponent({
         if (!this.visibilityOptions.some(option => option.text === 'Tags')) {
           this.visibilityOptions.push({ text: 'Truncations', selected: true })
           this.visibilityOptions.push({ text: 'Tags', selected: true })
-
-          if (this.streamlitDataStore.settings?.ion_types !== undefined) {
-            this.ionTypes.forEach(item => {
-              item.selected = this.streamlitDataStore!.settings!.ion_types.includes(item.text);
-            })
-          }
-
-          if (this.streamlitDataStore.settings?.tolerance !== undefined) {
-            this.fragmentMassTolerance = this.streamlitDataStore.settings.tolerance            
-          }
+          this.updateSettings()
           
         }
 
@@ -592,7 +599,7 @@ export default defineComponent({
         return
       }
 
-      if (this.selectedScanIndex == undefined) {
+      if (this.selectedScanIndex === undefined) {
         this.fragmentTableTitle = '' // if no scan is selected, nothing to show
         return
       }

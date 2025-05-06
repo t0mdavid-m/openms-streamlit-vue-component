@@ -16,8 +16,9 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
+import { defineComponent, watch, toRaw } from 'vue'
 import { useStreamlitDataStore } from './stores/streamlit-data'
+import { useSelectionStore } from '@/stores/selection'
 import { Streamlit, type RenderData } from 'streamlit-component-lib'
 import type { FlashViewerComponent } from './types/grid-layout'
 import ComponentsLayout from './components/ui/ComponentsLayout.vue'
@@ -29,8 +30,16 @@ export default defineComponent({
   },
   setup() {
     const streamlitDataStore = useStreamlitDataStore()
-
-    return { streamlitDataStore }
+    const selectionStore = useSelectionStore()
+    
+    watch(
+      selectionStore.$state,
+      (newState) => {
+        Streamlit.setComponentValue(toRaw(newState))
+      },
+      { deep: true, immediate: true }
+    )
+    return { streamlitDataStore, selectionStore }
   },
   data() {
     return {

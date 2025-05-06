@@ -44,31 +44,42 @@ export default defineComponent({
       return this.streamlitDataStore.theme
     },
     selectedScanRow(): number | undefined {
+      if (this.selectionStore.selectedScanIndex === undefined) {
+        return undefined
+      }
+      if (this.streamlitDataStore.allDataForDrawing.per_scan_data.length === 1) {
+        return 0
+      }
       return this.selectionStore.selectedScanIndex
     },
     selectedMassRow(): number | undefined {
       return this.selectionStore.selectedMassIndex
     },
     dataForDrawing(): Plotly.Data[] {
-      if (this.selectedScanRow === undefined) return []
+      const scan = this.selectedScanRow
+      const data = this.streamlitDataStore.allDataForDrawing.per_scan_data
+      const mass = this.selectedMassRow
+
+
+
+      if (scan === undefined) return []
 
       // Get selected row entry and filter by required columns
-      const selected_scan_info =
-        this.streamlitDataStore.allDataForDrawing.per_scan_data[this.selectedScanRow] ?? {}
+      const selected_scan_info = data[scan] ?? {}
       // get signal & noise array for drawing
       let signals_for_drawing: Record<string, number[]> = {}
 
-      if (this.selectedMassRow === undefined) {
+      if (mass === undefined) {
         // when scan is selected
         signals_for_drawing = this.getPrecursorSignal(selected_scan_info)
       } else {
         // when mass is selected
         signals_for_drawing = this.getSignalNoiseObject(
           (selected_scan_info.SignalPeaks as Array<number[][]> | undefined)?.[
-            this.selectedMassRow
+            mass
           ] ?? [[]],
           (selected_scan_info.NoisyPeaks as Array<number[][]> | undefined)?.[
-            this.selectedMassRow
+            mass
           ] ?? [[]]
         )
       }
