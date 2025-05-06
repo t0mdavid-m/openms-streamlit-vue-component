@@ -7,6 +7,7 @@ import { defineComponent, type PropType } from 'vue'
 import Plotly from 'plotly.js-dist-min'
 import type { Theme, RenderData } from 'streamlit-component-lib'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
+import { useSelectionStore, HeatmapData } from '@/stores/selection'
 import type { PlotlyHeatmapArguments } from './plotly-heatmap'
 
 export default defineComponent({
@@ -23,8 +24,13 @@ export default defineComponent({
   },
   setup() {
     const streamlitDataStore = useStreamlitDataStore()
-
-    return { streamlitDataStore }
+    const selectionStore = useSelectionStore()
+    return { streamlitDataStore, selectionStore }
+  },
+  data() {
+    return {
+      zoomRange: undefined as HeatmapData | undefined
+    }
   },
   computed: {
     id(): string {
@@ -62,10 +68,54 @@ export default defineComponent({
     yValues(): number[] {
       return this.dataForHeatmapDrawing.map((row) => row.mass as number)
     },
+    selectedRange(): HeatmapData | undefined {
+      switch (this.args.title) {
+        case 'Raw MS1 Heatmap':
+          return this.selectionStore.selectedRawHeatmap
+        case 'Deconvolved MS1 Heatmap':
+          return this.selectionStore.selectedDeconvHeatmap
+        default:
+            return undefined
+      }
+    },
+    xRange(): number[] | undefined {
+      if (this.selectedRange === undefined) {
+        return undefined
+      }
+      else if ((this.selectedRange.xRange[0] < 0) && (this.selectedRange.xRange[1] < 0)){
+        return undefined
+      }
+      else{
+        return this.selectedRange.xRange
+      }
+    },
+    yRange(): number[] | undefined {
+      if (this.selectedRange === undefined) {
+        return undefined
+      }
+      else if ((this.selectedRange.yRange[0] < 0) && (this.selectedRange.yRange[1] < 0)){
+        return undefined
+      }
+      else{
+        return this.selectedRange.yRange
+      }
+    },
     markerColorValues(): number[] {
       return this.dataForHeatmapDrawing.map((row) => row.intensity as number)
     },
     data(): Plotly.Data[] {
+      const intensities = this.dataForHeatmapDrawing.map(row => row.intensity as number)
+      const minIntensity = Math.min(...intensities.filter(x => x > 0))
+      const maxIntensity = Math.max(...intensities)
+      
+      // Generate tick values for powers of 10
+      const minPower = Math.floor(Math.log10(minIntensity))
+      const maxPower = Math.ceil(Math.log10(maxIntensity))
+      const tickValues = Array.from(
+        { length: maxPower - minPower + 1 }, 
+        (_, i) => Math.pow(10, minPower + i)
+      )
+
       return [
         {
           type: 'scattergl',
@@ -74,11 +124,19 @@ export default defineComponent({
           y: this.yValues,
           mode: 'markers',
           marker: {
-            color: this.markerColorValues,
+            color: this.markerColorValues.map(v => v > 0 ? Math.log10(v) : 0),
             colorscale: 'Portland',
             showscale: true,
+            colorbar: {
+              title: 'Intensity',
+              tickvals: tickValues.map(v => Math.log10(v)),
+              ticktext: tickValues.map(v => v.toExponential(0)),
+              tickmode: 'array'
+            }
           },
-          hovertext: this.markerColorValues.map((inty) => Math.round(inty).toString()),
+          hovertext: this.dataForHeatmapDrawing.map(row => 
+            (row.intensity as number).toExponential(2)
+          ),
         },
       ]
     },
@@ -88,9 +146,11 @@ export default defineComponent({
         showlegend: this.args.showLegend,
         xaxis: {
           title: 'Retention Time',
+          range: this.xRange,
         },
         yaxis: {
           title: this.yAxisLabel,
+          range: this.yRange,
         },
         paper_bgcolor: this.theme?.backgroundColor,
         plot_bgcolor: this.theme?.secondaryBackgroundColor,
@@ -104,6 +164,17 @@ export default defineComponent({
   watch: {
     renderData() {
       this.graph()
+    },
+    zoomRange() {
+      if (this.zoomRange === undefined) return
+      switch (this.args.title) {
+        case 'Raw MS1 Heatmap':
+          this.selectionStore.updateRawHeatmapSelection(this.zoomRange)
+          break
+        case 'Deconvolved MS1 Heatmap':
+          this.selectionStore.updateDeconvHeatmapSelection(this.zoomRange)
+          break
+      }
     },
   },
   mounted() {
@@ -129,6 +200,31 @@ export default defineComponent({
           },
         ],
       })
+      // Monitor zoom level
+      const plotElement = document.getElementById(this.id) as Plotly.PlotlyHTMLElement
+      if (plotElement) {
+        plotElement.on('plotly_relayout', (eventData: Plotly.PlotRelayoutEvent) => {
+          if (eventData['xaxis.autorange']) {
+            // Handle auto-range reset
+            this.zoomRange = {
+              xRange: [-1, -1],
+              yRange: [-1, -1],
+            }
+          }
+          else if (
+            eventData['xaxis.range[0]'] !== undefined && 
+            eventData['xaxis.range[1]'] !== undefined && 
+            eventData['yaxis.range[0]'] !== undefined && 
+            eventData['yaxis.range[1]'] !== undefined
+          ) {
+            this.zoomRange = {
+              xRange: [eventData['xaxis.range[0]'], eventData['xaxis.range[1]']],
+              yRange: [eventData['yaxis.range[0]'], eventData['yaxis.range[1]']]
+            }
+          }
+          
+        })
+      }
     },
   },
 })

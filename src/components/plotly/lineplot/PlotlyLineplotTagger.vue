@@ -67,6 +67,10 @@ export default defineComponent({
       return this.streamlitDataStore.theme
     },
     selectedScan(): number | undefined {
+      if (this.selectionStore.selectedScanIndex === undefined) return undefined
+      if (this.streamlitDataStore.allDataForDrawing.per_scan_data.length === 1) {
+        return 0
+      }
       return this.selectionStore.selectedScanIndex
     },
     selectedTag(): number | undefined {
@@ -76,7 +80,7 @@ export default defineComponent({
       return this.selectionStore.selectedTag?.selectedAA
     },
     showBackButton() : boolean {
-      return (this.args.title === 'Annotated Spectrum')
+      return (this.args.title === 'Augmented Annotated Spectrum')
     },
     minCharge() : number {
       if (this.selectedScan === undefined) {
@@ -98,9 +102,9 @@ export default defineComponent({
     },
     xAxisLabel(): string {
       switch (this.args.title) {
-        case 'Annotated Spectrum':
+        case 'Augmented Annotated Spectrum':
           return 'm/z'
-        case 'Deconvolved Spectrum':
+        case 'Augmented Deconvolved Spectrum':
           return 'Monoisotopic Mass'
         default:
           return ''
@@ -108,9 +112,9 @@ export default defineComponent({
     },
     xColumn(): string {
       switch (this.args.title) {
-        case 'Annotated Spectrum':
+        case 'Augmented Annotated Spectrum':
           return 'MonoMass_Anno'
-        case 'Deconvolved Spectrum':
+        case 'Augmented Deconvolved Spectrum':
           return 'MonoMass'
         default:
           return ''
@@ -151,9 +155,9 @@ export default defineComponent({
     },
     yColmun(): string {
       switch (this.args.title) {
-        case 'Annotated Spectrum':
+        case 'Augmented Annotated Spectrum':
           return 'SumIntensity_Anno'
-        case 'Deconvolved Spectrum':
+        case 'Augmented Deconvolved Spectrum':
           return 'SumIntensity'
         default:
           return ''
@@ -287,7 +291,7 @@ export default defineComponent({
       const ypos_high = ymax*1.32
       const xpos_scaling = (this.xRange[1] - this.xRange[0])/this.xPosScalingFactor
 
-      if (this.args.title === 'Annotated Spectrum') {
+      if (this.args.title === 'Augmented Annotated Spectrum') {
 
         type MzIntensity = {
           mz: number;
@@ -561,7 +565,7 @@ export default defineComponent({
 
 
 
-      if (this.args.title === "Deconvolved Spectrum") {
+      if (this.args.title === "Augmented Deconvolved Spectrum") {
         const buttonTraces = this.annotationData.traces
         traces.push(...buttonTraces)
       }
@@ -578,7 +582,7 @@ export default defineComponent({
       if (this.highlightedValues.length === 0) {
         return [Math.min(...this.xValues)*0.98, Math.max(...this.xValues)*1.02]
       }
-      if ((this.args.title === "Annotated Spectrum") && (this.selectedMass !== undefined)) {
+      if ((this.args.title === "Augmented Annotated Spectrum") && (this.selectedMass !== undefined)) {
         return [Math.min(...this.highlightedValues[this.selectedMass].mzs)*0.98, Math.max(...this.highlightedValues[this.selectedMass].mzs)*1.02]
       }
       let xmin_full = Math.min(...this.highlightedValues.map(a => a.mass))*0.98
@@ -635,13 +639,13 @@ export default defineComponent({
   watch: {
     selectedScan() {
       this.manual = false
-      this.args.title = 'Deconvolved Spectrum'
+      this.args.title = 'Augmented Deconvolved Spectrum'
       this.selectedMass = undefined
       this.graph()
     },
     selectedTag() {
       this.manual = false
-      this.args.title = 'Deconvolved Spectrum'
+      this.args.title = 'Augmented Deconvolved Spectrum'
       this.selectedMass = undefined
       this.graph()
     },
@@ -656,7 +660,7 @@ export default defineComponent({
   },
   methods: {
     backButton() {
-      this.args.title = 'Deconvolved Spectrum'
+      this.args.title = 'Augmented Deconvolved Spectrum'
       this.selectedMass = undefined
       this.manual = false
       this.graph()
@@ -671,7 +675,7 @@ export default defineComponent({
           if (x === this.highlightedValues[i].mass) {
             this.updateButtons([], [])
             this.selectedMass = i
-            this.args.title = 'Annotated Spectrum'
+            this.args.title = 'Augmented Annotated Spectrum'
             this.manual = false
             this.graph()
             break
@@ -743,7 +747,7 @@ export default defineComponent({
       return false
     },
     highlightedPos(value : number) : number | undefined {
-      if (this.args.title === 'Annotated Spectrum') {
+      if (this.args.title === 'Augmented Annotated Spectrum') {
         const selectedMass = this.selectedMass
         if (selectedMass === undefined) {
           return undefined

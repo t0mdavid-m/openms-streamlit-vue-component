@@ -5,12 +5,15 @@ import type { RenderData, Theme } from 'streamlit-component-lib'
 import { ArrowTable } from 'streamlit-component-lib'
 import type { InternalFragmentData, InternalFragmentDataDictionary } from '@/types/internal-fragment-data'
 import { Vector } from 'apache-arrow';
+import { useSelectionStore } from '@/stores/selection'
+import { toRaw } from 'vue'
 
 export const useStreamlitDataStore = defineStore('streamlit-data', {
   state: () => ({
     renderData: null as RenderData | null,
     dataForDrawing: {} as Record<DATAFRAMES, Record<string, unknown>[]>,
     dataset: '' as String,
+    hash: '' as String,
   }),
   getters: {
     args: (state): StreamlitData => state.renderData?.args,
@@ -28,11 +31,24 @@ export const useStreamlitDataStore = defineStore('streamlit-data', {
   },
   actions: {
     updateRenderData(newData: RenderData) {
-      // Current data model: Data is only loaded once!
-      // ToDo: See if data can be accessed bydirectionally
-      if (newData.args?.dataset === this.dataset) {
+      const selectionStore = useSelectionStore()
+      selectionStore.$patch(state => {
+        if (newData.args.selection_store.id !== state.id) {
+        for (const key in state) {
+          (state as any)[key] = undefined
+        }
+      }
+        Object.assign(state, newData.args.selection_store)
+      })
+      console.log(newData.args.selection_store.id)
+
+      if (this.hash === newData.args.hash) {
         return
       }
+      this.hash = newData.args.hash  
+      delete newData.args.selection_store;
+      delete newData.args.hash;
+      
       // Reset everything
       this.dataForDrawing = {} as Record<DATAFRAMES, Record<string, unknown>[]>
       this.dataset = newData.args?.dataset

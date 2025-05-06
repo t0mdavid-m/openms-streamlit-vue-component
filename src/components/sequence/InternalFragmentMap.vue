@@ -195,7 +195,6 @@ export default defineComponent({
       return this.streamlitData.theme
     },
     internalFragmentData(): InternalFragmentData | undefined {
-      console.log(this.streamlitData.internalFragmentData)
       return this.streamlitData.internalFragmentData?.[this.selectedSequence]
     },
     selectedSequence(): number {
@@ -242,6 +241,11 @@ export default defineComponent({
     },
     selectedScanInfo(): Record<string, unknown> | undefined {
       if (this.selectionStore.selectedScanIndex === undefined) return undefined
+      if (this.streamlitData.allDataForDrawing.per_scan_data.length == 1) {
+        return this.streamlitData.allDataForDrawing.per_scan_data[
+          0
+        ]
+      }
       return this.streamlitData.allDataForDrawing.per_scan_data[
         this.selectionStore.selectedScanIndex
       ]

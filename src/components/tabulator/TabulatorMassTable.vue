@@ -88,6 +88,9 @@ export default defineComponent({
   },
   computed: {
     selectedRow(): number | undefined {
+      if (this.streamlitDataStore.allDataForDrawing.per_scan_data.length === 1) {
+        return 0
+      }
       return this.selectionStore.selectedScanIndex
     },
     tableData(): Record<string, unknown>[] {
