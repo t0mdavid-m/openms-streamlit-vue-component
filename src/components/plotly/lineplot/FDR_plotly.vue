@@ -22,32 +22,33 @@ export default defineComponent({
   },
   setup() {
     const streamlitDataStore = useStreamlitDataStore()
+    console.log("I exist!")
     return { streamlitDataStore }
   },
   computed: {
     xValues_target(): number[] {
-      if (this.streamlitDataStore.allDataForDrawing.ecdf_target === undefined) {
+      if (this.streamlitDataStore.allDataForDrawing.density_target === undefined) {
         return []
       }
-      return this.streamlitDataStore.allDataForDrawing.ecdf_target.map(r => r.x) as number[]
+      return this.streamlitDataStore.allDataForDrawing.density_target.map(r => r.x) as number[]
     },
     xValues_decoy(): number[] {
-      if (this.streamlitDataStore.allDataForDrawing.ecdf_decoy === undefined) {
+      if (this.streamlitDataStore.allDataForDrawing.density_decoy === undefined) {
         return []
       }
-      return this.streamlitDataStore.allDataForDrawing.ecdf_decoy.map(r => r.x) as number[]
+      return this.streamlitDataStore.allDataForDrawing.density_decoy.map(r => r.x) as number[]
     },
     yValues_target(): number[] {
-      if (this.streamlitDataStore.allDataForDrawing.ecdf_target === undefined) {
+      if (this.streamlitDataStore.allDataForDrawing.density_target === undefined) {
         return []
       }
-      return this.streamlitDataStore.allDataForDrawing.ecdf_target.map(r => r.y) as number[]
+      return this.streamlitDataStore.allDataForDrawing.density_target.map(r => r.y) as number[]
     },
     yValues_decoy(): number[] {
-      if (this.streamlitDataStore.allDataForDrawing.ecdf_decoy === undefined) {
+      if (this.streamlitDataStore.allDataForDrawing.density_decoy === undefined) {
         return []
       }
-      return this.streamlitDataStore.allDataForDrawing.ecdf_decoy.map(r => r.y) as number[]
+      return this.streamlitDataStore.allDataForDrawing.density_decoy.map(r => r.y) as number[]
     },
     id(): string {
       return `graph-${this.index}`
