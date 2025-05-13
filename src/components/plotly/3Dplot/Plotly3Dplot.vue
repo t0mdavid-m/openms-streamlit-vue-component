@@ -73,16 +73,24 @@ export default defineComponent({
         // when scan is selected
         signals_for_drawing = this.getPrecursorSignal(selected_scan_info)
       } else {
+        if (this.streamlitDataStore.allDataForDrawing.per_scan_data.length === 1) {
+          signals_for_drawing = this.getSignalNoiseObject(
+            (selected_scan_info.SignalPeaks as Array<number[]>),
+            (selected_scan_info.NoisyPeaks as Array<number[]>)
+          )
+        }
+          else {
+            signals_for_drawing = this.getSignalNoiseObject(
+              (selected_scan_info.SignalPeaks as Array<number[][]> | undefined)?.[
+                mass
+              ] ?? [[]],
+              (selected_scan_info.NoisyPeaks as Array<number[][]> | undefined)?.[
+                mass
+              ] ?? [[]]
+            )
+          }
+        }
         // when mass is selected
-        signals_for_drawing = this.getSignalNoiseObject(
-          (selected_scan_info.SignalPeaks as Array<number[][]> | undefined)?.[
-            mass
-          ] ?? [[]],
-          (selected_scan_info.NoisyPeaks as Array<number[][]> | undefined)?.[
-            mass
-          ] ?? [[]]
-        )
-      }
 
       // if nothing was retrieved for drawing
       if (Object.keys(signals_for_drawing).length === 0) return []
