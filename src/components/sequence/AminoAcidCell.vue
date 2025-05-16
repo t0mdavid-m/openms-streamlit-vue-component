@@ -39,14 +39,14 @@
     </div>
     <div v-if="showTags && sequenceObject.tagStart" class="rounded-lg tag-marker tag-start"></div>
     <div v-if="showTags && sequenceObject.tagEnd" class="rounded-lg tag-marker tag-end"></div>
-    <div v-if="showModifications && sequenceObject.modStart" class="rounded-lg mod-marker mod-start"></div>
-    <div v-if="showModifications && sequenceObject.modEnd" class="rounded-lg mod-marker mod-end"></div>
+    <div v-if="showModifications && (sequenceObject.modStart||isThisAAmodified)" class="rounded-lg mod-marker mod-start"></div>
+    <div v-if="showModifications && (sequenceObject.modEnd||isThisAAmodified)" class="rounded-lg mod-marker mod-end"></div>
     <div v-if="showModifications && sequenceObject.modStart && !sequenceObject.modEnd" class="mod-marker mod-start-cont"></div>
     <div v-if="showModifications && !sequenceObject.modStart && sequenceObject.modEnd" class="mod-marker mod-end-cont"></div>
     <div v-if="showModifications && sequenceObject.modCenter" class="mod-marker mod-center-cont"></div>
-    <div v-if="showModifications && sequenceObject.modEnd" class="rounded-lg mod-mass">{{ sequenceObject.modMass }}
+    <div v-if="showModifications && (sequenceObject.modEnd||isThisAAmodified)" class="rounded-lg mod-mass">{{ modMass }}
       <v-tooltip activator="parent" class="foreground">
-        {{ `Modification Mass: ${sequenceObject.modMass} Da` }}
+        {{ `Modification Mass: ${modMass} Da` }}
         <br />
         {{ `Possible Modifications: ${sequenceObject.modLabels}` }}
         <br />
@@ -77,7 +77,7 @@
         <v-list-item>
           <v-select
             v-model="selectedModification"
-            clearable="true"
+            clearable=true
             label="Modification"
             density="compact"
             :items="modificationsForSelect"
@@ -94,7 +94,7 @@
               label="Monoisotopic mass in Da"
               type="number"
             />
-            <v-btn type="submit" block="true" class="mt-2" @click="updateCustomModification"
+            <v-btn type="submit" block=true class="mt-2" @click="updateCustomModification"
               >Submit</v-btn
             >
           </v-form>
@@ -346,6 +346,12 @@ export default defineComponent({
     DoesThisAAHaveSequenceTags() : boolean {
       return this.coverage > 0
     },
+    modMass() : string | undefined {
+      if (this.customModMass !== '0') {
+        return parseFloat(this.customModMass).toLocaleString('en-US', { signDisplay: 'always' })
+      }
+      return this.sequenceObject.modMass
+    }
   },
   methods: {
     toggleMenuOpen(): void {
@@ -389,13 +395,6 @@ export default defineComponent({
     },
   },
   watch: {
-    isThisAAmodified() {
-      this.sequenceObject.modStart = true
-      this.sequenceObject.modEnd = true
-    },
-    customModMass() {
-      this.sequenceObject.modMass = parseFloat(this.customModMass).toLocaleString('en-US', { signDisplay: 'always' })
-    },
     selectedModification() {
       if ((this.selectedModification !== undefined) && (modificationMassMap[this.selectedModification] !== undefined)) {
         this.sequenceObject.modMass = parseFloat(modificationMassMap[this.selectedModification].toFixed(2)).toLocaleString('en-US', { signDisplay: 'always' })

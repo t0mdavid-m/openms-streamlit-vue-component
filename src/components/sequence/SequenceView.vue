@@ -208,9 +208,9 @@ export default defineComponent({
         { text: 'z', selected: false },
       ] as { text: string; selected: boolean }[],
       ionTypesExtra: {
-        'water loss': true,
-        'ammonium loss': true,
-        'proton loss/addition': true,
+        'water loss': false,
+        'ammonium loss': false,
+        'proton loss/addition': false,
       } as Record<ExtraFragmentType, boolean>,
       fragmentMassTolerance: 10 as number,
       visibilityOptions: [
@@ -358,8 +358,8 @@ export default defineComponent({
       return this.streamlitDataStore.sequenceData?.[key]?.fixed_modifications ?? []
     },
     variableModifications(): Record<number, number> {
-      return {}
-      //return this.variableModData.variableModifications ?? {}
+      // return {}
+      return this.variableModData.variableModifications ?? {}
     },
     tickLabels(): Record<number, string> {
       return {
@@ -433,9 +433,6 @@ export default defineComponent({
       return false
     },
     showModifications(): boolean {
-      if (!this.displayTnT) {
-        return false
-      }
       if (this.visibilityOptions.find(option => option.text === 'Modifications')?.selected) {
         return true
       }
@@ -606,12 +603,6 @@ export default defineComponent({
 
       const selectedScanInfo =
         this.streamlitDataStore.allDataForDrawing.per_scan_data[this.selectedScanIndex]
-      const observedMass = selectedScanInfo.PrecursorMass as number
-      if ((observedMass === 0) && (!this.displayTnT)) {
-        // if selected scan is not eligible for this view
-        this.fragmentTableTitle = ''
-        return
-      }
 
       // get the observed mass table info
       const observed_masses = selectedScanInfo.MonoMass as number[]
