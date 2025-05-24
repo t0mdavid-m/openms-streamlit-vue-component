@@ -5,6 +5,7 @@
     title="Mass Table"
     :index="index"
     @row-selected="updateSelectedMass"
+    :selected-row-index-from-listening="selectedMassTableRow"
     :default-row=0
   />
 </template>
@@ -92,6 +93,9 @@ export default defineComponent({
         return 0
       }
       return this.selectionStore.selectedScanIndex
+    },
+    selectedMassTableRow(): number | undefined {
+      return this.selectionStore.selectedMassIndex
     },
     tableData(): Record<string, unknown>[] {
       if (this.selectedRow === undefined) return []

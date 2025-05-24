@@ -170,7 +170,12 @@ export default defineComponent({
         initialSort: this.initialSort
       })
       this.tabulator.on('tableBuilt', () => {
-        this.selectDefaultRow()
+        // First check if we have a selected row from listening
+        if (this.selectedRowIndexFromListening !== undefined) {
+          this.onSelectedRowListener(this.selectedRowIndexFromListening)
+        } else {
+          this.selectDefaultRow()
+        }
       })
     },
     selectDefaultRow() {
