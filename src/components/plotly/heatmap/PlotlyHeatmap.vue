@@ -225,6 +225,22 @@ export default defineComponent({
           }
           
         })
+        plotElement.on('plotly_click', (eventData: Plotly.PlotMouseEvent) => {
+          const pointData = this.dataForHeatmapDrawing[eventData.points[0].pointIndex]
+          const scan_idx: number | undefined = pointData?.scan_idx as number | undefined
+          const mass_idx: number | undefined = pointData?.mass_idx as number | undefined
+
+          if (scan_idx !== undefined) {
+            this.selectionStore.updateSelectedScan(scan_idx)
+          }
+          
+          if (
+              (this.args.title === 'Deconvolved MS1 Heatmap')
+              && (mass_idx !== undefined)
+          ) {
+            this.selectionStore.updateSelectedMass(mass_idx)
+          }
+        })
       }
     },
   },

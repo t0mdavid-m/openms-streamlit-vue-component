@@ -6,6 +6,7 @@
     :index="index"
     table-layout-param="fitColumns"
     @row-selected="updateSelectedScan"
+    :selected-row-index-from-listening="selectedRow"
     :default-row=0
   />
 </template>
@@ -76,12 +77,18 @@ export default defineComponent({
       rows.forEach((row) => (row['id'] = row['index']))
       return rows
     },
+    selectedRow(): number | undefined {
+      return this.selectionStore.selectedScanIndex
+    }
   },
   methods: {
     updateSelectedScan(selectedRow?: number) {
       if (selectedRow !== undefined) {
+        // Clear the mass selection if it's coming from a direct click in the scan table
+        // (i.e., this method was called by the table's row selection event)
         if (selectedRow !== this.selectionStore.selectedScanIndex) {
-          this.selectionStore.updateSelectedMass(undefined)
+          // If this came from the table click, clear mass selection
+          this.selectionStore.updateSelectedMass(0)
         }
         this.selectionStore.updateSelectedScan(selectedRow)
       }
