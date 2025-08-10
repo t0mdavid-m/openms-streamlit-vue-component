@@ -8,6 +8,8 @@ export type TagData = {
   selectedAA: number
   startPos: number
   endPos: number
+  isoStart?: number
+  isoEnd?: number
 }
 
 // Stores selection data for heatmaps
@@ -19,6 +21,7 @@ export type HeatmapData = {
 export const useSelectionStore = defineStore('selection', {
   state: () => ({
     scanIndex: undefined as number | undefined,
+    precursorScanIndex: undefined as number | undefined,
     massIndex: undefined as number | undefined,
     proteinIndex: undefined as number | undefined,
     tagIndex: undefined as number | undefined,
@@ -32,6 +35,7 @@ export const useSelectionStore = defineStore('selection', {
   }),
   getters: {
     selectedScanIndex: (state): number | undefined => state.scanIndex,
+    selectedPrecursorScanIndex: (state): number | undefined => state.precursorScanIndex,
     selectedMassIndex: (state): number | undefined => state.massIndex,
     selectedProteinIndex: (state): number | undefined => state.proteinIndex,
     selectedTagIndex: (state): number | undefined => state.tagIndex,
@@ -45,6 +49,9 @@ export const useSelectionStore = defineStore('selection', {
   actions: {
     updateSelectedScan(rowIndex: number) {
       this.scanIndex = rowIndex
+    },
+    updateSelectedPrecursorScan(rowIndex: number) {
+      this.precursorScanIndex = rowIndex
     },
     updateSelectedMass(rowIndex?: number) {
       this.massIndex = rowIndex

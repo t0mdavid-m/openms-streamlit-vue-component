@@ -76,6 +76,9 @@ export default defineComponent({
     selectedTag(): number | undefined {
       return this.selectionStore.selectedTagIndex
     },
+    selectedPrecursorScan(): number | undefined {
+      return this.selectionStore.selectedPrecursorScanIndex
+    },
     selectedAA() : number | undefined {
       return this.selectionStore.selectedTag?.selectedAA
     },
@@ -189,12 +192,13 @@ export default defineComponent({
       // TODO: Refactor in Python + Hashmaps, okay for now though
       for (let i = 0; i < values.length; i++) {
         for (let j = 0; j < this.xMassValues.length; j++) {
-          if (Math.abs(values[i] - this.xMassValues[j]) <= 1e-5) {
+          if (Math.abs(values[i] - this.xMassValues[j]) <= 1e-3) {
             positions.push(j)
             break
           }
         }
       }
+      console.log(positions)
 
       if (positions.length === values.length) {
         return positions
@@ -284,6 +288,13 @@ export default defineComponent({
       let buttonTraces : Plotly.Data[] = []
       let buttonShapes : Partial<Plotly.Shape>[] = []
       let buttonAnnotations: Partial<Plotly.Annotations>[] = []
+
+      if (this.selectionStore.selectedTag?.isoStart !== undefined) {
+        buttonShapes.push(this.addVerticalDashedLine(this.selectionStore.selectedTag.isoStart))
+      }
+      if (this.selectionStore.selectedTag?.isoEnd !== undefined) {
+        buttonShapes.push(this.addVerticalDashedLine(this.selectionStore.selectedTag.isoEnd))
+      }
 
       const ymax = this.computeYRange(this.xRange)[1]/1.8
       const ypos_low = ymax*1.18
@@ -582,6 +593,9 @@ export default defineComponent({
       if (this.highlightedValues.length === 0) {
         return [Math.min(...this.xValues)*0.98, Math.max(...this.xValues)*1.02]
       }
+      if ((this.args.title === "Augmented Annotated Spectrum") && (this.selectionStore.selectedTag?.isoStart !== undefined) && (this.selectionStore.selectedTag?.isoEnd !== undefined)) {
+        return [this.selectionStore.selectedTag.isoStart-3, this.selectionStore.selectedTag.isoEnd+3]
+      }
       if ((this.args.title === "Augmented Annotated Spectrum") && (this.selectedMass !== undefined)) {
         return [Math.min(...this.highlightedValues[this.selectedMass].mzs)*0.98, Math.max(...this.highlightedValues[this.selectedMass].mzs)*1.02]
       }
@@ -648,6 +662,13 @@ export default defineComponent({
       this.args.title = 'Augmented Deconvolved Spectrum'
       this.selectedMass = undefined
       this.graph()
+    },
+    selectedPrecursorScan() {
+      this.manual = false
+      this.args.title = 'Augmented Annotated Spectrum'
+      this.selectedMass = 0
+      this.graph()
+
     },
     annotationData() {
       if (this.manual) {
@@ -795,6 +816,24 @@ export default defineComponent({
       plotInstance.on('plotly_click', (eventData) => {
         this.onPlotClick(eventData)
       })
+    },
+    addVerticalDashedLine(x: number, color: string = 'black', width: number = 2, y0: number = 0, y1?: number) : Plotly.Shape {
+      // y1 defaults to the top of the current yRange if not provided
+      if (y1 === undefined) {
+        y1 = this.yRange.length > 1 ? this.yRange[1] : 1
+      }
+      return {
+        type: 'line',
+        x0: x,
+        x1: x,
+        y0: y0,
+        y1: y1,
+        line: {
+          color: color,
+          width: width,
+          dash: 'dash'
+        }
+      } as Plotly.Shape
     },
   },
 })

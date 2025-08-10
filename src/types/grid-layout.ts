@@ -14,11 +14,9 @@ export type DATAFRAMES =
   | 'internal_fragment_data'
   | 'quant_data'
   | 'protein_table'
+  | 'id_table'
   | 'tag_table'
   | 'settings'
-  //| 'ecdf_target'
-  //| 'ecdf_decoy'
-// 🔴 REPLACED WITH:
   | 'density_target'
   | 'density_decoy'
 
@@ -41,6 +39,7 @@ export type StreamlitData = {
   internal_fragment_data?: ArrowTable
   quant_data?: ArrowTable
   protein_table?: ArrowTable
+  id_table?: ArrowTable
   tag_table?: ArrowTable
   settings?: any
   //ecdf_target?: ArrowTable

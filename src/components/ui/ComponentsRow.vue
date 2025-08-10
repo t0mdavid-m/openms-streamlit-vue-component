@@ -15,6 +15,11 @@
         :args="component.componentArgs"
         :index="componentIndex(index)"
       />
+      <TabulatorFragmentScanTable
+        v-else-if="component.componentArgs.componentName === 'TabulatorFragmentScanTable'"
+        :args="component.componentArgs"
+        :index="componentIndex(index)"
+      />
       <TabulatorMassTable
         v-else-if="component.componentArgs.componentName === 'TabulatorMassTable'"
         :args="component.componentArgs"
@@ -69,6 +74,7 @@
 <script lang="ts">
 import PlotlyHeatmap from '@/components/plotly/heatmap/PlotlyHeatmap.vue'
 import TabulatorScanTable from '@/components/tabulator/TabulatorScanTable.vue'
+import TabulatorFragmentScanTable from '@/components/tabulator/TabulatorFragmentScanTable.vue'
 import PlotlyLineplot from '@/components/plotly/lineplot/PlotlyLineplot.vue'
 import PlotlyLineplotTagger from '@/components/plotly/lineplot/PlotlyLineplotTagger.vue'
 import Plotly3Dplot from '@/components/plotly/3Dplot/Plotly3Dplot.vue'
@@ -92,6 +98,7 @@ export default defineComponent({
     Plotly3Dplot,
     PlotlyHeatmap,
     TabulatorScanTable,
+    TabulatorFragmentScanTable,
     PlotlyLineplot,
     PlotlyLineplotTagger,
     TabulatorMassTable,
@@ -114,6 +121,7 @@ export default defineComponent({
     return {
       componentHeightMapping: {
         TabulatorScanTable: 'height-any',
+        TabulatorFragmentScanTable: 'height-any',
         TabulatorMassTable: 'height-any',
         TabulatorProteinTable: 'height-any',
         TabulatorTagTable: 'height-any',
