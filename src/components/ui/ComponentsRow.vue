@@ -30,12 +30,12 @@
         :args="component.componentArgs"
         :index="componentIndex(index)"
       />
-      <PlotlyLineplot
+      <PlotlyLineplotUnified
         v-else-if="component.componentArgs.componentName === 'PlotlyLineplot'"
         :args="component.componentArgs"
         :index="componentIndex(index)"
       />
-      <PlotlyLineplotTagger
+      <PlotlyLineplotUnified
         v-else-if="component.componentArgs.componentName === 'PlotlyLineplotTagger'"
         :args="component.componentArgs"
         :index="componentIndex(index)"
@@ -69,8 +69,7 @@
 <script lang="ts">
 import PlotlyHeatmap from '@/components/plotly/heatmap/PlotlyHeatmap.vue'
 import TabulatorScanTable from '@/components/tabulator/TabulatorScanTable.vue'
-import PlotlyLineplot from '@/components/plotly/lineplot/PlotlyLineplot.vue'
-import PlotlyLineplotTagger from '@/components/plotly/lineplot/PlotlyLineplotTagger.vue'
+import PlotlyLineplotUnified from '@/components/plotly/lineplot/PlotlyLineplotUnified.vue'
 import Plotly3Dplot from '@/components/plotly/3Dplot/Plotly3Dplot.vue'
 import TabulatorMassTable from '@/components/tabulator/TabulatorMassTable.vue'
 import TabulatorProteinTable from '@/components/tabulator/TabulatorProteinTable.vue'
@@ -92,8 +91,7 @@ export default defineComponent({
     Plotly3Dplot,
     PlotlyHeatmap,
     TabulatorScanTable,
-    PlotlyLineplot,
-    PlotlyLineplotTagger,
+    PlotlyLineplotUnified,
     TabulatorMassTable,
     TabulatorProteinTable,
     TabulatorTagTable,
@@ -119,6 +117,7 @@ export default defineComponent({
         TabulatorTagTable: 'height-any',
         PlotlyLineplot: 'height-any',
         PlotlyLineplotTagger: 'height-any',
+        PlotlyLineplotUnified: 'height-any',
         PlotlyHeatmap: 'height-any',
         Plotly3Dplot: 'height-any',
         SequenceView: 'height-any',
