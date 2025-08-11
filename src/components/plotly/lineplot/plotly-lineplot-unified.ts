@@ -90,7 +90,7 @@ export const DEFAULT_CONFIG = {
 export const DEFAULT_STYLING = {
   highlightColor: '#E4572E',
   selectedColor: '#F3A712',
-  unhighlightedColor: 'lightblue',
+  unhighlightedColor: '#1f77b4',
   annotationColors: {
     massButton: '#E4572E',
     selectedMassButton: '#F3A712',
