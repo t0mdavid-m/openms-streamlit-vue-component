@@ -13,7 +13,7 @@
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
-import Plotly, { type Data } from 'plotly.js-dist-min'
+import Plotly from 'plotly.js-dist-min'
 import type { Theme } from 'streamlit-component-lib'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
 import { useSelectionStore } from '@/stores/selection'
@@ -31,17 +31,6 @@ import {
 
 export default defineComponent({
   name: 'PlotlyLineplotUnified',
-  emits: [
-    'plot-rendered',
-    'plot-error',
-    'mass-selected',
-    'mass-highlighted',
-    'zoom-changed',
-    'annotation-clicked',
-    'back-button-clicked',
-    'mode-changed',
-    'feature-toggled'
-  ],
   props: {
     args: {
       type: Object as PropType<UnifiedPlotlyLineArguments>,
@@ -57,6 +46,17 @@ export default defineComponent({
       default: undefined
     }
   },
+  emits: [
+    'plot-rendered',
+    'plot-error',
+    'mass-selected',
+    'mass-highlighted',
+    'zoom-changed',
+    'annotation-clicked',
+    'back-button-clicked',
+    'mode-changed',
+    'feature-toggled'
+  ],
   setup() {
     const streamlitDataStore = useStreamlitDataStore()
     const selectionStore = useSelectionStore()
@@ -74,7 +74,13 @@ export default defineComponent({
       enabledFeatures: new Set<string>(),
       
       // UI state
-      isInitialized: false as Boolean
+      isInitialized: false as Boolean,
+      
+      // Annotation toggle state
+      annotationsVisible: true as Boolean,
+      
+      // Local state for title to avoid prop mutation
+      localTitle: '' as string
     }
   },
   computed: {
@@ -185,8 +191,12 @@ export default defineComponent({
     },
     
     // === AXIS CONFIGURATION ===
+    currentTitle(): string {
+      return this.localTitle || this.args.title
+    },
+    
     xAxisLabel(): string {
-      switch (this.args.title) {
+      switch (this.currentTitle) {
         case 'Annotated Spectrum':
         case 'Augmented Annotated Spectrum':
           return 'm/z'
@@ -203,7 +213,7 @@ export default defineComponent({
     },
     
     xColumn(): string {
-      switch (this.args.title) {
+      switch (this.currentTitle) {
         case 'Annotated Spectrum':
         case 'Augmented Annotated Spectrum':
           return 'MonoMass_Anno'
@@ -216,7 +226,7 @@ export default defineComponent({
     },
     
     yColumn(): string {
-      switch (this.args.title) {
+      switch (this.currentTitle) {
         case 'Annotated Spectrum':
         case 'Augmented Annotated Spectrum':
           return 'SumIntensity_Anno'
@@ -361,9 +371,9 @@ export default defineComponent({
     },
     
     showBackButton(): boolean {
-      return this.isEnhancedMode && 
-             this.mergedFeatures.backButton && 
-             (this.args.title === 'Augmented Annotated Spectrum')
+      return this.isEnhancedMode &&
+             this.mergedFeatures.backButton &&
+             (this.currentTitle === 'Augmented Annotated Spectrum')
     },
     
     // === HIGHLIGHTING SYSTEM ===
@@ -532,7 +542,7 @@ export default defineComponent({
           return [minX * 0.98, maxX * 1.02]
         }
         
-        if ((this.args.title === "Augmented Annotated Spectrum") &&
+        if ((this.currentTitle === "Augmented Annotated Spectrum") &&
             (this.selectedMass !== undefined) &&
             (this.selectedMass < highlighted.length)) {
           const selectedData = highlighted[this.selectedMass]
@@ -573,7 +583,7 @@ export default defineComponent({
     // === ANNOTATION SYSTEM ===
     annotationData(): PlotAnnotations {
       try {
-        if (!this.isEnhancedMode || !this.mergedFeatures.annotationSystem) {
+        if (!this.isEnhancedMode || !this.mergedFeatures.annotationSystem || !this.annotationsVisible) {
           return { shapes: [], annotations: [], traces: [] }
         }
         
@@ -600,7 +610,7 @@ export default defineComponent({
         const xpos_scaling = (xRange[1] - xRange[0]) / this.xPosScalingFactor
 
       // AUGMENTED ANNOTATED SPECTRUM MODE - Charge Labels Logic
-      if (this.args.title === 'Augmented Annotated Spectrum') {
+      if (this.currentTitle === 'Augmented Annotated Spectrum') {
         type MzIntensity = {
           mz: number;
           intensity: number;
@@ -899,6 +909,20 @@ export default defineComponent({
       // Enhanced mode traces
       let traces: Plotly.Data[] = []
       
+      // When annotations are hidden, force all peaks to use default color
+      if (!this.annotationsVisible) {
+        traces.push({
+          x: this.xValues,
+          y: this.yValues,
+          mode: 'lines',
+          type: 'scatter',
+          connectgaps: false,
+          marker: { color: this.mergedStyling.unhighlightedColor }
+        })
+        return traces
+      }
+      
+      // When annotations are visible, use normal highlighting logic
       traces.push({
         x: this.plotData.unhighlighted_x,
         y: this.plotData.unhighlighted_y,
@@ -925,7 +949,7 @@ export default defineComponent({
         })
       }
       
-      if (this.args.title === "Augmented Deconvolved Spectrum") {
+      if (this.currentTitle === "Augmented Deconvolved Spectrum") {
         const buttonTraces = this.annotationData.traces
         traces.push(...buttonTraces)
       }
@@ -935,7 +959,7 @@ export default defineComponent({
     
     layout(): Partial<Plotly.Layout> {
       const baseLayout: Partial<Plotly.Layout> = {
-        title: `<b>${this.args.title}</b>`,
+        title: `<b>${this.currentTitle}</b>`,
         showlegend: false,
         height: 400,
         xaxis: {
@@ -1042,6 +1066,13 @@ export default defineComponent({
       if (this.isEnhancedMode && this.manual && this.mergedFeatures.annotationSystem) {
         this.updateButtons(this.annotationData.shapes, this.annotationData.annotations)
       }
+    },
+    
+    // === ANNOTATION VISIBILITY REACTIVITY ===
+    annotationsVisible() {
+      if (this.isEnhancedMode) {
+        this.safeGraph()
+      }
     }
   },
   
@@ -1067,6 +1098,20 @@ export default defineComponent({
                   width: 1200,
                   format: 'svg',
                 })
+              },
+            },
+            {
+              title: this.annotationsVisible ? 'Hide Annotations' : 'Show Annotations',
+              name: 'toggleAnnotations',
+              icon: {
+                width: 1792,
+                height: 1792,
+                path: this.annotationsVisible
+                  ? 'M1664 960q-152-236-381-353 61 104 61 225 0 185-131.5 316.5t-316.5 131.5-316.5-131.5-131.5-316.5q0-121 61-225-229 117-381 353 133 205 333.5 326.5t434.5 121.5 434.5-121.5 333.5-326.5zm-720-384q0-20-14-34t-34-14q-125 0-214.5 89.5t-89.5 214.5q0 20 14 34t34 14 34-14 14-34q0-86 61-147t147-61q20 0 34-14t14-34zm848 384q0 34-20 69-140 230-376.5 368.5t-499.5 138.5-499.5-139-376.5-368q-20-35-20-69t20-69q140-229 376.5-368t499.5-139 499.5 139 376.5 368q20 35 20 69z'
+                  : 'M555 1179l78-141q87 63 136 63 25 0 40.5-15.5t15.5-39.5q0-46-49-86-49-40-124-40-93 0-124 47-7 11-24 11-17 0-28.5-10.5t-11.5-26.5q0-25 30-56 104-108 266-108 99 0 171.5 67.5t72.5 164.5q0 95-78 164-22 19-45.5 29t-59.5 10q-70 0-141-59zM1664 960q-152-236-381-353 61 104 61 225 0 185-131.5 316.5t-316.5 131.5-316.5-131.5-131.5-316.5q0-121 61-225-229 117-381 353 133 205 333.5 326.5t434.5 121.5 434.5-121.5 333.5-326.5zm-720-384q0-20-14-34t-34-14q-125 0-214.5 89.5t-89.5 214.5q0 20 14 34t34 14 34-14 14-34q0-86 61-147t147-61q20 0 34-14t14-34zm848 384q0 34-20 69-140 230-376.5 368.5t-499.5 138.5-499.5-139-376.5-368q-20-35-20-69t20-69q140-229 376.5-368t499.5-139 499.5 139 376.5 368q20 35 20 69z'
+              },
+              click: () => {
+                this.toggleAnnotations()
               },
             },
           ],
@@ -1116,6 +1161,9 @@ export default defineComponent({
         
         this.isInitialized = true
         
+        // Initialize local title
+        this.localTitle = this.args.title
+        
         // Use safe rendering
         this.safeGraph()
       } catch (error) {
@@ -1127,7 +1175,7 @@ export default defineComponent({
     resetManualState(): void {
       try {
         this.manual = false
-        this.args.title = 'Augmented Deconvolved Spectrum'
+        this.localTitle = 'Augmented Deconvolved Spectrum'
         this.selectedMass = undefined
       } catch (error) {
         this.handleError(error as Error, 'resetManualState')
@@ -1138,11 +1186,21 @@ export default defineComponent({
     backButton(): void {
       if (!this.isEnhancedMode || !this.mergedFeatures.backButton) return
       
-      this.args.title = 'Augmented Deconvolved Spectrum'
+      this.localTitle = 'Augmented Deconvolved Spectrum'
       this.selectedMass = undefined
       this.manual = false
       this.$emit('back-button-clicked', {
-        previousMode: this.args.title,
+        previousMode: this.localTitle,
+        timestamp: Date.now()
+      })
+      this.safeGraph()
+    },
+    
+    toggleAnnotations(): void {
+      this.annotationsVisible = !this.annotationsVisible
+      this.$emit('feature-toggled', {
+        feature: 'annotations',
+        enabled: this.annotationsVisible,
         timestamp: Date.now()
       })
       this.safeGraph()
@@ -1158,7 +1216,7 @@ export default defineComponent({
           if (x === this.highlightedValues[i].mass) {
             this.updateButtons([], [])
             this.selectedMass = i
-            this.args.title = 'Augmented Annotated Spectrum'
+            this.localTitle = 'Augmented Annotated Spectrum'
             this.manual = false
             this.$emit('mass-selected', {
               mass: x,
@@ -1274,7 +1332,7 @@ export default defineComponent({
         const highlighted = this.highlightedValues
         if (highlighted.length === 0) return undefined
         
-        if (this.args.title === 'Augmented Annotated Spectrum') {
+        if (this.currentTitle === 'Augmented Annotated Spectrum') {
           const selectedMass = this.selectedMass
           if (selectedMass === undefined || selectedMass >= highlighted.length) return undefined
           
