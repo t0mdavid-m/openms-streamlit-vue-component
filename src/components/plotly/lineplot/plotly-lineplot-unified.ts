@@ -71,7 +71,7 @@ export type HighlightData = {
 
 // Feature matrix for mode-based rendering
 export const FEATURE_MATRIX = {
-  basic: new Set(['svgExport']),
+  basic: new Set(['svgExport', 'massHighlighting']),
   enhanced: new Set([
     'svgExport', 'interactiveMode', 'massHighlighting',
     'tagHighlighting', 'zoomControls', 'annotationSystem',

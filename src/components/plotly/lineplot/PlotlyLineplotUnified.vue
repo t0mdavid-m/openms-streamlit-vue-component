@@ -376,6 +376,13 @@ export default defineComponent({
              (this.currentTitle === 'Augmented Annotated Spectrum')
     },
     
+    // Mass index highlighting - only for "Deconvolved Spectrum"
+    shouldHighlightMassIndex(): boolean {
+      console.log(this.mergedFeatures)
+      return this.currentTitle === 'Deconvolved Spectrum' &&
+             this.selectionStore.selectedMassIndex !== undefined
+    },
+    
     // === HIGHLIGHTING SYSTEM ===
     highlightedMassPos(): number[] {
       try {
@@ -454,16 +461,16 @@ export default defineComponent({
     },
     
     plotData(): PlotData {
-      if (!this.isEnhancedMode) {
-        return {
-          unhighlighted_x: this.xValues,
-          unhighlighted_y: this.yValues,
-          highlighted_x: [],
-          highlighted_y: [],
-          selected_x: [],
-          selected_y: []
-        }
-      }
+      // if (!this.isEnhancedMode) {
+      //   return {
+      //     unhighlighted_x: this.xValues,
+      //     unhighlighted_y: this.yValues,
+      //     highlighted_x: [],
+      //     highlighted_y: [],
+      //     selected_x: [],
+      //     selected_y: []
+      //   }
+      // }
       
       let unhighlighted_x: number[] = []
       let unhighlighted_y: number[] = []
@@ -471,15 +478,32 @@ export default defineComponent({
       let highlighted_y: number[] = []
       let selected_x: number[] = []
       let selected_y: number[] = []
-      
+      console.log('123')
       for (let i = 0; i < this.xValues.length; i++) {
         const x_val = this.xValues[i]
         const y_val = this.yValues[i]
         const posHighlight = this.highlightedPos(x_val)
         
-        if (
+        // Check for mass index highlighting (only for "Deconvolved Spectrum")
+        let isMassIndexSelected = false
+        console.log('here456')
+        console.log(this.shouldHighlightMassIndex)
+        if (this.shouldHighlightMassIndex) {
+          // Each mass creates 3 points in xValues/yValues, so divide by 3 to get mass index
+          const massIndex = Math.floor(i / 3)
+          console.log(massIndex)
+          console.log(this.selectionStore.selectedMassIndex)
+
+          isMassIndexSelected = (massIndex === this.selectionStore.selectedMassIndex)
+        }
+        
+        if (isMassIndexSelected) {
+          highlighted_x.push(x_val)
+          highlighted_y.push(y_val)
+        }
+        else if (
           (posHighlight !== undefined) &&
-          ((this.selectionStore.selectedTag?.selectedAA == posHighlight) || 
+          ((this.selectionStore.selectedTag?.selectedAA == posHighlight) ||
           (this.selectionStore.selectedTag?.selectedAA == posHighlight-1))
         ){
           selected_x.push(x_val)
@@ -494,8 +518,8 @@ export default defineComponent({
           unhighlighted_y.push(y_val)
         }
       }
-      
-      return { 
+      console.log(selected_x)
+      return {
         unhighlighted_x,
         unhighlighted_y,
         selected_x,
@@ -893,19 +917,19 @@ export default defineComponent({
     
     // === PLOTLY CONFIGURATION ===
     data(): Plotly.Data[] {
-      if (this.isBasicMode) {
-        return [
-          {
-            x: this.xValues,
-            y: this.yValues,
-            mode: 'lines',
-            type: 'scatter',
-            connectgaps: false,
-            marker: { color: this.mergedStyling.unhighlightedColor }
-          },
-        ]
-      }
-      
+      // if (this.isBasicMode) {
+      //   return [
+      //     {
+      //       x: this.xValues,
+      //       y: this.yValues,
+      //       mode: 'lines',
+      //       type: 'scatter',
+      //       connectgaps: false,
+      //       marker: { color: this.mergedStyling.unhighlightedColor }
+      //     },
+      //   ]
+      // }
+      console.log('what??')
       // Enhanced mode traces
       let traces: Plotly.Data[] = []
       
@@ -932,6 +956,7 @@ export default defineComponent({
       })
       
       if (this.mergedFeatures.massHighlighting) {
+        console.log('wowowowo')
         traces.push({
           x: this.plotData.highlighted_x,
           y: this.plotData.highlighted_y,
@@ -1071,6 +1096,13 @@ export default defineComponent({
     // === ANNOTATION VISIBILITY REACTIVITY ===
     annotationsVisible() {
       if (this.isEnhancedMode) {
+        this.safeGraph()
+      }
+    },
+    
+    // === MASS INDEX REACTIVITY ===
+    'selectionStore.selectedMassIndex'() {
+      if (this.shouldHighlightMassIndex) {
         this.safeGraph()
       }
     }
@@ -1442,7 +1474,6 @@ export default defineComponent({
           await this.renderFallback()
           return
         }
-        
         await this.graph()
       } catch (error) {
         this.handleError(error as Error, 'safeGraph')

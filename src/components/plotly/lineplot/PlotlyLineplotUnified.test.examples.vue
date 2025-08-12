@@ -98,6 +98,29 @@
         @mode-changed="onModeChanged"
       />
     </section>
+    
+    <!-- Example 7: Mass Index Highlighting Test -->
+    <section class="test-section">
+      <h2>7. Mass Index Highlighting Test - Deconvolved Spectrum Only</h2>
+      <div class="test-controls">
+        <button @click="setMassIndex(0)">Highlight Mass Index 0</button>
+        <button @click="setMassIndex(1)">Highlight Mass Index 1</button>
+        <button @click="setMassIndex(2)">Highlight Mass Index 2</button>
+        <button @click="clearMassIndex()">Clear Highlighting</button>
+        <button @click="toggleSpectrumType()">
+          Switch to {{ massIndexTestArgs.title === 'Deconvolved Spectrum' ? 'Augmented Deconvolved Spectrum' : 'Deconvolved Spectrum' }}
+        </button>
+      </div>
+      <p><strong>Current Mass Index:</strong> {{ currentMassIndex ?? 'None' }}</p>
+      <p><strong>Title:</strong> {{ massIndexTestArgs.title }}</p>
+      <p><strong>Expected:</strong> Highlighting should only work when title is "Deconvolved Spectrum"</p>
+      <PlotlyLineplotUnified
+        :args="massIndexTestArgs"
+        :index="7"
+        @plot-rendered="onPlotRendered('mass-index-test')"
+        @plot-error="onPlotError('mass-index-test')"
+      />
+    </section>
   </div>
 </template>
 
@@ -105,6 +128,7 @@
 import { defineComponent, ref, reactive } from 'vue'
 import PlotlyLineplotUnified from './PlotlyLineplotUnified.vue'
 import type { UnifiedPlotlyLineArguments } from './plotly-lineplot-unified'
+import { useSelectionStore } from '@/stores/selection'
 
 interface EventLogEntry {
   timestamp: string
@@ -119,6 +143,8 @@ export default defineComponent({
   },
   setup() {
     const eventLog = ref<EventLogEntry[]>([])
+    const selectionStore = useSelectionStore()
+    const currentMassIndex = ref<number | undefined>(undefined)
     
     // Example 1: Basic Mode Args (Legacy PlotlyLineplot)
     const basicModeArgs = reactive<UnifiedPlotlyLineArguments>({
@@ -205,6 +231,17 @@ export default defineComponent({
       }
     })
     
+    // Example 7: Mass Index Highlighting Test
+    const massIndexTestArgs = reactive<UnifiedPlotlyLineArguments>({
+      componentName: 'PlotlyLineplotUnified',
+      title: 'Deconvolved Spectrum',
+      mode: 'enhanced',
+      features: {
+        massHighlighting: true,
+        zoomControls: true
+      }
+    })
+    
     // Event handlers
     const logEvent = (type: string, data: any) => {
       eventLog.value.unshift({
@@ -265,6 +302,28 @@ export default defineComponent({
       logEvent('feature-toggle-requested', { feature, newValue: !currentValue })
     }
     
+    // Mass index test controls
+    const setMassIndex = (index: number) => {
+      currentMassIndex.value = index
+      selectionStore.updateSelectedMass(index)
+      logEvent('mass-index-set', { index })
+    }
+    
+    const clearMassIndex = () => {
+      currentMassIndex.value = undefined
+      selectionStore.updateSelectedMass(undefined)
+      logEvent('mass-index-cleared', {})
+    }
+    
+    const toggleSpectrumType = () => {
+      if (massIndexTestArgs.title === 'Deconvolved Spectrum') {
+        massIndexTestArgs.title = 'Augmented Deconvolved Spectrum'
+      } else {
+        massIndexTestArgs.title = 'Deconvolved Spectrum'
+      }
+      logEvent('spectrum-type-toggled', { newTitle: massIndexTestArgs.title })
+    }
+    
     return {
       eventLog,
       basicModeArgs,
@@ -281,7 +340,12 @@ export default defineComponent({
       onModeChanged,
       onFeatureToggled,
       switchMode,
-      toggleFeature
+      toggleFeature,
+      massIndexTestArgs,
+      currentMassIndex,
+      setMassIndex,
+      clearMassIndex,
+      toggleSpectrumType
     }
   }
 })
@@ -357,11 +421,13 @@ export default defineComponent({
   color: #6c757d;
 }
 
-.mode-controls {
+.mode-controls,
+.test-controls {
   margin-bottom: 20px;
 }
 
-.mode-controls button {
+.mode-controls button,
+.test-controls button {
   margin-right: 10px;
   margin-bottom: 10px;
   padding: 8px 16px;
@@ -373,12 +439,20 @@ export default defineComponent({
   font-size: 14px;
 }
 
-.mode-controls button:hover {
+.mode-controls button:hover,
+.test-controls button:hover {
   background-color: #0056b3;
 }
 
-.mode-controls button:active {
+.mode-controls button:active,
+.test-controls button:active {
   background-color: #004085;
+}
+
+.test-controls p {
+  margin: 5px 0;
+  font-weight: bold;
+  color: #495057;
 }
 
 /* Responsive design */
@@ -392,7 +466,8 @@ export default defineComponent({
     margin-bottom: 20px;
   }
   
-  .mode-controls button {
+  .mode-controls button,
+  .test-controls button {
     display: block;
     width: 100%;
     margin-bottom: 10px;
