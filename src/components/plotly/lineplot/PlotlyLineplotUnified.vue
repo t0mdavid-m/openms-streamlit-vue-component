@@ -1160,7 +1160,13 @@ export default defineComponent({
           const newYRange = this.computeYRange(newXRange)
           await Plotly.relayout(this.id, {'yaxis.range': [newYRange[0], newYRange[1]]})
           await Plotly.relayout(this.id, {'xaxis.range': [newXRange[0], newXRange[1]]})
-
+          console.log('update')
+          // Update annotations with new scaling after zoom
+          const updatedAnnotations = this.annotationData
+          await Plotly.relayout(this.id, {
+            'shapes': updatedAnnotations.shapes,
+            'annotations': updatedAnnotations.annotations
+          })
         } catch (error) {
           this.handleError(error as Error, 'onRelayout-plotly-update')
         }
