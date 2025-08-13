@@ -65,6 +65,47 @@ export default defineComponent({
       return `graph-${this.index}`
     },
     
+    isDataReady(): boolean {
+      try {
+        // Check if essential data structure exists
+        const scanData = this.streamlitDataStore.allDataForDrawing?.per_scan_data
+        if (!scanData || !Array.isArray(scanData) || scanData.length === 0) {
+          return false
+        }
+        
+        // Check if selected scan is valid
+        const selectedScan = this.selectedScan
+        if (selectedScan === undefined || selectedScan >= scanData.length) {
+          return false
+        }
+        
+        // Check if scan data exists
+        const data = scanData[selectedScan]
+        if (!data || typeof data !== 'object') {
+          return false
+        }
+        
+        // Check if required columns exist and have content
+        const xColumn = this.xColumn
+        const yColumn = this.yColumn
+        if (!xColumn || !yColumn) {
+          return false
+        }
+        
+        const xData = data[xColumn]
+        const yData = data[yColumn]
+        if (!Array.isArray(xData) || !Array.isArray(yData) ||
+            xData.length === 0 || yData.length === 0) {
+          return false
+        }
+        
+        return true
+      } catch (error) {
+        this.handleError(error as Error, 'isDataReady-computation')
+        return false
+      }
+    },
+    
     theme(): Theme | undefined {
       return this.streamlitDataStore.theme
     },
@@ -93,10 +134,11 @@ export default defineComponent({
     
     selectedScan(): number | undefined {
       try {
-        if (this.selectionStore.selectedScanIndex === undefined) return undefined
         const scanData = this.streamlitDataStore.allDataForDrawing?.per_scan_data
         if (!scanData || scanData.length === 0) return undefined
-        if (scanData.length === 1) return 0
+        
+        // Always default to first scan if no specific selection
+        if (this.selectionStore.selectedScanIndex === undefined) return 0
         
         return this.selectionStore.selectedScanIndex
       } catch (error) {
@@ -516,7 +558,7 @@ export default defineComponent({
         }
         this.manual = true
 
-        const highlighted = this.highlightedValues        
+        const highlighted = this.highlightedValues
         let values : number[] = [0, 1]
         if (this.xAxisLabel === 'm/z') {
           values = highlighted.flatMap(a => Array.isArray(a.mzs) ? a.mzs : []).filter((m: number) => Number.isFinite(m))
@@ -950,6 +992,22 @@ export default defineComponent({
   },
   
   watch: {
+    
+    isDataReady: {
+      handler(newVal: boolean) {
+        if (newVal) {
+          this.safeGraph()
+        }
+      },
+      immediate: true
+    },
+    
+    'streamlitDataStore.allDataForDrawing.per_scan_data': {
+      handler() {
+        this.safeGraph()
+      },
+      deep: true
+    },
 
     selectedScan() {
       this.resetManualState()
@@ -1228,6 +1286,11 @@ export default defineComponent({
     
     async safeGraph(): Promise<void> {
       try {
+        // Check data readiness first
+        if (!this.isDataReady) {
+          return
+        }
+        
         if (!this.validateComponentState()) {
           await this.renderFallback()
           return
