@@ -2,7 +2,7 @@
   <div :id="id" class="plot-container" :style="cssCustomProperties">
     <!-- Enhanced Mode UI Elements -->
     <button 
-      v-if="isEnhancedMode && showBackButton" 
+      v-if="showBackButton" 
       class="simple-button" 
       @click="backButton"
     >
@@ -26,7 +26,6 @@ import type {
 import {
   DEFAULT_CONFIG,
   DEFAULT_STYLING,
-  FEATURE_MATRIX
 } from './plotly-lineplot-unified'
 
 export default defineComponent({
@@ -40,23 +39,7 @@ export default defineComponent({
       type: Number,
       required: true,
     },
-    // Legacy support
-    legacyMode: {
-      type: String as PropType<'basic' | 'enhanced'>,
-      default: undefined
-    }
   },
-  emits: [
-    'plot-rendered',
-    'plot-error',
-    'mass-selected',
-    'mass-highlighted',
-    'zoom-changed',
-    'annotation-clicked',
-    'back-button-clicked',
-    'mode-changed',
-    'feature-toggled'
-  ],
   setup() {
     const streamlitDataStore = useStreamlitDataStore()
     const selectionStore = useSelectionStore()
@@ -64,14 +47,8 @@ export default defineComponent({
   },
   data() {
     return {
-      // Enhanced mode state (from PlotlyLineplotTagger)
       manual: false as Boolean,
       manual_xRange: undefined as number[] | undefined,
-      selectedMass: undefined as number | undefined,
-      
-      // Mode management
-      currentMode: 'auto' as 'basic' | 'enhanced' | 'auto',
-      enabledFeatures: new Set<string>(),
       
       // UI state
       isInitialized: false as Boolean,
@@ -84,7 +61,6 @@ export default defineComponent({
     }
   },
   computed: {
-    // === CORE PROPERTIES ===
     id(): string {
       return `graph-${this.index}`
     },
@@ -93,52 +69,18 @@ export default defineComponent({
       return this.streamlitDataStore.theme
     },
     
-    // === MODE MANAGEMENT ===
-    resolvedMode(): 'basic' | 'enhanced' {
-      if (this.currentMode !== 'auto') {
-        return this.currentMode
-      }
-      
-      // Auto-detect based on data availability
-      if (this.legacyMode) {
-        return this.legacyMode
-      }
-      
-      // Intelligent detection based on available data
-      const hasTagData = this.selectionStore.selectedTag !== undefined
-      const hasComplexData = this.streamlitDataStore.allDataForDrawing.per_scan_data?.[0]?.SignalPeaks
-      
-      return (hasTagData || hasComplexData) ? 'enhanced' : 'basic'
+    isTnTMode(): boolean {
+      return this.selectionStore.selectedTag !== undefined
     },
-    
-    isBasicMode(): boolean {
-      return this.resolvedMode === 'basic'
-    },
-    
-    isEnhancedMode(): boolean {
-      return this.resolvedMode === 'enhanced'
-    },
-    
-    // === FEATURE FLAGS ===
-    mergedFeatures(): Record<string, boolean> {
-      const defaultFeatures = Object.fromEntries(
-        Array.from(FEATURE_MATRIX[this.resolvedMode]).map(f => [f, true])
-      )
-      
-      return {
-        ...defaultFeatures,
-        ...this.args.features
-      }
-    },
-    
-    mergedConfig(): typeof DEFAULT_CONFIG {
+
+    config(): typeof DEFAULT_CONFIG {
       return {
         ...DEFAULT_CONFIG,
         ...this.args.config
       }
     },
     
-    mergedStyling(): typeof DEFAULT_STYLING {
+    styling(): typeof DEFAULT_STYLING {
       return {
         ...DEFAULT_STYLING,
         ...this.args.styling,
@@ -149,11 +91,8 @@ export default defineComponent({
       }
     },
     
-    // === DATA ACCESS PROPERTIES ===
     selectedScan(): number | undefined {
       try {
-        if (!this.isEnhancedMode) return undefined
-        
         if (this.selectionStore.selectedScanIndex === undefined) return undefined
         const scanData = this.streamlitDataStore.allDataForDrawing?.per_scan_data
         if (!scanData || scanData.length === 0) return undefined
@@ -166,31 +105,14 @@ export default defineComponent({
       }
     },
     
-    selectedRow(): number | undefined {
-      try {
-        if (!this.isBasicMode) return undefined
-        
-        if (this.selectionStore.selectedScanIndex === undefined) return undefined
-        const scanData = this.streamlitDataStore.allDataForDrawing?.per_scan_data
-        if (!scanData || scanData.length === 0) return undefined
-        if (scanData.length === 1) return 0
-        
-        return this.selectionStore.selectedScanIndex
-      } catch (error) {
-        this.handleError(error as Error, 'selectedRow-computation')
-        return undefined
-      }
-    },
-    
     selectedTag(): number | undefined {
-      return this.isEnhancedMode ? this.selectionStore.selectedTagIndex : undefined
+      return this.isTnTMode ? this.selectionStore.selectedTagIndex : undefined
     },
     
     selectedAA(): number | undefined {
-      return this.isEnhancedMode ? this.selectionStore.selectedTag?.selectedAA : undefined
+      return this.isTnTMode ? this.selectionStore.selectedTag?.selectedAA : undefined
     },
     
-    // === AXIS CONFIGURATION ===
     currentTitle(): string {
       return this.localTitle || this.args.title
     },
@@ -238,11 +160,10 @@ export default defineComponent({
       }
     },
     
-    // === DATA PROCESSING ===
     xValues(): number[] {
       try {
         const xValues: number[] = []
-        const dataRow = this.isBasicMode ? this.selectedRow : this.selectedScan
+        const dataRow = this.selectedScan
         
         if (dataRow === undefined) return xValues
         
@@ -271,7 +192,7 @@ export default defineComponent({
     yValues(): number[] {
       try {
         const yValues: number[] = []
-        const dataRow = this.isBasicMode ? this.selectedRow : this.selectedScan
+        const dataRow = this.selectedScan
         
         if (dataRow === undefined) return yValues
         
@@ -297,10 +218,9 @@ export default defineComponent({
       }
     },
     
-    // === ENHANCED MODE SPECIFIC PROPERTIES ===
-    xMassValues(): number[] {
+    MassValues(): number[] {
       try {
-        if (!this.isEnhancedMode || this.selectedScan === undefined) return []
+        if (this.selectedScan === undefined) return []
         
         const scanData = this.streamlitDataStore.allDataForDrawing?.per_scan_data
         if (!scanData || this.selectedScan >= scanData.length) return []
@@ -314,10 +234,27 @@ export default defineComponent({
         return []
       }
     },
+
+    MZValues(): number[] {
+      try {
+        if (this.selectedScan === undefined) return []
+        
+        const scanData = this.streamlitDataStore.allDataForDrawing?.per_scan_data
+        if (!scanData || this.selectedScan >= scanData.length) return []
+        
+        const data = scanData[this.selectedScan]
+        const massData = data?.['MonoMass_Anno'] as number[]
+        
+        return Array.isArray(massData) ? massData : []
+      } catch (error) {
+        this.handleError(error as Error, 'xMassValues-computation')
+        return []
+      }
+    },
     
     mzSignals(): number[][][] {
       try {
-        if (!this.isEnhancedMode || this.selectedScan === undefined) return []
+        if (this.selectedScan === undefined) return []
         
         const scanData = this.streamlitDataStore.allDataForDrawing?.per_scan_data
         if (!scanData || this.selectedScan >= scanData.length) return []
@@ -334,7 +271,7 @@ export default defineComponent({
     
     minCharge(): number {
       try {
-        if (!this.isEnhancedMode || this.selectedScan === undefined) return -10
+        if (this.selectedScan === undefined) return -10
         
         const scanData = this.streamlitDataStore.allDataForDrawing?.per_scan_data
         if (!scanData || this.selectedScan >= scanData.length) return -10
@@ -353,7 +290,7 @@ export default defineComponent({
     
     maxCharge(): number {
       try {
-        if (!this.isEnhancedMode || this.selectedScan === undefined) return -10
+        if (this.selectedScan === undefined) return -10
         
         const scanData = this.streamlitDataStore.allDataForDrawing?.per_scan_data
         if (!scanData || this.selectedScan >= scanData.length) return -10
@@ -371,62 +308,64 @@ export default defineComponent({
     },
     
     showBackButton(): boolean {
-      return this.isEnhancedMode &&
-             this.mergedFeatures.backButton &&
+      return this.isTnTMode &&
              (this.currentTitle === 'Augmented Annotated Spectrum')
     },
     
-    // Mass index highlighting - only for "Deconvolved Spectrum"
     shouldHighlightMassIndex(): boolean {
-      console.log(this.mergedFeatures)
       return this.currentTitle === 'Deconvolved Spectrum' &&
              this.selectionStore.selectedMassIndex !== undefined
     },
-    
-    // === HIGHLIGHTING SYSTEM ===
-    highlightedMassPos(): number[] {
+
+    highlightedValues(): HighlightData[] {
       try {
-        if (!this.isEnhancedMode || !this.mergedFeatures.massHighlighting) return []
-        
-        const values = this.selectionStore.selectedTag?.masses
-        if (!values || !Array.isArray(values)) return []
-        
-        const massValues = this.xMassValues
-        if (massValues.length === 0) return []
-        
-        let positions: number[] = []
-        
-        for (let i = 0; i < values.length; i++) {
-          for (let j = 0; j < massValues.length; j++) {
-            if (Math.abs(values[i] - massValues[j]) <= 1e-5) {
-              positions.push(j)
+    
+        // Highlight by mass value (tags)
+        let mass_values : number[] = []
+        if (this.selectionStore.selectedTag?.masses !== undefined) {
+          mass_values = this.selectionStore.selectedTag?.masses
+        }
+        let mass_positions : number[] = []
+        mass_values.forEach((v, i) => {
+          for (let j = 0; j < this.MassValues.length; j++) {
+            if (Math.abs(this.MassValues[j] - v) < 1e-5) {
+              mass_positions.push(j)
               break
             }
           }
+        })
+
+        // Highlight by selected mass index
+        if (
+          this.selectionStore.selectedMassIndex !== undefined &&
+          this.selectionStore.selectedMassIndex >= 0 &&
+          this.selectionStore.selectedMassIndex < this.MassValues.length &&
+          this.currentTitle !== 'Augmented Deconvolved Spectrum'
+        ) {
+          mass_positions = [this.selectionStore.selectedMassIndex]
         }
-        
-        return positions.length === values.length ? positions : []
-      } catch (error) {
-        this.handleError(error as Error, 'highlightedMassPos-computation')
-        return []
-      }
-    },
-    
-    highlightedValues(): HighlightData[] {
-      try {
-        if (!this.isEnhancedMode || !this.mergedFeatures.massHighlighting) return []
-        
-        const positions = this.highlightedMassPos
-        const massValues = this.xMassValues
+
+        const massValues = this.MassValues
         const signals = this.mzSignals
         
-        if (positions.length === 0 || massValues.length === 0) return []
+        if (mass_positions.length === 0 || massValues.length === 0) return []
         
         let highlightValues: HighlightData[] = []
         
-        for (let i = 0; i < positions.length; i++) {
-          const posIndex = positions[i]
-          if (posIndex >= massValues.length || posIndex >= signals.length) continue
+        for (let i = 0; i < mass_positions.length; i++) {
+          const posIndex = mass_positions[i]
+          if (posIndex >= massValues.length) continue
+          
+          // Deconvolved only spectrum
+          if (signals.length === 0) {
+            highlightValues.push({
+              mass: this.MassValues[posIndex],
+              mzs: [],
+              charges: [],
+              intensity: []
+            })
+            continue
+          }
           
           const mass = massValues[posIndex]
           let mzs: number[] = []
@@ -452,64 +391,83 @@ export default defineComponent({
             intensity: intensity
           })
         }
-        
         return highlightValues
       } catch (error) {
         this.handleError(error as Error, 'highlightedValues-computation')
         return []
       }
     },
-    
-    plotData(): PlotData {
-      // if (!this.isEnhancedMode) {
-      //   return {
-      //     unhighlighted_x: this.xValues,
-      //     unhighlighted_y: this.yValues,
-      //     highlighted_x: [],
-      //     highlighted_y: [],
-      //     selected_x: [],
-      //     selected_y: []
-      //   }
-      // }
+
+    highlightedMassPos(): boolean[] {
+      try {
+        const highlights = this.highlightedValues;
+        if (highlights.length === 0 || !Array.isArray(this.MassValues)) {
+          return new Array(this.MassValues?.length || 0).fill(false);
+        }
+
+        // Collect all highlighted masses
+        const highlightedMasses = new Set(
+          highlights.map(h => h.mass)
+        );
+
+        // Create boolean mask for each mass in this.massValues
+        return this.MassValues.map(mass => highlightedMasses.has(mass));
+      } catch (error) {
+        this.handleError(error as Error, 'booleanMassHighlightMask-computation');
+        return new Array(this.MassValues?.length || 0).fill(false);
+      }
+    },
+
+    highlightedMzPos(): boolean[] {
+      try {
+        const highlights = this.highlightedValues;
+        if (highlights.length === 0 || !Array.isArray(this.MZValues)) {
+          return new Array(this.MZValues?.length || 0).fill(false);
+        }
+
+        // Flatten all mzs from highlighted values
+        const highlightedMzs = new Set(
+          highlights.flatMap(h => h.mzs)
+        );
+
+        // Create boolean mask for each mz in this.mzValues
+        return this.MZValues.map(mz => highlightedMzs.has(mz));
+      } catch (error) {
+        this.handleError(error as Error, 'booleanHighlightMask-computation');
+        return new Array(this.MZValues?.length || 0).fill(false);
+      }
+    },
       
+    plotData(): PlotData {
       let unhighlighted_x: number[] = []
       let unhighlighted_y: number[] = []
       let highlighted_x: number[] = []
       let highlighted_y: number[] = []
       let selected_x: number[] = []
       let selected_y: number[] = []
-      console.log('123')
+
       for (let i = 0; i < this.xValues.length; i++) {
         const x_val = this.xValues[i]
         const y_val = this.yValues[i]
-        const posHighlight = this.highlightedPos(x_val)
-        
-        // Check for mass index highlighting (only for "Deconvolved Spectrum")
-        let isMassIndexSelected = false
-        console.log('here456')
-        console.log(this.shouldHighlightMassIndex)
-        if (this.shouldHighlightMassIndex) {
-          // Each mass creates 3 points in xValues/yValues, so divide by 3 to get mass index
-          const massIndex = Math.floor(i / 3)
-          console.log(massIndex)
-          console.log(this.selectionStore.selectedMassIndex)
 
-          isMassIndexSelected = (massIndex === this.selectionStore.selectedMassIndex)
+        let posHighlight = undefined
+        if (this.xAxisLabel == 'm/z') {
+            posHighlight = this.highlightedMzPos[Math.floor(i / 3)]
         }
+        else {
+            posHighlight = this.highlightedMassPos[Math.floor(i / 3)]
+        }
+        if (posHighlight === undefined) continue
         
-        if (isMassIndexSelected) {
-          highlighted_x.push(x_val)
-          highlighted_y.push(y_val)
-        }
-        else if (
-          (posHighlight !== undefined) &&
-          ((this.selectionStore.selectedTag?.selectedAA == posHighlight) ||
-          (this.selectionStore.selectedTag?.selectedAA == posHighlight-1))
+        if (
+          (posHighlight) &&
+          ((this.selectionStore.selectedTag?.selectedAA == Math.floor(i / 3)) ||
+          (this.selectionStore.selectedTag?.selectedAA == Math.floor(i / 3) - 1))
         ){
           selected_x.push(x_val)
           selected_y.push(y_val)
         }
-        else if (posHighlight !== undefined) {
+        else if (posHighlight) {
           highlighted_x.push(x_val)
           highlighted_y.push(y_val)
         }
@@ -518,7 +476,7 @@ export default defineComponent({
           unhighlighted_y.push(y_val)
         }
       }
-      console.log(selected_x)
+
       return {
         unhighlighted_x,
         unhighlighted_y,
@@ -529,64 +487,54 @@ export default defineComponent({
       }
     },
     
-    // === SCALING AND POSITIONING ===
     xPosScalingFactor(): number {
-      return this.mergedConfig.xPosScalingFactor
+      return this.config.xPosScalingFactor
     },
     
     xPosScalingThreshold(): number {
-      return this.mergedConfig.xPosScalingThreshold
+      return this.config.xPosScalingThreshold
     },
     
     maxAnnotationRange(): number {
       return this.xPosScalingFactor * this.xPosScalingThreshold
     },
     
-    // === RANGE MANAGEMENT ===
     xRange(): number[] {
       try {
         const xValues = this.xValues
         if (xValues.length === 0) return [0, 1]
         
-        if (this.isBasicMode) {
+        if (!this.annotationsVisible && !this.manual) {
           const minX = Math.min(...xValues)
           const maxX = Math.max(...xValues)
           return [minX * 0.98, maxX * 1.02]
         }
-        
+
         // Enhanced mode range logic
         if (this.manual && this.manual_xRange !== undefined) {
           return this.manual_xRange
         }
-        
-        const highlighted = this.highlightedValues
-        if (highlighted.length === 0) {
-          const minX = Math.min(...xValues)
-          const maxX = Math.max(...xValues)
-          return [minX * 0.98, maxX * 1.02]
+        this.manual = true
+
+        const highlighted = this.highlightedValues        
+        let values : number[] = [0, 1]
+        if (this.xAxisLabel === 'm/z') {
+          values = highlighted.flatMap(a => Array.isArray(a.mzs) ? a.mzs : []).filter((m: number) => Number.isFinite(m))
         }
-        
-        if ((this.currentTitle === "Augmented Annotated Spectrum") &&
-            (this.selectedMass !== undefined) &&
-            (this.selectedMass < highlighted.length)) {
-          const selectedData = highlighted[this.selectedMass]
-          if (selectedData.mzs.length > 0) {
-            return [Math.min(...selectedData.mzs) * 0.98, Math.max(...selectedData.mzs) * 1.02]
-          }
+        else {
+          values = highlighted.map(a => a.mass).filter(m => !isNaN(m))
         }
-        
-        const masses = highlighted.map(a => a.mass).filter(m => !isNaN(m))
-        if (masses.length === 0) return [0, 1]
-        
-        let xmin_full = Math.min(...masses) * 0.98
-        let xmax_full = Math.max(...masses) * 1.02
-        
-        if ((xmax_full - xmin_full) < this.maxAnnotationRange) {
+        let xmin_full = Math.min(...values) * 0.98
+        let xmax_full = Math.max(...values) * 1.02
+        if (
+          (xmax_full - xmin_full) < this.maxAnnotationRange
+          || this.xAxisLabel === 'm/z'
+        ) {
           return [xmin_full, xmax_full]
         }
         
         // Center of all highlighted masses
-        let xcenter = masses.reduce((sum, mass) => sum + mass, 0) / masses.length
+        let xcenter = values.reduce((sum, mass) => sum + mass, 0) / values.length
         let offset = 0.5 * 0.9 * this.maxAnnotationRange
         return [xcenter - offset, xcenter + offset]
       } catch (error) {
@@ -604,14 +552,13 @@ export default defineComponent({
       }
     },
     
-    // === ANNOTATION SYSTEM ===
     annotationData(): PlotAnnotations {
       try {
-        if (!this.isEnhancedMode || !this.mergedFeatures.annotationSystem || !this.annotationsVisible) {
+
+        if (!this.annotationsVisible) {
           return { shapes: [], annotations: [], traces: [] }
         }
         
-        // Performance optimization: Early return if no data
         const highlighted = this.highlightedValues
         if (highlighted.length === 0) {
           return { shapes: [], annotations: [], traces: [] }
@@ -633,106 +580,95 @@ export default defineComponent({
         const xRange = this.xRange
         const xpos_scaling = (xRange[1] - xRange[0]) / this.xPosScalingFactor
 
-      // AUGMENTED ANNOTATED SPECTRUM MODE - Charge Labels Logic
-      if (this.currentTitle === 'Augmented Annotated Spectrum') {
-        type MzIntensity = {
-          mz: number;
-          intensity: number;
-        }
-
-        if (this.selectedMass === undefined) {
-          return {
-            shapes: [],
-            annotations: [],
-            traces: [],
+        if (this.xAxisLabel === 'm/z') {
+          type MzIntensity = {
+            mz: number;
+            intensity: number;
           }
-        }
 
-        // Performance optimization: Validate selected mass index
-        if (this.selectedMass >= highlighted.length) {
-          return {
-            shapes: [],
-            annotations: [],
-            traces: [],
-          }
-        }
-
-        let fillcolor = this.mergedStyling.annotationColors.massButton
-        const selectedAA = this.selectionStore.selectedTag?.selectedAA
-        if (
-          (selectedAA === this.selectedMass) ||
-          (selectedAA === this.selectedMass - 1)) {
-            fillcolor = this.mergedStyling.annotationColors.selectedMassButton
-        }
-
-        const selectedData = highlighted[this.selectedMass]
-        const { mzs, charges, intensity: intensities } = selectedData
-        
-        // Performance optimization: Early return if no mz data
-        if (!mzs || mzs.length === 0) {
-          return { shapes: [], annotations: [], traces: [] }
-        }
-        
-        const grouped = new Map<number, MzIntensity[]>()
-
-        // Group by charge state - optimized loop
-        for (let i = 0; i < mzs.length; i++) {
-            const mz = mzs[i]
-            const charge = charges[i]
-            const intensity = intensities[i]
-
-            if (!isFinite(mz) || !isFinite(charge) || !isFinite(intensity)) continue
-
-            const mzIntensity: MzIntensity = { mz, intensity }
-            if (grouped.has(charge)) {
-                grouped.get(charge)!.push(mzIntensity)
-            } else {
-                grouped.set(charge, [mzIntensity])
+          if (this.selectionStore.selectedMassIndex === undefined) {
+            return {
+              shapes: [],
+              annotations: [],
+              traces: [],
             }
-        }
+          }
 
-        // Create charge label annotations
-        grouped.forEach((mzIntensity, charge) => {
-          const summedIntensity = mzIntensity.reduce((sum, val) => sum + val.intensity, 0)
-          const centerOfGravity = mzIntensity.map(val => (val.intensity / summedIntensity)*val.mz)
-          const mass = centerOfGravity.reduce((sum, val) => sum + val, 0)
+          if (this.selectionStore.selectedMassIndex >= this.MassValues.length) {
+            return {
+              shapes: [],
+              annotations: [],
+              traces: [],
+            }
+          }
+
+          let fillcolor = this.styling.annotationColors.massButton
+  
+          // Only one mass is supported for raw spectra
+          const selectedData = highlighted[0]
+          const { mzs, charges, intensity: intensities } = selectedData
           
-          buttonShapes.push({
-            type: 'rect',
-            x0: mass-0.5*(xpos_scaling),
-            y0: ypos_low,
-            x1: mass+0.5*(xpos_scaling),
-            y1: ypos_high,
-            fillcolor: fillcolor,
-            line: {
-              width: 0
-            }
-          })
+          if (!mzs || mzs.length === 0) {
+            return { shapes: [], annotations: [], traces: [] }
+          }
+          
+          const grouped = new Map<number, MzIntensity[]>()
+
+          // Group by charge state
+          for (let i = 0; i < mzs.length; i++) {
+              const mz = mzs[i]
+              const charge = charges[i]
+              const intensity = intensities[i]
+              const mzIntensity: MzIntensity = { mz, intensity }
+
+              if (grouped.has(charge)) {
+                  grouped.get(charge)!.push(mzIntensity)
+              } else {
+                  grouped.set(charge, [mzIntensity])
+              }
+          }
+
+          // Create charge label annotations
+          grouped.forEach((mzIntensity, charge) => {
+            const summedIntensity = mzIntensity.reduce((sum, val) => sum + val.intensity, 0)
+            const centerOfGravity = mzIntensity.map(val => (val.intensity / summedIntensity)*val.mz)
+            const mass = centerOfGravity.reduce((sum, val) => sum + val, 0)
             
-          buttonAnnotations.push({
-            x: mass,
-            y: ypos,
-            xref: 'x',
-            yref: 'y',
-            text: "z="+charge,
-            showarrow: false,
-            font: {
-              size: 15
-            }
+            buttonShapes.push({
+              type: 'rect',
+              x0: mass-0.5*(xpos_scaling),
+              y0: ypos_low,
+              x1: mass+0.5*(xpos_scaling),
+              y1: ypos_high,
+              fillcolor: fillcolor,
+              line: {
+                width: 0
+              }
+            })
+              
+            buttonAnnotations.push({
+              x: mass,
+              y: ypos,
+              xref: 'x',
+              yref: 'y',
+              text: "z="+charge,
+              showarrow: false,
+              font: {
+                size: 15
+              }
+            })
           })
-        })
-
-        return {
-            shapes: buttonShapes,
-            annotations: buttonAnnotations,
-            traces: buttonTraces,
+          return {
+              shapes: buttonShapes,
+              annotations: buttonAnnotations,
+              traces: buttonTraces,
+          }
         }
-      }
 
-        // AUGMENTED DECONVOLVED SPECTRUM MODE - Mass Buttons + Sequence Arrows
+        // Mass Buttons + Sequence Arrows
         let arrowAnnotations: Partial<Plotly.Annotations>[] = []
         
-        // Performance optimization: Check scaling threshold for annotation display
+        //Check scaling threshold for annotation display
         if (xpos_scaling > this.xPosScalingThreshold) {
           return {
             shapes: buttonShapes,
@@ -743,7 +679,8 @@ export default defineComponent({
 
         const selectedAA = this.selectionStore.selectedTag?.selectedAA
         
-        // Create mass button annotations - optimized loop
+        // Create mass button annotations
+        const scaling = highlighted.length === 1 ? 2 : 1
         for (let i = 0; i < highlighted.length; i++) {
           const highlightedData = highlighted[i]
           const mass = highlightedData.mass
@@ -751,11 +688,11 @@ export default defineComponent({
           // Performance optimization: Skip invalid mass values
           if (!isFinite(mass)) continue
 
-          let fillcolor = this.mergedStyling.annotationColors.massButton
+          let fillcolor = this.styling.annotationColors.massButton
           let family = 'sans-serif'
           
           if ((selectedAA === i) || (selectedAA === i - 1)) {
-              fillcolor = this.mergedStyling.annotationColors.selectedMassButton
+              fillcolor = this.styling.annotationColors.selectedMassButton
               family = 'Arial Black, Arial Bold, Arial, sans-serif'
           }
 
@@ -776,9 +713,9 @@ export default defineComponent({
           // Create mass button shape
           buttonShapes.push({
             type: 'rect',
-            x0: mass - xpos_scaling,
+            x0: mass - scaling*xpos_scaling,
             y0: ypos_low,
-            x1: mass + xpos_scaling,
+            x1: mass + scaling*xpos_scaling,
             y1: ypos_high,
             fillcolor: fillcolor,
             line: {
@@ -813,11 +750,11 @@ export default defineComponent({
           // Performance optimization: Skip if either mass is invalid
           if (!isFinite(currentData.mass) || !isFinite(nextData.mass)) continue
 
-          let fillcolor = this.mergedStyling.annotationColors.sequenceArrow
+          let fillcolor = this.styling.annotationColors.sequenceArrow
           let family = 'sans-serif'
           
           if (selectedAA === i) {
-              fillcolor = this.mergedStyling.annotationColors.selectedSequenceArrow
+              fillcolor = this.styling.annotationColors.selectedSequenceArrow
               family = 'Arial Black, Arial Bold, Arial, sans-serif'
           }
 
@@ -915,22 +852,8 @@ export default defineComponent({
       }
     },
     
-    // === PLOTLY CONFIGURATION ===
     data(): Plotly.Data[] {
-      // if (this.isBasicMode) {
-      //   return [
-      //     {
-      //       x: this.xValues,
-      //       y: this.yValues,
-      //       mode: 'lines',
-      //       type: 'scatter',
-      //       connectgaps: false,
-      //       marker: { color: this.mergedStyling.unhighlightedColor }
-      //     },
-      //   ]
-      // }
-      console.log('what??')
-      // Enhanced mode traces
+
       let traces: Plotly.Data[] = []
       
       // When annotations are hidden, force all peaks to use default color
@@ -941,48 +864,44 @@ export default defineComponent({
           mode: 'lines',
           type: 'scatter',
           connectgaps: false,
-          marker: { color: this.mergedStyling.unhighlightedColor }
+          marker: { color: this.styling.highlightHiddenColor }
         })
         return traces
       }
       
-      // When annotations are visible, use normal highlighting logic
+      // When annotations are visible, use highlighting logic
       traces.push({
         x: this.plotData.unhighlighted_x,
         y: this.plotData.unhighlighted_y,
         mode: 'lines',
         type: 'scatter',
-        marker: { color: this.mergedStyling.unhighlightedColor }
+        marker: { color: this.styling.unhighlightedColor }
       })
       
-      if (this.mergedFeatures.massHighlighting) {
-        console.log('wowowowo')
-        traces.push({
-          x: this.plotData.highlighted_x,
-          y: this.plotData.highlighted_y,
-          mode: 'lines',
-          type: 'scatter',
-          marker: { color: this.mergedStyling.highlightColor }
-        })
-        
-        traces.push({
-          x: this.plotData.selected_x,
-          y: this.plotData.selected_y,
-          mode: 'lines',
-          type: 'scatter',
-          marker: { color: this.mergedStyling.selectedColor }
-        })
-      }
+      traces.push({
+        x: this.plotData.highlighted_x,
+        y: this.plotData.highlighted_y,
+        mode: 'lines',
+        type: 'scatter',
+        marker: { color: this.styling.highlightColor }
+      })
       
-      if (this.currentTitle === "Augmented Deconvolved Spectrum") {
-        const buttonTraces = this.annotationData.traces
-        traces.push(...buttonTraces)
-      }
+      traces.push({
+        x: this.plotData.selected_x,
+        y: this.plotData.selected_y,
+        mode: 'lines',
+        type: 'scatter',
+        marker: { color: this.styling.selectedColor }
+      })
+      
+      const buttonTraces = this.annotationData.traces
+      traces.push(...buttonTraces)
       
       return traces
     },
     
     layout(): Partial<Plotly.Layout> {
+
       const baseLayout: Partial<Plotly.Layout> = {
         title: `<b>${this.currentTitle}</b>`,
         showlegend: false,
@@ -999,7 +918,7 @@ export default defineComponent({
           showgrid: true,
           gridcolor: this.theme?.secondaryBackgroundColor,
           rangemode: 'nonnegative',
-          fixedrange: !this.mergedFeatures.zoomControls,
+          fixedrange: false,
           showline: true,
           linecolor: 'grey',
           linewidth: 1,
@@ -1011,101 +930,50 @@ export default defineComponent({
           family: this.theme?.font,
         },
       }
-      
-      // Enhanced mode additions
-      if (this.isEnhancedMode) {
-        baseLayout.xaxis!.range = this.xRange
-        baseLayout.yaxis!.range = this.yRange
-        
-        if (this.mergedFeatures.annotationSystem) {
-          baseLayout.shapes = this.annotationData.shapes
-          baseLayout.annotations = this.annotationData.annotations
-        }
-      }
+      baseLayout.xaxis!.range = this.xRange
+      baseLayout.yaxis!.range = this.yRange
+      baseLayout.shapes = this.annotationData.shapes
+      baseLayout.annotations = this.annotationData.annotations
       
       return baseLayout
     },
     
-    // === STYLING ===
     cssCustomProperties(): Record<string, string> {
       return {
-        '--highlight-color': this.mergedStyling.highlightColor,
-        '--selected-color': this.mergedStyling.selectedColor,
-        '--unhighlighted-color': this.mergedStyling.unhighlightedColor,
-        '--annotation-background': this.mergedStyling.annotationColors.background,
-        '--button-hover-color': this.mergedStyling.annotationColors.buttonHover,
+        '--highlight-color': this.styling.highlightColor,
+        '--selected-color': this.styling.selectedColor,
+        '--unhighlighted-color': this.styling.unhighlightedColor,
+        '--annotation-background': this.styling.annotationColors.background,
+        '--button-hover-color': this.styling.annotationColors.buttonHover,
       }
     }
   },
   
   watch: {
-    // === MODE MANAGEMENT ===
-    'args.mode': {
-      handler(newMode: string) {
-        if (newMode && newMode !== this.currentMode) {
-          const oldMode = this.currentMode
-          this.currentMode = newMode as 'basic' | 'enhanced' | 'auto'
-          this.$emit('mode-changed', { from: oldMode, to: newMode, features: Array.from(this.enabledFeatures) })
-          this.safeGraph()
-        }
-      },
-      immediate: true
-    },
-    
-    'args.features': {
-      handler() {
-        this.safeGraph()
-      },
-      deep: true
-    },
-    
-    // === DATA REACTIVITY ===
+
     selectedScan() {
-      if (this.isEnhancedMode) {
-        this.resetManualState()
-        this.safeGraph()
-      }
-    },
-    
-    selectedRow() {
-      if (this.isBasicMode) {
-        this.safeGraph()
-      }
+      this.resetManualState()
+      this.safeGraph()
     },
     
     xValues() {
-      if (this.isBasicMode) {
-        this.safeGraph()
-      }
+      this.safeGraph()
     },
     
     selectedTag() {
-      if (this.isEnhancedMode) {
-        this.resetManualState()
-        this.safeGraph()
-      }
+      this.resetManualState()
+      this.safeGraph()
     },
     
-    // === ENHANCED MODE SPECIFIC ===
-    annotationData() {
-      if (this.isEnhancedMode && this.manual && this.mergedFeatures.annotationSystem) {
-        this.updateButtons(this.annotationData.shapes, this.annotationData.annotations)
-      }
-    },
-    
-    // === ANNOTATION VISIBILITY REACTIVITY ===
     annotationsVisible() {
-      if (this.isEnhancedMode) {
-        this.safeGraph()
-      }
+      this.safeGraph()
     },
     
-    // === MASS INDEX REACTIVITY ===
     'selectionStore.selectedMassIndex'() {
-      if (this.shouldHighlightMassIndex) {
-        this.safeGraph()
-      }
+      this.manual = false
+      this.safeGraph()
     }
+
   },
   
   mounted() {
@@ -1113,12 +981,24 @@ export default defineComponent({
   },
   
   methods: {
-    // === CORE RENDERING ===
+
     async graph(): Promise<void> {
       try {
         const plotInstance = await Plotly.newPlot(this.id, this.data, this.layout, {
           modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'],
           modeBarButtonsToAdd: [
+            {
+              title: this.annotationsVisible ? 'Hide Annotations' : 'Show Annotations',
+              name: 'toggleAnnotations',
+              icon: {
+                width: 1792,
+                height: 1792,
+                path: 'M1664 960q-152-236-381-353 61 104 61 225 0 185-131.5 316.5t-316.5 131.5-316.5-131.5-131.5-316.5q0-121 61-225-229 117-381 353 133 205 333.5 326.5t434.5 121.5 434.5-121.5 333.5-326.5zm-720-384q0-20-14-34t-34-14q-125 0-214.5 89.5t-89.5 214.5q0 20 14 34t34 14 34-14 14-34q0-86 61-147t147-61q20 0 34-14t14-34zm848 384q0 34-20 69-140 230-376.5 368.5t-499.5 138.5-499.5-139-376.5-368q-20-35-20-69t20-69q140-229 376.5-368t499.5-139 499.5 139 376.5 368q20 35 20 69z'
+              },
+              click: () => {
+                this.toggleAnnotations()
+              },
+            },
             {
               title: 'Download as SVG',
               name: 'toImageSvg',
@@ -1132,43 +1012,17 @@ export default defineComponent({
                 })
               },
             },
-            {
-              title: this.annotationsVisible ? 'Hide Annotations' : 'Show Annotations',
-              name: 'toggleAnnotations',
-              icon: {
-                width: 1792,
-                height: 1792,
-                path: this.annotationsVisible
-                  ? 'M1664 960q-152-236-381-353 61 104 61 225 0 185-131.5 316.5t-316.5 131.5-316.5-131.5-131.5-316.5q0-121 61-225-229 117-381 353 133 205 333.5 326.5t434.5 121.5 434.5-121.5 333.5-326.5zm-720-384q0-20-14-34t-34-14q-125 0-214.5 89.5t-89.5 214.5q0 20 14 34t34 14 34-14 14-34q0-86 61-147t147-61q20 0 34-14t14-34zm848 384q0 34-20 69-140 230-376.5 368.5t-499.5 138.5-499.5-139-376.5-368q-20-35-20-69t20-69q140-229 376.5-368t499.5-139 499.5 139 376.5 368q20 35 20 69z'
-                  : 'M555 1179l78-141q87 63 136 63 25 0 40.5-15.5t15.5-39.5q0-46-49-86-49-40-124-40-93 0-124 47-7 11-24 11-17 0-28.5-10.5t-11.5-26.5q0-25 30-56 104-108 266-108 99 0 171.5 67.5t72.5 164.5q0 95-78 164-22 19-45.5 29t-59.5 10q-70 0-141-59zM1664 960q-152-236-381-353 61 104 61 225 0 185-131.5 316.5t-316.5 131.5-316.5-131.5-131.5-316.5q0-121 61-225-229 117-381 353 133 205 333.5 326.5t434.5 121.5 434.5-121.5 333.5-326.5zm-720-384q0-20-14-34t-34-14q-125 0-214.5 89.5t-89.5 214.5q0 20 14 34t34 14 34-14 14-34q0-86 61-147t147-61q20 0 34-14t14-34zm848 384q0 34-20 69-140 230-376.5 368.5t-499.5 138.5-499.5-139-376.5-368q-20-35-20-69t20-69q140-229 376.5-368t499.5-139 499.5 139 376.5 368q20 35 20 69z'
-              },
-              click: () => {
-                this.toggleAnnotations()
-              },
-            },
           ],
-          scrollZoom: this.mergedFeatures.zoomControls
+          scrollZoom: true
         })
         
-        // Enhanced mode event listeners
-        if (this.isEnhancedMode) {
-          if (this.mergedFeatures.zoomControls) {
-            plotInstance.on('plotly_relayout', (eventData) => {
-              this.onRelayout(eventData)
-            })
-          }
-          
-          if (this.mergedFeatures.clickEvents) {
-            plotInstance.on('plotly_click', (eventData) => {
-              this.onPlotClick(eventData)
-            })
-          }
-        }
-        
-        this.$emit('plot-rendered', { 
-          timestamp: Date.now(), 
-          mode: this.resolvedMode,
-          features: Array.from(this.enabledFeatures)
+        // Event listeners
+        plotInstance.on('plotly_relayout', (eventData) => {
+          this.onRelayout(eventData)
+        })
+      
+        plotInstance.on('plotly_click', (eventData) => {
+          this.onPlotClick(eventData)
         })
         
       } catch (error) {
@@ -1176,21 +1030,8 @@ export default defineComponent({
       }
     },
     
-    // === MODE MANAGEMENT ===
     initializeComponent(): void {
-      try {
-        // Set initial mode based on props or auto-detection
-        if (this.args.mode) {
-          this.currentMode = this.args.mode
-        } else if (this.legacyMode) {
-          this.currentMode = this.legacyMode
-        } else {
-          this.currentMode = 'auto'
-        }
-        
-        // Initialize enabled features
-        this.enabledFeatures = new Set(Object.keys(this.mergedFeatures).filter(key => this.mergedFeatures[key]))
-        
+      try {      
         this.isInitialized = true
         
         // Initialize local title
@@ -1198,6 +1039,7 @@ export default defineComponent({
         
         // Use safe rendering
         this.safeGraph()
+
       } catch (error) {
         this.handleError(error as Error, 'initializeComponent')
         this.renderFallback()
@@ -1207,54 +1049,39 @@ export default defineComponent({
     resetManualState(): void {
       try {
         this.manual = false
-        this.localTitle = 'Augmented Deconvolved Spectrum'
-        this.selectedMass = undefined
+        if (this.localTitle === 'Augmented Annotated Spectrum') {
+          this.localTitle = 'Augmented Deconvolved Spectrum'
+        }
+        this.selectionStore.updateSelectedMass(undefined)
       } catch (error) {
         this.handleError(error as Error, 'resetManualState')
       }
     },
     
-    // === ENHANCED MODE INTERACTIONS ===
     backButton(): void {
-      if (!this.isEnhancedMode || !this.mergedFeatures.backButton) return
-      
-      this.localTitle = 'Augmented Deconvolved Spectrum'
-      this.selectedMass = undefined
-      this.manual = false
-      this.$emit('back-button-clicked', {
-        previousMode: this.localTitle,
-        timestamp: Date.now()
-      })
+      this.resetManualState()
       this.safeGraph()
     },
     
     toggleAnnotations(): void {
       this.annotationsVisible = !this.annotationsVisible
-      this.$emit('feature-toggled', {
-        feature: 'annotations',
-        enabled: this.annotationsVisible,
-        timestamp: Date.now()
-      })
       this.safeGraph()
     },
     
     onPlotClick(eventData: any): void {
-      if (!this.isEnhancedMode || !this.mergedFeatures.clickEvents) return
-      
       if (eventData.points && eventData.points.length > 0) {
         const x = eventData.points[0].x
         
-        for (let i = 0; i < this.highlightedValues.length; i++) {
-          if (x === this.highlightedValues[i].mass) {
-            this.updateButtons([], [])
-            this.selectedMass = i
-            this.localTitle = 'Augmented Annotated Spectrum'
+        for (let i = 0; i < this.MassValues.length; i++) {
+          if (x === this.MassValues[i]) {
+            if (this.localTitle === 'Augmented Deconvolved Spectrum') {
+              if (!this.highlightedMassPos[i]) {
+                break
+              }
+              this.localTitle = 'Augmented Annotated Spectrum'
+            }
             this.manual = false
-            this.$emit('mass-selected', {
-              mass: x,
-              index: i,
-              metadata: this.highlightedValues[i]
-            })
+            this.selectionStore.updateSelectedMass(i)
             this.safeGraph()
             break
           }
@@ -1263,8 +1090,6 @@ export default defineComponent({
     },
     
     async onRelayout(eventData: any): Promise<void> {
-      if (!this.isEnhancedMode || !this.mergedFeatures.zoomControls) return
-      
       if (eventData['xaxis.range[0]'] !== undefined && eventData['xaxis.range[1]'] !== undefined) {
         const newXRange = [eventData['xaxis.range[0]'], eventData['xaxis.range[1]']]
         if (newXRange[0] < 0) {
@@ -1277,12 +1102,7 @@ export default defineComponent({
           const newYRange = this.computeYRange(newXRange)
           await Plotly.relayout(this.id, {'yaxis.range': [newYRange[0], newYRange[1]]})
           await Plotly.relayout(this.id, {'xaxis.range': [newXRange[0], newXRange[1]]})
-          
-          this.$emit('zoom-changed', {
-            xRange: newXRange,
-            yRange: newYRange,
-            manual: this.manual
-          })
+
         } catch (error) {
           this.handleError(error as Error, 'onRelayout-plotly-update')
         }
@@ -1308,20 +1128,6 @@ export default defineComponent({
       }
     },
     
-    async updateButtons(shapes: Partial<Plotly.Shape>[], annotations: Partial<Plotly.Annotations>[]): Promise<void> {
-      try {
-        if (!this.isEnhancedMode) return
-        
-        await Plotly.relayout(this.id, {
-          shapes: shapes || [],
-          annotations: annotations || []
-        })
-      } catch (error) {
-        this.handleError(error as Error, 'updateButtons')
-      }
-    },
-    
-    // === DATA PROCESSING ===
     computeYRange(xRange: number[]): number[] {
       try {
         const yValues = this.yValues
@@ -1347,52 +1153,6 @@ export default defineComponent({
       }
     },
     
-    isHighlighted(value: number): boolean {
-      try {
-        if (!isFinite(value)) return false
-        return this.highlightedPos(value) !== undefined
-      } catch (error) {
-        this.handleError(error as Error, 'isHighlighted')
-        return false
-      }
-    },
-    
-    highlightedPos(value: number): number | undefined {
-      try {
-        if (!this.isEnhancedMode || !isFinite(value)) return undefined
-        
-        const highlighted = this.highlightedValues
-        if (highlighted.length === 0) return undefined
-        
-        if (this.currentTitle === 'Augmented Annotated Spectrum') {
-          const selectedMass = this.selectedMass
-          if (selectedMass === undefined || selectedMass >= highlighted.length) return undefined
-          
-          const mzs = highlighted[selectedMass].mzs
-          if (!Array.isArray(mzs)) return undefined
-          
-          for (let j = 0; j < mzs.length; j++) {
-            if (isFinite(mzs[j]) && Math.abs(value - mzs[j]) <= 1e-5) {
-              return selectedMass
-            }
-          }
-        } else {
-          for (let i = 0; i < highlighted.length; i++) {
-            const mass = highlighted[i].mass
-            if (isFinite(mass) && Math.abs(value - mass) <= 1e-5) {
-              return i
-            }
-          }
-        }
-        
-        return undefined
-      } catch (error) {
-        this.handleError(error as Error, 'highlightedPos')
-        return undefined
-      }
-    },
-    
-    // === FALLBACK MECHANISMS ===
     getFallbackData(): Plotly.Data[] {
       return [
         {
@@ -1400,7 +1160,7 @@ export default defineComponent({
           y: [0, 0],
           mode: 'lines',
           type: 'scatter',
-          marker: { color: this.mergedStyling.unhighlightedColor },
+          marker: { color: this.styling.unhighlightedColor },
           name: 'No Data'
         }
       ]
@@ -1422,7 +1182,6 @@ export default defineComponent({
       }
     },
     
-    // === VALIDATION ===
     validateComponentState(): boolean {
       try {
         // Check if essential stores are available
@@ -1439,7 +1198,7 @@ export default defineComponent({
         }
         
         // Check if required columns exist for current mode
-        const dataRow = this.isBasicMode ? this.selectedRow : this.selectedScan
+        const dataRow = this.selectedScan
         if (dataRow !== undefined && dataRow < scanData.length) {
           const data = scanData[dataRow]
           if (!data || typeof data !== 'object') {
@@ -1467,7 +1226,6 @@ export default defineComponent({
       }
     },
     
-    // === SAFE RENDERING ===
     async safeGraph(): Promise<void> {
       try {
         if (!this.validateComponentState()) {
@@ -1488,32 +1246,23 @@ export default defineComponent({
           staticPlot: true
         })
         
-        this.$emit('plot-rendered', {
-          timestamp: Date.now(),
-          mode: 'fallback',
-          features: ['fallback']
-        })
       } catch (error) {
         console.error('PlotlyLineplotUnified: Failed to render fallback:', error)
       }
     },
     
-    // === UTILITY ===
     handleError(error: Error, context: string): void {
       const errorInfo = {
         error: error.message || 'Unknown error',
         context,
         timestamp: Date.now(),
-        mode: this.resolvedMode,
         componentState: {
           isInitialized: this.isInitialized,
-          currentMode: this.currentMode,
           hasData: this.xValues.length > 0
         }
       }
       
       console.error(`PlotlyLineplotUnified error in ${context}:`, error, errorInfo)
-      this.$emit('plot-error', errorInfo)
     }
   },
 })

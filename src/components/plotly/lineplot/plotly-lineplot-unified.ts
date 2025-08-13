@@ -5,22 +5,7 @@ export type PlotlyLineArguments = {
 
 // Extended interface for unified component
 export interface UnifiedPlotlyLineArguments extends PlotlyLineArguments {
-  // Mode Configuration
-  mode?: 'basic' | 'enhanced' | 'auto'
-  
-  // Feature Flags
-  features?: {
-    interactiveMode?: boolean
-    massHighlighting?: boolean
-    tagHighlighting?: boolean
-    zoomControls?: boolean
-    annotationSystem?: boolean
-    massSelection?: boolean
-    backButton?: boolean
-    clickEvents?: boolean
-    sequenceVisualization?: boolean
-  }
-  
+   
   // Advanced Configuration
   config?: {
     xPosScalingFactor?: number
@@ -69,16 +54,6 @@ export type HighlightData = {
   charges: number[]
 }
 
-// Feature matrix for mode-based rendering
-export const FEATURE_MATRIX = {
-  basic: new Set(['svgExport', 'massHighlighting']),
-  enhanced: new Set([
-    'svgExport', 'interactiveMode', 'massHighlighting',
-    'tagHighlighting', 'zoomControls', 'annotationSystem',
-    'massSelection', 'backButton', 'clickEvents', 'sequenceVisualization'
-  ])
-}
-
 // Default configurations
 export const DEFAULT_CONFIG = {
   xPosScalingFactor: 27.5,
@@ -90,7 +65,8 @@ export const DEFAULT_CONFIG = {
 export const DEFAULT_STYLING = {
   highlightColor: '#E4572E',
   selectedColor: '#F3A712',
-  unhighlightedColor: '#1f77b4',
+  unhighlightedColor: 'lightblue',
+  highlightHiddenColor: '1f77b4',
   annotationColors: {
     massButton: '#E4572E',
     selectedMassButton: '#F3A712',
