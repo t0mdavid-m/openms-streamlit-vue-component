@@ -1513,9 +1513,9 @@ export default defineComponent({
         const newXRange = [Math.min(...xValues), Math.max(...xValues)]
         this.manual = true
         this.manual_xRange = newXRange
-        const newYRange = this.computeYRange(newXRange)
         
-        await Plotly.relayout(this.id, {'yaxis.range': [newYRange[0], newYRange[1]]})
+        // Trigger full re-render to update all computed properties including overlap detection
+        this.safeGraph()
       } catch (error) {
         this.handleError(error as Error, 'onAutosize')
       }
