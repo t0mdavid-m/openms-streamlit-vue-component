@@ -538,6 +538,161 @@ export default defineComponent({
     maxAnnotationRange(): number {
       return this.xPosScalingFactor * this.xPosScalingThreshold
     },
+
+    // Shared coordinate calculation utilities
+    getAnnotationPositioning(): {
+      ymax: number;
+      ypos_low: number;
+      ypos: number;
+      ypos_high: number;
+      xpos_scaling: number;
+      xRange: number[];
+      yRange: number[];
+    } | null {
+      const yRange = this.yRange
+      const xRange = this.xRange
+      
+      if (yRange.length < 2 || yRange[1] <= 0 || xRange.length < 2) {
+        return null
+      }
+
+      const ymax = yRange[1] / 1.8
+      const ypos_low = ymax * 1.18
+      const ypos = ymax * 1.25
+      const ypos_high = ymax * 1.32
+      const xpos_scaling = (xRange[1] - xRange[0]) / this.xPosScalingFactor
+
+      return {
+        ymax,
+        ypos_low,
+        ypos,
+        ypos_high,
+        xpos_scaling,
+        xRange,
+        yRange
+      }
+    },
+
+    // Calculate annotation box dimensions, positions and visibility with overlap detection
+    annotationBoxData(): Array<{
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      type: 'mass' | 'charge';
+      index: number;
+      visible: boolean;
+    }> {
+      try {
+        const highlighted = this.highlightedValues
+        if (highlighted.length === 0) return []
+
+        const positioning = this.getAnnotationPositioning
+        if (!positioning) return []
+
+        const { ypos_low, ypos_high, xpos_scaling } = positioning
+
+        const boxes: Array<{
+          x: number;
+          y: number;
+          width: number;
+          height: number;
+          type: 'mass' | 'charge';
+          index: number;
+          visible: boolean;
+        }> = []
+
+        // For m/z spectrum (charge states)
+        if (this.xAxisLabel === 'm/z') {
+          if (this.selectionStore.selectedMassIndex === undefined ||
+              this.selectionStore.selectedMassIndex >= this.MassValues.length) {
+            return boxes
+          }
+
+          const selectedData = highlighted[0]
+          const { mzs, charges, intensity: intensities } = selectedData
+          
+          if (!mzs || mzs.length === 0) return boxes
+          
+          const grouped = new Map<number, Array<{mz: number; intensity: number}>>()
+
+          // Group by charge state
+          for (let i = 0; i < mzs.length; i++) {
+            const mz = mzs[i]
+            const charge = charges[i]
+            const intensity = intensities[i]
+            const mzIntensity = { mz, intensity }
+
+            if (grouped.has(charge)) {
+              grouped.get(charge)!.push(mzIntensity)
+            } else {
+              grouped.set(charge, [mzIntensity])
+            }
+          }
+
+          // Create charge state boxes
+          let chargeIndex = 0
+          grouped.forEach((mzIntensity, charge) => {
+            const summedIntensity = mzIntensity.reduce((sum, val) => sum + val.intensity, 0)
+            const centerOfGravity = mzIntensity.map(val => (val.intensity / summedIntensity) * val.mz)
+            const mass = centerOfGravity.reduce((sum, val) => sum + val, 0)
+            
+            boxes.push({
+              x: mass,
+              y: (ypos_low + ypos_high) / 2,
+              width: xpos_scaling,
+              height: ypos_high - ypos_low,
+              type: 'charge',
+              index: chargeIndex++,
+              visible: true // Will be updated by overlap detection below
+            })
+          })
+        } else {
+          // For mass spectrum (mass labels)
+          const scaling = highlighted.length === 1 ? 2 : 1
+          for (let i = 0; i < highlighted.length; i++) {
+            const highlightedData = highlighted[i]
+            const mass = highlightedData.mass
+            
+            if (!isFinite(mass)) continue
+
+            boxes.push({
+              x: mass,
+              y: (ypos_low + ypos_high) / 2,
+              width: scaling * xpos_scaling * 2, // *2 because shape uses ±scaling*xpos_scaling
+              height: ypos_high - ypos_low,
+              type: 'mass',
+              index: i,
+              visible: true // Will be updated by overlap detection below
+            })
+          }
+        }
+
+        // Overlap detection using data coordinates (more efficient)
+        if (boxes.length > 1) {
+          // Check if ANY two annotation boxes overlap in data space
+          let hasOverlap = false
+          for (let i = 0; i < boxes.length && !hasOverlap; i++) {
+            for (let j = i + 1; j < boxes.length; j++) {
+              if (this.dataBoxesOverlap(boxes[i], boxes[j])) {
+                hasOverlap = true
+                break
+              }
+            }
+          }
+
+          // If any overlap is detected, hide all annotations
+          if (hasOverlap) {
+            boxes.forEach(box => { box.visible = false })
+          }
+        }
+
+        return boxes
+      } catch (error) {
+        this.handleError(error as Error, 'annotationBoxData-computation')
+        return []
+      }
+    },
     
     xRange(): number[] {
       try {
@@ -602,22 +757,18 @@ export default defineComponent({
         if (highlighted.length === 0) {
           return { shapes: [], annotations: [], traces: [] }
         }
+
+        // Reuse positioning calculations and get visibility from annotationBoxData
+        const positioning = this.getAnnotationPositioning
+        if (!positioning) {
+          return { shapes: [], annotations: [], traces: [] }
+        }
+
+        const { ypos_low, ypos, ypos_high, xpos_scaling } = positioning
         
         let buttonTraces: Plotly.Data[] = []
         let buttonShapes: Partial<Plotly.Shape>[] = []
         let buttonAnnotations: Partial<Plotly.Annotations>[] = []
-        
-        const yRange = this.yRange
-        if (yRange.length < 2 || yRange[1] <= 0) {
-          return { shapes: [], annotations: [], traces: [] }
-        }
-        
-        const ymax = yRange[1] / 1.8
-        const ypos_low = ymax * 1.18
-        const ypos = ymax * 1.25
-        const ypos_high = ymax * 1.32
-        const xRange = this.xRange
-        const xpos_scaling = (xRange[1] - xRange[0]) / this.xPosScalingFactor
 
         if (this.xAxisLabel === 'm/z') {
           type MzIntensity = {
@@ -667,35 +818,44 @@ export default defineComponent({
               }
           }
 
-          // Create charge label annotations
+          // Create charge label annotations using overlap detection from annotationBoxData
+          const annotationBoxes = this.annotationBoxData
+          const visibleChargeBoxes = annotationBoxes.filter(box => box.type === 'charge' && box.visible)
+          
+          let chargeIndex = 0
           grouped.forEach((mzIntensity, charge) => {
             const summedIntensity = mzIntensity.reduce((sum, val) => sum + val.intensity, 0)
             const centerOfGravity = mzIntensity.map(val => (val.intensity / summedIntensity)*val.mz)
             const mass = centerOfGravity.reduce((sum, val) => sum + val, 0)
             
-            buttonShapes.push({
-              type: 'rect',
-              x0: mass-0.5*(xpos_scaling),
-              y0: ypos_low,
-              x1: mass+0.5*(xpos_scaling),
-              y1: ypos_high,
-              fillcolor: fillcolor,
-              line: {
-                width: 0
-              }
-            })
-              
-            buttonAnnotations.push({
-              x: mass,
-              y: ypos,
-              xref: 'x',
-              yref: 'y',
-              text: "z="+charge,
-              showarrow: false,
-              font: {
-                size: 15
-              }
-            })
+            // Only show if visible according to overlap detection
+            const isVisible = visibleChargeBoxes.some(box => box.index === chargeIndex)
+            if (isVisible) {
+              buttonShapes.push({
+                type: 'rect',
+                x0: mass-0.5*(xpos_scaling),
+                y0: ypos_low,
+                x1: mass+0.5*(xpos_scaling),
+                y1: ypos_high,
+                fillcolor: fillcolor,
+                line: {
+                  width: 0
+                }
+              })
+                
+              buttonAnnotations.push({
+                x: mass,
+                y: ypos,
+                xref: 'x',
+                yref: 'y',
+                text: "z="+charge,
+                showarrow: false,
+                font: {
+                  size: 15
+                }
+              })
+            }
+            chargeIndex++
           })
           return {
               shapes: buttonShapes,
@@ -704,21 +864,13 @@ export default defineComponent({
           }
         }
 
-        // Mass Buttons + Sequence Arrows
+        // Mass Buttons + Sequence Arrows with overlap detection
         let arrowAnnotations: Partial<Plotly.Annotations>[] = []
-        
-        //Check scaling threshold for annotation display
-        if (xpos_scaling > this.xPosScalingThreshold) {
-          return {
-            shapes: buttonShapes,
-            annotations: buttonAnnotations,
-            traces: buttonTraces,
-          }
-        }
-
         const selectedAA = this.selectionStore.selectedTag?.selectedAA
+        const annotationBoxes = this.annotationBoxData
+        const visibleMassBoxes = annotationBoxes.filter(box => box.type === 'mass' && box.visible)
         
-        // Create mass button annotations
+        // Create mass button annotations using overlap detection
         const scaling = highlighted.length === 1 ? 2 : 1
         for (let i = 0; i < highlighted.length; i++) {
           const highlightedData = highlighted[i]
@@ -727,57 +879,61 @@ export default defineComponent({
           // Performance optimization: Skip invalid mass values
           if (!isFinite(mass)) continue
 
-          let fillcolor = this.styling.annotationColors.massButton
-          let family = 'sans-serif'
-          
-          if ((selectedAA === i) || (selectedAA === i - 1)) {
-              fillcolor = this.styling.annotationColors.selectedMassButton
-              family = 'Arial Black, Arial Bold, Arial, sans-serif'
-          }
-
-          // Create invisible hover trace for mass buttons
-          buttonTraces.push({
-            x: [mass],
-            y: [ypos],
-            mode: 'markers',
-            marker: {
-              size: 20,
-              opacity: 0,
-            },
-            hoverinfo: 'text',
-            hovertext: String(mass.toFixed(2)),
-            type: 'scatter'
-          })
-
-          // Create mass button shape
-          buttonShapes.push({
-            type: 'rect',
-            x0: mass - scaling*xpos_scaling,
-            y0: ypos_low,
-            x1: mass + scaling*xpos_scaling,
-            y1: ypos_high,
-            fillcolor: fillcolor,
-            line: {
-              width: 0
-            }
-          })
+          // Only show if visible according to overlap detection
+          const isVisible = visibleMassBoxes.some(box => box.index === i)
+          if (isVisible) {
+            let fillcolor = this.styling.annotationColors.massButton
+            let family = 'sans-serif'
             
-          // Create mass button label
-          buttonAnnotations.push({
-            x: mass,
-            y: ypos,
-            xref: 'x',
-            yref: 'y',
-            text: mass.toFixed(2),
-            showarrow: false,
-            font: {
-              size: 15,
-              family: family
+            if ((selectedAA === i) || (selectedAA === i - 1)) {
+                fillcolor = this.styling.annotationColors.selectedMassButton
+                family = 'Arial Black, Arial Bold, Arial, sans-serif'
             }
-          })
+
+            // Create invisible hover trace for mass buttons
+            buttonTraces.push({
+              x: [mass],
+              y: [ypos],
+              mode: 'markers',
+              marker: {
+                size: 20,
+                opacity: 0,
+              },
+              hoverinfo: 'text',
+              hovertext: String(mass.toFixed(2)),
+              type: 'scatter'
+            })
+
+            // Create mass button shape
+            buttonShapes.push({
+              type: 'rect',
+              x0: mass - scaling*xpos_scaling,
+              y0: ypos_low,
+              x1: mass + scaling*xpos_scaling,
+              y1: ypos_high,
+              fillcolor: fillcolor,
+              line: {
+                width: 0
+              }
+            })
+              
+            // Create mass button label
+            buttonAnnotations.push({
+              x: mass,
+              y: ypos,
+              xref: 'x',
+              yref: 'y',
+              text: mass.toFixed(2),
+              showarrow: false,
+              font: {
+                size: 15,
+                family: family
+              }
+            })
+          }
         }
 
-        // Create sequence arrows between mass buttons - optimized
+        // Create sequence arrows between mass buttons with overlap-aware logic
         const yPosArrow = ypos * 0.5
         const yPosAA = ypos * 0.6
         const sequence = this.selectionStore.selectedTag?.sequence
@@ -789,95 +945,100 @@ export default defineComponent({
           // Performance optimization: Skip if either mass is invalid
           if (!isFinite(currentData.mass) || !isFinite(nextData.mass)) continue
 
-          let fillcolor = this.styling.annotationColors.sequenceArrow
-          let family = 'sans-serif'
-          
-          if (selectedAA === i) {
-              fillcolor = this.styling.annotationColors.selectedSequenceArrow
-              family = 'Arial Black, Arial Bold, Arial, sans-serif'
-          }
-
-          let xStart = currentData.mass
-          let xEnd = nextData.mass
-          const xMid = (xStart + xEnd) / 2
-          let xMidStart = xMid
-          let xMidEnd = xMid
-          const diff = Math.abs(xStart - xEnd) * 0.9
-          let AA = ""
-          let delta = 0
-
-          // Get amino acid from sequence
-          if (sequence !== undefined && sequence.length > 0) {
-            const reverseIndex = sequence.length - 1 - i
-            if (reverseIndex >= 0 && reverseIndex < sequence.length) {
-              AA = sequence[reverseIndex]
+          // Only show arrows if both connected mass buttons are visible
+          const currentVisible = visibleMassBoxes.some(box => box.index === i)
+          const nextVisible = visibleMassBoxes.some(box => box.index === i + 1)
+          if (currentVisible && nextVisible) {
+            let fillcolor = this.styling.annotationColors.sequenceArrow
+            let family = 'sans-serif'
+            
+            if (selectedAA === i) {
+                fillcolor = this.styling.annotationColors.selectedSequenceArrow
+                family = 'Arial Black, Arial Bold, Arial, sans-serif'
             }
-          }
 
-          // Calculate arrow positioning
-          if (xStart > xEnd) {
-            delta = xStart - xEnd
-            xStart -= diff
-            xMidStart += diff * 0.1
-            xEnd += diff
-            xMidEnd -= diff * 0.1
-          } else {
-            delta = xEnd - xStart
-            xStart += diff
-            xMidStart -= diff * 0.1
-            xEnd -= diff
-            xMidEnd += diff * 0.1
-          }
+            let xStart = currentData.mass
+            let xEnd = nextData.mass
+            const xMid = (xStart + xEnd) / 2
+            let xMidStart = xMid
+            let xMidEnd = xMid
+            const diff = Math.abs(xStart - xEnd) * 0.9
+            let AA = ""
+            let delta = 0
 
-          // Create sequence arrow (start part)
-          arrowAnnotations.push({
-            ax: xMidStart,
-            ay: yPosArrow,
-            xref: 'x',
-            yref: 'y',
-            x: xStart,
-            y: yPosArrow,
-            axref: 'x',
-            ayref: 'y',
-            showarrow: true,
-            arrowhead: 0,
-            arrowsize: 1,
-            arrowwidth: 2,
-            arrowcolor: fillcolor
-          })
-          
-          // Create sequence arrow (end part)
-          arrowAnnotations.push({
-            ax: xMidEnd,
-            ay: yPosArrow,
-            xref: 'x',
-            yref: 'y',
-            x: xEnd,
-            y: yPosArrow,
-            axref: 'x',
-            ayref: 'y',
-            showarrow: true,
-            arrowhead: 2,
-            arrowsize: 1,
-            arrowwidth: 2,
-            arrowcolor: fillcolor
-          })
-
-          // Create amino acid label
-          arrowAnnotations.push({
-            x: xMid,
-            y: yPosAA,
-            xref: 'x',
-            yref: 'y',
-            text: AA,
-            hovertext: 'Δ=' + delta.toFixed(2) + ' Da',
-            showarrow: false,
-            font: {
-              size: 15,
-              color: fillcolor,
-              family: family
+            // Get amino acid from sequence
+            if (sequence !== undefined && sequence.length > 0) {
+              const reverseIndex = sequence.length - 1 - i
+              if (reverseIndex >= 0 && reverseIndex < sequence.length) {
+                AA = sequence[reverseIndex]
+              }
             }
-          })
+
+            // Calculate arrow positioning
+            if (xStart > xEnd) {
+              delta = xStart - xEnd
+              xStart -= diff
+              xMidStart += diff * 0.1
+              xEnd += diff
+              xMidEnd -= diff * 0.1
+            } else {
+              delta = xEnd - xStart
+              xStart += diff
+              xMidStart -= diff * 0.1
+              xEnd -= diff
+              xMidEnd += diff * 0.1
+            }
+
+            // Create sequence arrow (start part)
+            arrowAnnotations.push({
+              ax: xMidStart,
+              ay: yPosArrow,
+              xref: 'x',
+              yref: 'y',
+              x: xStart,
+              y: yPosArrow,
+              axref: 'x',
+              ayref: 'y',
+              showarrow: true,
+              arrowhead: 0,
+              arrowsize: 1,
+              arrowwidth: 2,
+              arrowcolor: fillcolor
+            })
+            
+            // Create sequence arrow (end part)
+            arrowAnnotations.push({
+              ax: xMidEnd,
+              ay: yPosArrow,
+              xref: 'x',
+              yref: 'y',
+              x: xEnd,
+              y: yPosArrow,
+              axref: 'x',
+              ayref: 'y',
+              showarrow: true,
+              arrowhead: 2,
+              arrowsize: 1,
+              arrowwidth: 2,
+              arrowcolor: fillcolor
+            })
+
+            // Create amino acid label
+            arrowAnnotations.push({
+              x: xMid,
+              y: yPosAA,
+              xref: 'x',
+              yref: 'y',
+              text: AA,
+              hovertext: 'Δ=' + delta.toFixed(2) + ' Da',
+              showarrow: false,
+              font: {
+                size: 15,
+                color: fillcolor,
+                family: family
+              }
+            })
+          }
         }
 
         return {
@@ -1036,6 +1197,183 @@ export default defineComponent({
   },
   
   methods: {
+
+    // Utility methods for coordinate conversion and overlap detection
+    dataToScreenX(dataX: number): number {
+      try {
+        const xRange = this.xRange
+        if (xRange.length !== 2 || xRange[1] <= xRange[0]) return 0
+        
+        // Approximate plot area width (assuming standard Plotly margins)
+        const plotWidth = 800 // Approximate plot area width
+        const margin = 80 // Approximate left margin
+        
+        return margin + ((dataX - xRange[0]) / (xRange[1] - xRange[0])) * plotWidth
+      } catch (error) {
+        this.handleError(error as Error, 'dataToScreenX')
+        return 0
+      }
+    },
+
+    dataToScreenY(dataY: number): number {
+      try {
+        const yRange = this.yRange
+        if (yRange.length !== 2 || yRange[1] <= yRange[0]) return 0
+        
+        // Approximate plot area height (assuming standard Plotly margins)
+        const plotHeight = 300 // Approximate plot area height
+        const margin = 50 // Approximate top margin
+        
+        // Note: screen Y coordinates are inverted (0 at top)
+        return margin + plotHeight - ((dataY - yRange[0]) / (yRange[1] - yRange[0])) * plotHeight
+      } catch (error) {
+        this.handleError(error as Error, 'dataToScreenY')
+        return 0
+      }
+    },
+
+    dataToScreenWidth(dataWidth: number): number {
+      try {
+        const xRange = this.xRange
+        if (xRange.length !== 2 || xRange[1] <= xRange[0]) return 0
+        
+        const plotWidth = 800
+        return (dataWidth / (xRange[1] - xRange[0])) * plotWidth
+      } catch (error) {
+        this.handleError(error as Error, 'dataToScreenWidth')
+        return 0
+      }
+    },
+
+    dataToScreenHeight(dataHeight: number): number {
+      try {
+        const yRange = this.yRange
+        if (yRange.length !== 2 || yRange[1] <= yRange[0]) return 0
+        
+        const plotHeight = 300
+        return (dataHeight / (yRange[1] - yRange[0])) * plotHeight
+      } catch (error) {
+        this.handleError(error as Error, 'dataToScreenHeight')
+        return 0
+      }
+    },
+
+    // Optimized overlap detection using data coordinates (eliminates screen coordinate conversion)
+    dataBoxesOverlap(box1: { x: number; y: number; width: number; height: number },
+                     box2: { x: number; y: number; width: number; height: number }): boolean {
+      try {
+        // Calculate minimum separation needed in data coordinates
+        const positioning = this.getAnnotationPositioning
+        if (!positioning) return false
+
+        const { xRange } = positioning
+        
+        // Calculate relative padding based on data range (more accurate than fixed screen padding)
+        const xPadding = (xRange[1] - xRange[0]) * 0.01 // 1% of x-range as padding
+        const yPadding = box1.height * 0.1 // 10% of box height as padding
+        
+        // Calculate box boundaries (center coordinates to corner coordinates)
+        const box1Left = box1.x - box1.width / 2 - xPadding
+        const box1Right = box1.x + box1.width / 2 + xPadding
+        const box1Top = box1.y - box1.height / 2 - yPadding
+        const box1Bottom = box1.y + box1.height / 2 + yPadding
+        
+        const box2Left = box2.x - box2.width / 2 - xPadding
+        const box2Right = box2.x + box2.width / 2 + xPadding
+        const box2Top = box2.y - box2.height / 2 - yPadding
+        const box2Bottom = box2.y + box2.height / 2 + yPadding
+        
+        // Check for overlap (if boxes don't overlap, they are separated on at least one axis)
+        return !(box1Right < box2Left || box2Right < box1Left ||
+                 box1Bottom < box2Top || box2Bottom < box1Top)
+      } catch (error) {
+        this.handleError(error as Error, 'dataBoxesOverlap')
+        return false
+      }
+    },
+
+    // Legacy method kept for compatibility, but now calls the optimized version
+    boxesOverlap(box1: { screenX: number; screenY: number; screenWidth: number; screenHeight: number },
+                 box2: { screenX: number; screenY: number; screenWidth: number; screenHeight: number }): boolean {
+      try {
+        // Convert screen coordinates back to data coordinates for the optimized method
+        const dataBox1 = {
+          x: this.screenToDataX(box1.screenX),
+          y: this.screenToDataY(box1.screenY),
+          width: this.screenToDataWidth(box1.screenWidth),
+          height: this.screenToDataHeight(box1.screenHeight)
+        }
+        
+        const dataBox2 = {
+          x: this.screenToDataX(box2.screenX),
+          y: this.screenToDataY(box2.screenY),
+          width: this.screenToDataWidth(box2.screenWidth),
+          height: this.screenToDataHeight(box2.screenHeight)
+        }
+        
+        return this.dataBoxesOverlap(dataBox1, dataBox2)
+      } catch (error) {
+        this.handleError(error as Error, 'boxesOverlap')
+        return false
+      }
+    },
+
+    // Additional utility methods for screen-to-data conversion (for legacy compatibility)
+    screenToDataX(screenX: number): number {
+      try {
+        const xRange = this.xRange
+        if (xRange.length !== 2 || xRange[1] <= xRange[0]) return 0
+        
+        const plotWidth = 800
+        const margin = 80
+        
+        return xRange[0] + ((screenX - margin) / plotWidth) * (xRange[1] - xRange[0])
+      } catch (error) {
+        this.handleError(error as Error, 'screenToDataX')
+        return 0
+      }
+    },
+
+    screenToDataY(screenY: number): number {
+      try {
+        const yRange = this.yRange
+        if (yRange.length !== 2 || yRange[1] <= yRange[0]) return 0
+        
+        const plotHeight = 300
+        const margin = 50
+        
+        return yRange[0] + ((plotHeight - (screenY - margin)) / plotHeight) * (yRange[1] - yRange[0])
+      } catch (error) {
+        this.handleError(error as Error, 'screenToDataY')
+        return 0
+      }
+    },
+
+    screenToDataWidth(screenWidth: number): number {
+      try {
+        const xRange = this.xRange
+        if (xRange.length !== 2 || xRange[1] <= xRange[0]) return 0
+        
+        const plotWidth = 800
+        return (screenWidth / plotWidth) * (xRange[1] - xRange[0])
+      } catch (error) {
+        this.handleError(error as Error, 'screenToDataWidth')
+        return 0
+      }
+    },
+
+    screenToDataHeight(screenHeight: number): number {
+      try {
+        const yRange = this.yRange
+        if (yRange.length !== 2 || yRange[1] <= yRange[0]) return 0
+        
+        const plotHeight = 300
+        return (screenHeight / plotHeight) * (yRange[1] - yRange[0])
+      } catch (error) {
+        this.handleError(error as Error, 'screenToDataHeight')
+        return 0
+      }
+    },
 
     async graph(): Promise<void> {
       try {
