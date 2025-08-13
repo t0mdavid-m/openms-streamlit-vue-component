@@ -137,10 +137,8 @@ export default defineComponent({
         const scanData = this.streamlitDataStore.allDataForDrawing?.per_scan_data
         if (!scanData || scanData.length === 0) return undefined
         
-        // Always default to first scan if no specific selection
-        if (this.selectionStore.selectedScanIndex === undefined) return 0
-        
-        return this.selectionStore.selectedScanIndex
+        // Always default to first scan
+        return 0
       } catch (error) {
         this.handleError(error as Error, 'selectedScan-computation')
         return undefined
@@ -556,7 +554,6 @@ export default defineComponent({
         if (this.manual && this.manual_xRange !== undefined) {
           return this.manual_xRange
         }
-        this.manual = true
 
         const highlighted = this.highlightedValues
         let values : number[] = [0, 1]
@@ -1114,6 +1111,7 @@ export default defineComponent({
     resetManualState(): void {
       try {
         this.manual = false
+        this.manual_xRange = undefined
         if (this.localTitle === 'Augmented Annotated Spectrum') {
           this.localTitle = 'Augmented Deconvolved Spectrum'
         }
@@ -1162,21 +1160,7 @@ export default defineComponent({
         }
         this.manual = true
         this.manual_xRange = newXRange
-        
-        try {
-          const newYRange = this.computeYRange(newXRange)
-          await Plotly.relayout(this.id, {'yaxis.range': [newYRange[0], newYRange[1]]})
-          await Plotly.relayout(this.id, {'xaxis.range': [newXRange[0], newXRange[1]]})
-          console.log('update')
-          // Update annotations with new scaling after zoom
-          const updatedAnnotations = this.annotationData
-          await Plotly.relayout(this.id, {
-            'shapes': updatedAnnotations.shapes,
-            'annotations': updatedAnnotations.annotations
-          })
-        } catch (error) {
-          this.handleError(error as Error, 'onRelayout-plotly-update')
-        }
+        this.safeGraph()
       }
       else if (eventData['xaxis.autorange'] === true) {
         this.onAutosize()
