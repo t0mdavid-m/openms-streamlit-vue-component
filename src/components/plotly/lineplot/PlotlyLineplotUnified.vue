@@ -1042,6 +1042,13 @@ export default defineComponent({
 
     async graph(): Promise<void> {
       try {
+        // Ensure DOM element exists before rendering
+        const element = document.getElementById(this.id)
+        if (!element) {
+          console.warn(`PlotlyLineplotUnified: DOM element with id '${this.id}' not found, skipping render`)
+          return
+        }
+        
         const plotInstance = await Plotly.newPlot(this.id, this.data, this.layout, {
           modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'],
           modeBarButtonsToAdd: [
