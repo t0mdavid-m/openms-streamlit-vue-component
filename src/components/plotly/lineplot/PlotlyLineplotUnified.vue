@@ -745,9 +745,9 @@ export default defineComponent({
             if (isVisible) {
               buttonShapes.push({
                 type: 'rect',
-                x0: mass-xpos_scaling,
+                x0: mass-0.5*(xpos_scaling),
                 y0: ypos_low,
-                x1: mass+xpos_scaling,
+                x1: mass+0.5*(xpos_scaling),
                 y1: ypos_high,
                 fillcolor: fillcolor,
                 line: {
