@@ -584,110 +584,7 @@ export default defineComponent({
       visible: boolean;
     }> {
       try {
-        const highlighted = this.highlightedValues
-        if (highlighted.length === 0) return []
-
-        const positioning = this.getAnnotationPositioning
-        if (!positioning) return []
-
-        const { ypos_low, ypos_high, xpos_scaling } = positioning
-
-        const boxes: Array<{
-          x: number;
-          y: number;
-          width: number;
-          height: number;
-          type: 'mass' | 'charge';
-          index: number;
-          visible: boolean;
-        }> = []
-
-        // For m/z spectrum (charge states)
-        if (this.xAxisLabel === 'm/z') {
-          if (this.selectionStore.selectedMassIndex === undefined ||
-              this.selectionStore.selectedMassIndex >= this.MassValues.length) {
-            return boxes
-          }
-
-          const selectedData = highlighted[0]
-          const { mzs, charges, intensity: intensities } = selectedData
-          
-          if (!mzs || mzs.length === 0) return boxes
-          
-          const grouped = new Map<number, Array<{mz: number; intensity: number}>>()
-
-          // Group by charge state
-          for (let i = 0; i < mzs.length; i++) {
-            const mz = mzs[i]
-            const charge = charges[i]
-            const intensity = intensities[i]
-            const mzIntensity = { mz, intensity }
-
-            if (grouped.has(charge)) {
-              grouped.get(charge)!.push(mzIntensity)
-            } else {
-              grouped.set(charge, [mzIntensity])
-            }
-          }
-
-          // Create charge state boxes
-          let chargeIndex = 0
-          grouped.forEach((mzIntensity, charge) => {
-            const summedIntensity = mzIntensity.reduce((sum, val) => sum + val.intensity, 0)
-            const centerOfGravity = mzIntensity.map(val => (val.intensity / summedIntensity) * val.mz)
-            const mass = centerOfGravity.reduce((sum, val) => sum + val, 0)
-            
-            boxes.push({
-              x: mass,
-              y: (ypos_low + ypos_high) / 2,
-              width: xpos_scaling,
-              height: ypos_high - ypos_low,
-              type: 'charge',
-              index: chargeIndex++,
-              visible: true // Will be updated by overlap detection below
-            })
-          })
-        } else {
-          // For mass spectrum (mass labels)
-          const scaling = highlighted.length === 1 ? 2 : 1
-          for (let i = 0; i < highlighted.length; i++) {
-            const highlightedData = highlighted[i]
-            const mass = highlightedData.mass
-            
-            if (!isFinite(mass)) continue
-
-            boxes.push({
-              x: mass,
-              y: (ypos_low + ypos_high) / 2,
-              width: scaling * xpos_scaling * 2, // *2 because shape uses ±scaling*xpos_scaling
-              height: ypos_high - ypos_low,
-              type: 'mass',
-              index: i,
-              visible: true // Will be updated by overlap detection below
-            })
-          }
-        }
-
-        // Overlap detection using data coordinates (more efficient)
-        if (boxes.length > 1) {
-          // Check if ANY two annotation boxes overlap in data space
-          let hasOverlap = false
-          for (let i = 0; i < boxes.length && !hasOverlap; i++) {
-            for (let j = i + 1; j < boxes.length; j++) {
-              if (this.dataBoxesOverlap(boxes[i], boxes[j])) {
-                hasOverlap = true
-                break
-              }
-            }
-          }
-
-          // If any overlap is detected, hide all annotations
-          if (hasOverlap) {
-            boxes.forEach(box => { box.visible = false })
-          }
-        }
-
-        return boxes
+        return this.computeAnnotationBoxes(this.xRange, this.yRange)
       } catch (error) {
         this.handleError(error as Error, 'annotationBoxData-computation')
         return []
@@ -711,6 +608,14 @@ export default defineComponent({
         }
 
         const highlighted = this.highlightedValues
+        
+        // Skip iterative adjustment if no highlighted values
+        if (highlighted.length === 0) {
+          const minX = Math.min(...xValues)
+          const maxX = Math.max(...xValues)
+          return [minX * 0.98, maxX * 1.02]
+        }
+
         let values : number[] = [0, 1]
         if (this.xAxisLabel === 'm/z') {
           values = highlighted.flatMap(a => Array.isArray(a.mzs) ? a.mzs : []).filter((m: number) => Number.isFinite(m))
@@ -718,19 +623,26 @@ export default defineComponent({
         else {
           values = highlighted.map(a => a.mass).filter(m => !isNaN(m))
         }
+        
+        if (values.length === 0) return [0, 1]
+        
         let xmin_full = Math.min(...values) * 0.98
         let xmax_full = Math.max(...values) * 1.02
-        if (
-          (xmax_full - xmin_full) < this.maxAnnotationRange
-          || this.xAxisLabel === 'm/z'
-        ) {
+
+        // For m/z spectrum return full range
+        if (this.xAxisLabel === 'm/z') {
           return [xmin_full, xmax_full]
         }
-        
-        // Center of all highlighted masses
+
+        // Calculate initial centered range
         let xcenter = values.reduce((sum, mass) => sum + mass, 0) / values.length
         let offset = 0.5 * 0.9 * this.maxAnnotationRange
-        return [xcenter - offset, xcenter + offset]
+        let initialRange = [xcenter - offset, xcenter + offset]
+        
+        // Use iterative zoom adjustment to ensure annotations are visible
+        let optimizedRange = this.calculateOptimalXRange(initialRange)
+        
+        return optimizedRange
       } catch (error) {
         this.handleError(error as Error, 'xRange-computation')
         return [0, 1]
@@ -1198,6 +1110,178 @@ export default defineComponent({
   
   methods: {
 
+    // Helper method to compute annotation boxes for any given xRange and yRange
+    computeAnnotationBoxes(xRange: number[], yRange: number[]): Array<{
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      type: 'mass' | 'charge';
+      index: number;
+      visible: boolean;
+    }> {
+      try {
+        const highlighted = this.highlightedValues
+        if (highlighted.length === 0) return []
+
+        if (yRange.length < 2 || yRange[1] <= 0 || xRange.length < 2) {
+          return []
+        }
+
+        const ymax = yRange[1] / 1.8
+        const ypos_low = ymax * 1.18
+        const ypos_high = ymax * 1.32
+        const xpos_scaling = (xRange[1] - xRange[0]) / this.xPosScalingFactor
+
+        const boxes: Array<{
+          x: number;
+          y: number;
+          width: number;
+          height: number;
+          type: 'mass' | 'charge';
+          index: number;
+          visible: boolean;
+        }> = []
+
+        // For m/z spectrum (charge states)
+        if (this.xAxisLabel === 'm/z') {
+          if (this.selectionStore.selectedMassIndex === undefined ||
+              this.selectionStore.selectedMassIndex >= this.MassValues.length) {
+            return boxes
+          }
+
+          const selectedData = highlighted[0]
+          const { mzs, charges, intensity: intensities } = selectedData
+          
+          if (!mzs || mzs.length === 0) return boxes
+          
+          const grouped = new Map<number, Array<{mz: number; intensity: number}>>()
+
+          // Group by charge state
+          for (let i = 0; i < mzs.length; i++) {
+            const mz = mzs[i]
+            const charge = charges[i]
+            const intensity = intensities[i]
+            const mzIntensity = { mz, intensity }
+
+            if (grouped.has(charge)) {
+              grouped.get(charge)!.push(mzIntensity)
+            } else {
+              grouped.set(charge, [mzIntensity])
+            }
+          }
+
+          // Create charge state boxes
+          let chargeIndex = 0
+          grouped.forEach((mzIntensity, charge) => {
+            const summedIntensity = mzIntensity.reduce((sum, val) => sum + val.intensity, 0)
+            const centerOfGravity = mzIntensity.map(val => (val.intensity / summedIntensity) * val.mz)
+            const mass = centerOfGravity.reduce((sum, val) => sum + val, 0)
+            
+            boxes.push({
+              x: mass,
+              y: (ypos_low + ypos_high) / 2,
+              width: xpos_scaling,
+              height: ypos_high - ypos_low,
+              type: 'charge',
+              index: chargeIndex++,
+              visible: true // Will be updated by overlap detection below
+            })
+          })
+        } else {
+          // For mass spectrum (mass labels)
+          const scaling = highlighted.length === 1 ? 2 : 1
+          for (let i = 0; i < highlighted.length; i++) {
+            const highlightedData = highlighted[i]
+            const mass = highlightedData.mass
+            
+            if (!isFinite(mass)) continue
+
+            boxes.push({
+              x: mass,
+              y: (ypos_low + ypos_high) / 2,
+              width: scaling * xpos_scaling * 2, // *2 because shape uses ±scaling*xpos_scaling
+              height: ypos_high - ypos_low,
+              type: 'mass',
+              index: i,
+              visible: true // Will be updated by overlap detection below
+            })
+          }
+        }
+
+        // Overlap detection using data coordinates
+        if (boxes.length > 1) {
+          // Check if ANY two annotation boxes overlap in data space
+          let hasOverlap = false
+          for (let i = 0; i < boxes.length && !hasOverlap; i++) {
+            for (let j = i + 1; j < boxes.length; j++) {
+              if (this.testBoxesOverlapForRange(boxes[i], boxes[j], xRange)) {
+                hasOverlap = true
+                break
+              }
+            }
+          }
+
+          // If any overlap is detected, hide all annotations
+          if (hasOverlap) {
+            boxes.forEach(box => { box.visible = false })
+          }
+        }
+
+        return boxes
+      } catch (error) {
+        this.handleError(error as Error, 'computeAnnotationBoxes')
+        return []
+      }
+    },
+
+    // Helper method to check if annotations would be visible for a given test range
+    wouldAnnotationsBeVisible(testXRange: number[]): boolean {
+      try {
+        // Use the shared annotation box computation with test range
+        const testYRange = this.computeYRange(testXRange)
+        const boxes = this.computeAnnotationBoxes(testXRange, testYRange)
+        
+        // Return true if any boxes would be visible
+        return boxes.some((box: { visible: boolean }) => box.visible)
+      } catch (error) {
+        this.handleError(error as Error, 'wouldAnnotationsBeVisible')
+        return true
+      }
+    },
+
+    // Calculate progressively narrower zoom ranges using actual annotationBoxData logic
+    calculateOptimalXRange(initialRange: number[]): number[] {
+      try {
+        const maxIterations = 10
+        const narrowingFactor = 0.8
+        let currentRange = [...initialRange]
+        
+        for (let iteration = 0; iteration < maxIterations; iteration++) {
+          if (this.wouldAnnotationsBeVisible(currentRange)) {
+            return currentRange
+          }
+          
+          // Narrow the range around the center
+          const center = (currentRange[0] + currentRange[1]) / 2
+          const halfWidth = (currentRange[1] - currentRange[0]) / 2
+          const newHalfWidth = halfWidth * narrowingFactor
+          
+          currentRange = [center - newHalfWidth, center + newHalfWidth]
+          
+          // Prevent range from becoming too narrow
+          if (currentRange[1] - currentRange[0] < 0.1) {
+            break
+          }
+        }
+        
+        return currentRange
+      } catch (error) {
+        this.handleError(error as Error, 'calculateOptimalXRange')
+        return initialRange
+      }
+    },
+
     // Utility methods for coordinate conversion and overlap detection
     dataToScreenX(dataX: number): number {
       try {
@@ -1258,21 +1342,16 @@ export default defineComponent({
       }
     },
 
-    // Optimized overlap detection using data coordinates (eliminates screen coordinate conversion)
-    dataBoxesOverlap(box1: { x: number; y: number; width: number; height: number },
-                     box2: { x: number; y: number; width: number; height: number }): boolean {
+    // Helper method for overlap detection with custom x-range (used by both current and test ranges)
+    testBoxesOverlapForRange(box1: { x: number; y: number; width: number; height: number },
+                            box2: { x: number; y: number; width: number; height: number },
+                            xRange: number[]): boolean {
       try {
-        // Calculate minimum separation needed in data coordinates
-        const positioning = this.getAnnotationPositioning
-        if (!positioning) return false
+        if (xRange.length !== 2 || xRange[1] <= xRange[0]) return false
 
-        const { xRange } = positioning
+        const xPadding = (xRange[1] - xRange[0]) * 0.01
+        const yPadding = box1.height * 0.1
         
-        // Calculate relative padding based on data range (more accurate than fixed screen padding)
-        const xPadding = (xRange[1] - xRange[0]) * 0.01 // 1% of x-range as padding
-        const yPadding = box1.height * 0.1 // 10% of box height as padding
-        
-        // Calculate box boundaries (center coordinates to corner coordinates)
         const box1Left = box1.x - box1.width / 2 - xPadding
         const box1Right = box1.x + box1.width / 2 + xPadding
         const box1Top = box1.y - box1.height / 2 - yPadding
@@ -1283,9 +1362,20 @@ export default defineComponent({
         const box2Top = box2.y - box2.height / 2 - yPadding
         const box2Bottom = box2.y + box2.height / 2 + yPadding
         
-        // Check for overlap (if boxes don't overlap, they are separated on at least one axis)
         return !(box1Right < box2Left || box2Right < box1Left ||
                  box1Bottom < box2Top || box2Bottom < box1Top)
+      } catch (error) {
+        this.handleError(error as Error, 'testBoxesOverlapForRange')
+        return false
+      }
+    },
+
+    // Optimized overlap detection using data coordinates (eliminates screen coordinate conversion)
+    dataBoxesOverlap(box1: { x: number; y: number; width: number; height: number },
+                     box2: { x: number; y: number; width: number; height: number }): boolean {
+      try {
+        // Use the helper with current xRange
+        return this.testBoxesOverlapForRange(box1, box2, this.xRange)
       } catch (error) {
         this.handleError(error as Error, 'dataBoxesOverlap')
         return false
