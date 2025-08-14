@@ -28,7 +28,9 @@ export const useSelectionStore = defineStore('selection', {
     counter: undefined as number | undefined,
     id: undefined as number | undefined,
     heatmap_deconv: undefined as HeatmapData | undefined,
+    heatmap_deconv2: undefined as HeatmapData | undefined,
     heatmap_raw: undefined as HeatmapData | undefined,
+    heatmap_raw2: undefined as HeatmapData | undefined,
   }),
   getters: {
     selectedScanIndex: (state): number | undefined => state.scanIndex,
@@ -37,8 +39,10 @@ export const useSelectionStore = defineStore('selection', {
     selectedTagIndex: (state): number | undefined => state.tagIndex,
     selectedAApos: (state): number | undefined => state.AApos,
     selectedTag: (state): TagData | undefined => state.tagData,
+    selectedDeconvMS2Heatmap: (state): HeatmapData | undefined => state.heatmap_deconv2,
     selectedDeconvHeatmap: (state): HeatmapData | undefined => state.heatmap_deconv,
     selectedRawHeatmap: (state): HeatmapData | undefined => state.heatmap_raw,
+    selectedRawMS2Heatmap: (state): HeatmapData | undefined => state.heatmap_raw2,
     selectedObservedMassFromFragmentTable: (state): number | undefined =>
       state.selectedObservedMass,
   },
@@ -67,8 +71,14 @@ export const useSelectionStore = defineStore('selection', {
     updateRawHeatmapSelection(selection: HeatmapData) {
       this.heatmap_raw = selection
     },
+    updateRawMS2HeatmapSelection(selection: HeatmapData) {
+      this.heatmap_raw2 = selection
+    },
     updateDeconvHeatmapSelection(selection: HeatmapData) {
       this.heatmap_deconv = selection
+    },
+    updateDeconvMS2HeatmapSelection(selection: HeatmapData) {
+      this.heatmap_deconv2 = selection
     },
   },
 })

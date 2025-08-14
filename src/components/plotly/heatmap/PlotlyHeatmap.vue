@@ -47,7 +47,11 @@ export default defineComponent({
       switch (this.args.title) {
         case 'Raw MS1 Heatmap':
           return this.streamlitDataStore.allDataForDrawing.raw_heatmap_df
+        case 'Raw MS2 Heatmap':
+          return this.streamlitDataStore.allDataForDrawing.raw_heatmap_df
         case 'Deconvolved MS1 Heatmap':
+          return this.streamlitDataStore.allDataForDrawing.deconv_heatmap_df
+        case 'Deconvolved MS2 Heatmap':
           return this.streamlitDataStore.allDataForDrawing.deconv_heatmap_df
         default:
           return []
@@ -57,7 +61,11 @@ export default defineComponent({
       switch (this.args.title) {
         case 'Raw MS1 Heatmap':
           return 'm/z'
+        case 'Raw MS2 Heatmap':
+          return 'm/z'
         case 'Deconvolved MS1 Heatmap':
+          return 'Monoisotopic Mass'
+        case 'Deconvolved MS2 Heatmap':
           return 'Monoisotopic Mass'
         default:
           return ''
@@ -73,8 +81,12 @@ export default defineComponent({
       switch (this.args.title) {
         case 'Raw MS1 Heatmap':
           return this.selectionStore.selectedRawHeatmap
+        case 'Raw MS2 Heatmap':
+          return this.selectionStore.selectedRawMS2Heatmap
         case 'Deconvolved MS1 Heatmap':
           return this.selectionStore.selectedDeconvHeatmap
+        case 'Deconvolved MS2 Heatmap':
+          return this.selectionStore.selectedDeconvMS2Heatmap
         default:
             return undefined
       }
@@ -172,8 +184,14 @@ export default defineComponent({
         case 'Raw MS1 Heatmap':
           this.selectionStore.updateRawHeatmapSelection(this.zoomRange)
           break
+        case 'Raw MS2 Heatmap':
+          this.selectionStore.updateRawMS2HeatmapSelection(this.zoomRange)
+          break
         case 'Deconvolved MS1 Heatmap':
           this.selectionStore.updateDeconvHeatmapSelection(this.zoomRange)
+          break
+        case 'Deconvolved MS2 Heatmap':
+          this.selectionStore.updateDeconvMS2HeatmapSelection(this.zoomRange)
           break
       }
     },
@@ -236,6 +254,12 @@ export default defineComponent({
           
           if (
               (this.args.title === 'Deconvolved MS1 Heatmap')
+              && (mass_idx !== undefined)
+          ) {
+            this.selectionStore.updateSelectedMass(mass_idx)
+          }
+          else if (
+              (this.args.title === 'Deconvolved MS2 Heatmap')
               && (mass_idx !== undefined)
           ) {
             this.selectionStore.updateSelectedMass(mass_idx)

@@ -2,18 +2,19 @@
   <div style="padding: 8px; width: 98%">
     <div class="d-flex">
       <div style="width: 100%; display: grid; grid-template-columns: 1fr 1fr 1fr">
-        <div class="d-flex justify-end" style="grid-column: 1 / span 1">
+        <div class="d-flex justify-start" style="grid-column: 1 / span 1">
+          <v-btn
+            variant="text"
+            size="small"
+            icon="mdi-download"
+            @click="downloadTable"
+          />
           <slot name="start-title-row"></slot>
         </div>
         <div class="d-flex justify-center" style="grid-column: 2 / span 1">
-          <h4 :id="`${id}-title`">
+          <h4>
             <slot>{{ title ?? '' }}</slot>
           </h4>
-          <v-menu :activator="`#${id}-title`" location="bottom">
-            <v-card min-width="100">
-              <v-btn prepend-icon="mdi-download" @click="downloadTable">Download</v-btn>
-            </v-card>
-          </v-menu>
         </div>
         <div class="d-flex justify-end" style="grid-column: 3 / span 1">
           <slot name="end-title-row"></slot>
