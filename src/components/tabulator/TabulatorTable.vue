@@ -6,6 +6,12 @@
           <v-btn
             variant="text"
             size="small"
+            icon="mdi-filter"
+            @click="openFilterDialog"
+          />
+          <v-btn
+            variant="text"
+            size="small"
             icon="mdi-download"
             @click="downloadTable"
           />
@@ -22,6 +28,36 @@
       </div>
     </div>
     <div :id="id" :class="tableClasses" @click="onTableClick"></div>
+    
+    <!-- Filter Dialog - Optimized for component constraints -->
+    <v-dialog
+      v-model="filterDialog"
+      max-width="90%"
+      :theme="streamlitDataStore.theme?.base ?? 'light'"
+      class="filter-dialog-constrained"
+    >
+      <v-card>
+        <v-card-title class="d-flex justify-space-between align-center">
+          <span>Filter Options</span>
+          <v-btn icon size="small" @click="filterDialog = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+        <v-divider></v-divider>
+        <v-card-text>
+          <!-- Plain white surface as specified -->
+          <div style="height: 300px; background-color: white; border-radius: 4px; border: 1px solid #e0e0e0;">
+            <div style="padding: 16px; text-align: center; color: #666;">
+              Filter functionality will be implemented here
+            </div>
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="primary" @click="filterDialog = false">Close</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -84,6 +120,7 @@ export default defineComponent({
     return {
       tabulator: undefined as Tabulator | undefined,
       initialized: 0 as number,
+      filterDialog: false,
     }
   },
   computed: {
@@ -213,6 +250,9 @@ export default defineComponent({
     downloadTable() {
       if (this.tabulator !== undefined) this.tabulator.download('csv', `${this.title}.csv`)
     },
+    openFilterDialog() {
+      this.filterDialog = true
+    },
   },
 })
 </script>
@@ -231,5 +271,20 @@ export default defineComponent({
 .tabulator-col-title,
 .tabulator-cell {
   font-size: 14px;
+}
+
+// Optimized dialog for component constraints
+.filter-dialog-constrained {
+  .v-card {
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .v-card-text {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+  }
 }
 </style>
