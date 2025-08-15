@@ -88,6 +88,93 @@
               </div>
             </div>
           </div>
+
+          <!-- Dynamic Filter Components -->
+          <div v-if="selectedColumns.length > 0" style="margin-top: 24px;">
+            <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+              <h6 style="color: #333; margin: 0;">Filter Settings:</h6>
+              <div>
+                <v-btn
+                  size="small"
+                  variant="outlined"
+                  @click="applyFilters"
+                  style="margin-right: 8px;"
+                  color="primary"
+                >
+                  Apply Filters
+                </v-btn>
+                <v-btn
+                  size="small"
+                  variant="outlined"
+                  @click="clearFilters"
+                  color="error"
+                >
+                  Clear Filters
+                </v-btn>
+              </div>
+            </div>
+            
+            <div class="filter-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; background-color: #f9f9f9; border-radius: 4px; padding: 16px;">
+              <div
+                v-for="columnField in selectedColumns"
+                :key="columnField"
+                class="filter-item"
+                style="display: flex; flex-direction: column; gap: 8px;"
+              >
+                <label style="font-weight: 500; font-size: 14px; color: #555;">
+                  {{ getColumnTitle(columnField) }}
+                  <span style="font-size: 12px; color: #888; font-weight: normal;">
+                    ({{ getFilterType(columnField) }})
+                  </span>
+                </label>
+                
+                <!-- Categorical Filter -->
+                <v-select
+                  v-if="getFilterType(columnField) === 'categorical' && filterValues[columnField]"
+                  v-model="filterValues[columnField].categorical"
+                  :items="getUniqueValues(columnField)"
+                  multiple
+                  chips
+                  label="Select values"
+                  clearable
+                  density="compact"
+                  variant="outlined"
+                  @update:model-value="applyFilters"
+                />
+
+                <!-- Numeric Range Filter -->
+                <div v-else-if="getFilterType(columnField) === 'numeric' && filterValues[columnField]" style="padding: 8px 0;">
+                  <v-range-slider
+                    :model-value="[
+                      filterValues[columnField]?.numeric?.min || getMinValue(columnField),
+                      filterValues[columnField]?.numeric?.max || getMaxValue(columnField)
+                    ]"
+                    :min="getMinValue(columnField)"
+                    :max="getMaxValue(columnField)"
+                    step="any"
+                    thumb-label="always"
+                    density="compact"
+                    @update:model-value="(value: number[]) => updateNumericFilter(columnField, value)"
+                  />
+                  <div style="display: flex; justify-content: space-between; font-size: 12px; color: #666; margin-top: 4px;">
+                    <span>{{ getMinValue(columnField) }}</span>
+                    <span>{{ getMaxValue(columnField) }}</span>
+                  </div>
+                </div>
+
+                <!-- Text/Regex Filter -->
+                <v-text-field
+                  v-else-if="filterValues[columnField]"
+                  v-model="filterValues[columnField].text"
+                  label="Search pattern (regex supported)"
+                  clearable
+                  density="compact"
+                  variant="outlined"
+                  @update:model-value="applyFilters"
+                />
+              </div>
+            </div>
+          </div>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -159,6 +246,18 @@ export default defineComponent({
       initialized: 0 as number,
       filterDialog: false,
       selectedColumns: [] as string[],
+      filterValues: {} as Record<string, {
+        categorical?: string[],
+        numeric?: { min: number, max: number },
+        text?: string
+      }>,
+      filterTypes: {} as Record<string, 'categorical' | 'numeric' | 'text'>,
+      columnAnalysis: {} as Record<string, {
+        uniqueValues: any[],
+        minValue?: number,
+        maxValue?: number,
+        dataType: 'categorical' | 'numeric' | 'text'
+      }>,
     }
   },
   computed: {
@@ -224,6 +323,15 @@ export default defineComponent({
       if (newVal !== undefined) {
         this.onSelectedRowListener(newVal)
       }
+    },
+    selectedColumns: {
+      handler(newColumns: string[]) {
+        // Initialize filter values for newly selected columns
+        newColumns.forEach(columnField => {
+          this.initializeFilterValue(columnField);
+        });
+      },
+      immediate: true
     },
   },
   mounted() {
@@ -303,6 +411,10 @@ export default defineComponent({
         this.selectedColumns.splice(index, 1);
       } else {
         this.selectedColumns.push(columnField);
+        // Immediately initialize filter value for new column
+        this.$nextTick(() => {
+          this.initializeFilterValue(columnField);
+        });
       }
     },
     selectAllColumns() {
@@ -310,6 +422,164 @@ export default defineComponent({
     },
     clearColumnSelection() {
       this.selectedColumns = [];
+    },
+    // Data analysis utilities
+    analyzeColumn(columnField: string) {
+      if (this.columnAnalysis[columnField]) {
+        return this.columnAnalysis[columnField];
+      }
+
+      const column = this.columnDefinitions.find(col => col.field === columnField);
+      const values = this.preparedTableData
+        .map(row => row[columnField])
+        .filter(v => v != null && v !== '');
+      
+      const uniqueValues = [...new Set(values)];
+      const sorter = column?.sorter;
+      
+      let dataType: 'categorical' | 'numeric' | 'text';
+      let minValue: number | undefined;
+      let maxValue: number | undefined;
+
+      // Type detection logic
+      if (sorter === 'number') {
+        const numericValues = values.filter(v => typeof v === 'number' || !isNaN(Number(v)));
+        if (numericValues.length > 0) {
+          const numbers = numericValues.map(v => Number(v));
+          minValue = Math.min(...numbers);
+          maxValue = Math.max(...numbers);
+          
+          // If less than 20 unique values, treat as categorical
+          dataType = uniqueValues.length <= 20 ? 'categorical' : 'numeric';
+        } else {
+          dataType = 'text';
+        }
+      } else {
+        // For string columns or no sorter, check if it looks categorical
+        dataType = uniqueValues.length <= 50 ? 'categorical' : 'text';
+      }
+
+      const analysis = {
+        uniqueValues: uniqueValues.slice(0, 100), // Limit for performance
+        minValue,
+        maxValue,
+        dataType
+      };
+
+      this.columnAnalysis[columnField] = analysis;
+      this.filterTypes[columnField] = dataType;
+      
+      return analysis;
+    },
+    getFilterType(columnField: string): 'categorical' | 'numeric' | 'text' {
+      if (!this.filterTypes[columnField]) {
+        this.analyzeColumn(columnField);
+      }
+      return this.filterTypes[columnField];
+    },
+    getUniqueValues(columnField: string): string[] {
+      const analysis = this.analyzeColumn(columnField);
+      return analysis.uniqueValues.map(v => String(v)).sort();
+    },
+    getMinValue(columnField: string): number {
+      const analysis = this.analyzeColumn(columnField);
+      return analysis.minValue ?? 0;
+    },
+    getMaxValue(columnField: string): number {
+      const analysis = this.analyzeColumn(columnField);
+      return analysis.maxValue ?? 100;
+    },
+    getColumnTitle(columnField: string): string {
+      const column = this.columnDefinitions.find(col => col.field === columnField);
+      return column?.title || columnField;
+    },
+    // Filter management
+    initializeFilterValue(columnField: string) {
+      if (!this.filterValues[columnField]) {
+        const filterType = this.getFilterType(columnField);
+        const newFilterValue = {} as any;
+        
+        switch (filterType) {
+          case 'categorical':
+            newFilterValue.categorical = [];
+            break;
+          case 'numeric':
+            newFilterValue.numeric = { min: this.getMinValue(columnField), max: this.getMaxValue(columnField) };
+            break;
+          case 'text':
+            newFilterValue.text = '';
+            break;
+        }
+        
+        // Direct assignment works in Vue 3
+        this.filterValues[columnField] = newFilterValue;
+      }
+    },
+    applyFilters() {
+      if (!this.tabulator) return;
+
+      // Clear any existing debounce
+      if (this.debouncedTimeout) {
+        clearTimeout(this.debouncedTimeout);
+      }
+
+      // Debounce for better performance
+      this.debouncedTimeout = setTimeout(() => {
+        if (!this.tabulator) return;
+
+        this.tabulator.clearFilter(true);
+        
+        this.selectedColumns.forEach(columnField => {
+          const filterValue = this.filterValues[columnField];
+          const filterType = this.filterTypes[columnField];
+          
+          if (!filterValue) return;
+
+          switch (filterType) {
+            case 'categorical':
+              if (filterValue.categorical?.length) {
+                // Convert string values back to original data type for numeric columns
+                const column = this.columnDefinitions.find(col => col.field === columnField);
+                const isNumericColumn = column?.sorter === 'number';
+                
+                const filterValues = isNumericColumn
+                  ? filterValue.categorical.map(v => {
+                      const num = Number(v);
+                      return isNaN(num) ? v : num;
+                    })
+                  : filterValue.categorical;
+                
+                this.tabulator?.addFilter(columnField, 'in', filterValues);
+              }
+              break;
+            case 'numeric':
+              if (filterValue.numeric) {
+                this.tabulator?.addFilter(columnField, '>=', filterValue.numeric.min);
+                this.tabulator?.addFilter(columnField, '<=', filterValue.numeric.max);
+              }
+              break;
+            case 'text':
+              if (filterValue.text) {
+                this.tabulator?.addFilter(columnField, 'regex', filterValue.text);
+              }
+              break;
+          }
+        });
+      }, 300);
+    },
+    updateNumericFilter(columnField: string, value: number[]) {
+      if (!this.filterValues[columnField]) {
+        this.filterValues[columnField] = {};
+      }
+      this.filterValues[columnField].numeric = { min: value[0], max: value[1] };
+      this.applyFilters();
+    },
+    clearFilters() {
+      this.tabulator?.clearFilter(true);
+      this.filterValues = {};
+      this.selectedColumns.forEach(columnField => {
+        this.initializeFilterValue(columnField);
+      });
     },
   },
 })
