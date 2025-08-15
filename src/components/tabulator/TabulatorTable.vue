@@ -144,21 +144,34 @@
 
                 <!-- Numeric Range Filter -->
                 <div v-else-if="getFilterType(columnField) === 'numeric' && filterValues[columnField]" style="padding: 8px 0;">
-                  <v-range-slider
-                    :model-value="[
-                      filterValues[columnField]?.numeric?.min || getMinValue(columnField),
-                      filterValues[columnField]?.numeric?.max || getMaxValue(columnField)
-                    ]"
-                    :min="getMinValue(columnField)"
-                    :max="getMaxValue(columnField)"
-                    step="any"
-                    thumb-label="always"
-                    density="compact"
-                    @update:model-value="(value: number[]) => updateNumericFilter(columnField, value)"
-                  />
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <v-text-field
+                      :model-value="filterValues[columnField]?.numeric?.min || getMinValue(columnField)"
+                      type="number"
+                      label="Min"
+                      :placeholder="`Min: ${getMinValue(columnField)}`"
+                      density="compact"
+                      variant="outlined"
+                      :min="getMinValue(columnField)"
+                      :max="getMaxValue(columnField)"
+                      @update:model-value="(value: string) => updateNumericFilterMin(columnField, value)"
+                      @blur="validateAndApplyNumericFilter(columnField)"
+                    />
+                    <v-text-field
+                      :model-value="filterValues[columnField]?.numeric?.max || getMaxValue(columnField)"
+                      type="number"
+                      label="Max"
+                      :placeholder="`Max: ${getMaxValue(columnField)}`"
+                      density="compact"
+                      variant="outlined"
+                      :min="getMinValue(columnField)"
+                      :max="getMaxValue(columnField)"
+                      @update:model-value="(value: string) => updateNumericFilterMax(columnField, value)"
+                      @blur="validateAndApplyNumericFilter(columnField)"
+                    />
+                  </div>
                   <div style="display: flex; justify-content: space-between; font-size: 12px; color: #666; margin-top: 4px;">
-                    <span>{{ getMinValue(columnField) }}</span>
-                    <span>{{ getMaxValue(columnField) }}</span>
+                    <span>Data range: {{ getMinValue(columnField) }} - {{ getMaxValue(columnField) }}</span>
                   </div>
                 </div>
 
@@ -258,6 +271,7 @@ export default defineComponent({
         maxValue?: number,
         dataType: 'categorical' | 'numeric' | 'text'
       }>,
+      debouncedTimeout: undefined as NodeJS.Timeout | undefined,
     }
   },
   computed: {
@@ -572,6 +586,62 @@ export default defineComponent({
         this.filterValues[columnField] = {};
       }
       this.filterValues[columnField].numeric = { min: value[0], max: value[1] };
+      this.applyFilters();
+    },
+    updateNumericFilterMin(columnField: string, value: string) {
+      if (!this.filterValues[columnField]) {
+        this.filterValues[columnField] = {};
+      }
+      if (!this.filterValues[columnField].numeric) {
+        this.filterValues[columnField].numeric = {
+          min: this.getMinValue(columnField),
+          max: this.getMaxValue(columnField)
+        };
+      }
+      const numValue = value === '' ? this.getMinValue(columnField) : Number(value);
+      if (!isNaN(numValue)) {
+        this.filterValues[columnField].numeric!.min = numValue;
+      }
+    },
+    updateNumericFilterMax(columnField: string, value: string) {
+      if (!this.filterValues[columnField]) {
+        this.filterValues[columnField] = {};
+      }
+      if (!this.filterValues[columnField].numeric) {
+        this.filterValues[columnField].numeric = {
+          min: this.getMinValue(columnField),
+          max: this.getMaxValue(columnField)
+        };
+      }
+      const numValue = value === '' ? this.getMaxValue(columnField) : Number(value);
+      if (!isNaN(numValue)) {
+        this.filterValues[columnField].numeric!.max = numValue;
+      }
+    },
+    validateAndApplyNumericFilter(columnField: string) {
+      const filterValue = this.filterValues[columnField]?.numeric;
+      if (!filterValue) return;
+
+      const dataMin = this.getMinValue(columnField);
+      const dataMax = this.getMaxValue(columnField);
+
+      // Ensure min is not greater than max
+      if (filterValue.min > filterValue.max) {
+        const temp = filterValue.min;
+        filterValue.min = filterValue.max;
+        filterValue.max = temp;
+      }
+
+      // Clamp values to data bounds
+      filterValue.min = Math.max(filterValue.min, dataMin);
+      filterValue.max = Math.min(filterValue.max, dataMax);
+
+      // Ensure min is not greater than max after clamping
+      if (filterValue.min > filterValue.max) {
+        filterValue.min = dataMin;
+        filterValue.max = dataMax;
+      }
+
       this.applyFilters();
     },
     clearFilters() {
