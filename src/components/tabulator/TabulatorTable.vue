@@ -45,10 +45,47 @@
         </v-card-title>
         <v-divider></v-divider>
         <v-card-text>
-          <!-- Plain white surface as specified -->
-          <div style="height: 300px; background-color: white; border-radius: 4px; border: 1px solid #e0e0e0;">
-            <div style="padding: 16px; text-align: center; color: #666;">
-              Filter functionality will be implemented here
+          <!-- Column Pills Toolbar -->
+          <div style="background-color: white; border-radius: 4px; border: 1px solid #e0e0e0; padding: 16px;">
+            <div style="margin-bottom: 12px;">
+              <h6 style="color: #333; margin: 0;">Select Columns:</h6>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              <v-chip
+                v-for="column in columnNames"
+                :key="column.field"
+                :color="selectedColumns.includes(column.field) ? 'primary' : 'default'"
+                :variant="selectedColumns.includes(column.field) ? 'flat' : 'outlined'"
+                size="small"
+                clickable
+                @click="toggleColumnSelection(column.field)"
+              >
+                {{ column.title }}
+              </v-chip>
+            </div>
+            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e0e0e0;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #666; font-size: 14px;">
+                  {{ selectedColumns.length }} of {{ columnNames.length }} columns selected
+                </span>
+                <div>
+                  <v-btn
+                    size="small"
+                    variant="outlined"
+                    @click="selectAllColumns"
+                    style="margin-right: 8px;"
+                  >
+                    Select All
+                  </v-btn>
+                  <v-btn
+                    size="small"
+                    variant="outlined"
+                    @click="clearColumnSelection"
+                  >
+                    Clear All
+                  </v-btn>
+                </div>
+              </div>
             </div>
           </div>
         </v-card-text>
@@ -121,6 +158,7 @@ export default defineComponent({
       tabulator: undefined as Tabulator | undefined,
       initialized: 0 as number,
       filterDialog: false,
+      selectedColumns: [] as string[],
     }
   },
   computed: {
@@ -142,6 +180,12 @@ export default defineComponent({
         'table-bordered': true,
         'table-sm': true,
       }
+    },
+    columnNames(): { field: string; title: string }[] {
+      return this.columnDefinitions.map(col => ({
+        field: col.field || '',
+        title: col.title || col.field || ''
+      })).filter(col => col.field !== '');
     },
     preparedTableData(): Record<string, unknown>[] {
 
@@ -252,6 +296,20 @@ export default defineComponent({
     },
     openFilterDialog() {
       this.filterDialog = true
+    },
+    toggleColumnSelection(columnField: string) {
+      const index = this.selectedColumns.indexOf(columnField);
+      if (index > -1) {
+        this.selectedColumns.splice(index, 1);
+      } else {
+        this.selectedColumns.push(columnField);
+      }
+    },
+    selectAllColumns() {
+      this.selectedColumns = [...this.columnNames.map(col => col.field)];
+    },
+    clearColumnSelection() {
+      this.selectedColumns = [];
     },
   },
 })
