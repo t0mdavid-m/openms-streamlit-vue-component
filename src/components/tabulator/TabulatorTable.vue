@@ -97,6 +97,20 @@ export default defineComponent({
         numeric?: { min: number, max: number },
         text?: string
       }>,
+      persistentFilterState: {} as Record<string, {
+        filterValue: {
+          categorical?: string[],
+          numeric?: { min: number, max: number },
+          text?: string
+        },
+        filterType: 'categorical' | 'numeric' | 'text',
+        columnAnalysis: {
+          uniqueValues: any[],
+          minValue?: number,
+          maxValue?: number,
+          dataType: 'categorical' | 'numeric' | 'text'
+        }
+      }>,
       filterTypes: {} as Record<string, 'categorical' | 'numeric' | 'text'>,
       columnAnalysis: {} as Record<string, {
         uniqueValues: any[],
@@ -283,8 +297,22 @@ export default defineComponent({
       this.selectedColumns = [...this.columnNames.map(col => col.field)];
     },
     clearColumnSelection() {
+      // Preserve filter state for all currently selected columns before clearing
+      this.selectedColumns.forEach(columnField => {
+        if (this.filterValues[columnField] || this.filterTypes[columnField] || this.columnAnalysis[columnField]) {
+          this.persistentFilterState[columnField] = {
+            filterValue: this.filterValues[columnField] ? { ...this.filterValues[columnField] } : {},
+            filterType: this.filterTypes[columnField] || 'text',
+            columnAnalysis: this.columnAnalysis[columnField] ? { ...this.columnAnalysis[columnField] } : {
+              uniqueValues: [],
+              dataType: 'text' as const
+            }
+          };
+        }
+      });
+      
       this.selectedColumns = [];
-      // Clear all filter state when clearing column selection
+      // Clear all active filter state when clearing column selection
       this.filterValues = {};
       this.filterTypes = {};
       this.columnAnalysis = {};
@@ -364,23 +392,55 @@ export default defineComponent({
     // Filter management
     initializeFilterValue(columnField: string) {
       if (!this.filterValues[columnField]) {
-        const filterType = this.getFilterType(columnField);
-        const newFilterValue = {} as any;
+        let hasRestoredFilters = false;
         
-        switch (filterType) {
-          case 'categorical':
-            newFilterValue.categorical = [];
-            break;
-          case 'numeric':
-            newFilterValue.numeric = { min: this.getMinValue(columnField), max: this.getMaxValue(columnField) };
-            break;
-          case 'text':
-            newFilterValue.text = '';
-            break;
+        // Check if we have persistent filter state for this column
+        if (this.persistentFilterState[columnField]) {
+          // Restore from persistent state
+          const persistentState = this.persistentFilterState[columnField];
+          this.filterValues[columnField] = { ...persistentState.filterValue };
+          this.filterTypes[columnField] = persistentState.filterType;
+          this.columnAnalysis[columnField] = { ...persistentState.columnAnalysis };
+          hasRestoredFilters = true;
+        } else {
+          // Create new filter value
+          const filterType = this.getFilterType(columnField);
+          const newFilterValue = {} as any;
+          
+          switch (filterType) {
+            case 'categorical':
+              newFilterValue.categorical = [];
+              break;
+            case 'numeric':
+              newFilterValue.numeric = { min: this.getMinValue(columnField), max: this.getMaxValue(columnField) };
+              break;
+            case 'text':
+              newFilterValue.text = '';
+              break;
+          }
+          
+          // Direct assignment works in Vue 3
+          this.filterValues[columnField] = newFilterValue;
         }
         
-        // Direct assignment works in Vue 3
-        this.filterValues[columnField] = newFilterValue;
+        // If we restored filters with actual filter values, apply them immediately
+        if (hasRestoredFilters) {
+          this.$nextTick(() => {
+            const filterValue = this.filterValues[columnField];
+            const hasActiveFilter =
+              (filterValue.categorical && filterValue.categorical.length > 0) ||
+              (filterValue.numeric && (filterValue.numeric.min !== this.getMinValue(columnField) || filterValue.numeric.max !== this.getMaxValue(columnField))) ||
+              (filterValue.text && filterValue.text.trim() !== '');
+              
+            if (hasActiveFilter) {
+              this.applyFilters();
+              // Refresh dialog if it's open
+              if (this.teleportDialog) {
+                this.refreshTeleportDialog();
+              }
+            }
+          });
+        }
       }
     },
     applyFilters() {
@@ -499,17 +559,29 @@ export default defineComponent({
       this.applyFilters();
     },
     cleanupFilterForColumn(columnField: string) {
-      // Remove filter values for the unselected column
+      // Preserve filter state in persistent storage before cleanup
+      if (this.filterValues[columnField] || this.filterTypes[columnField] || this.columnAnalysis[columnField]) {
+        this.persistentFilterState[columnField] = {
+          filterValue: this.filterValues[columnField] ? { ...this.filterValues[columnField] } : {},
+          filterType: this.filterTypes[columnField] || 'text',
+          columnAnalysis: this.columnAnalysis[columnField] ? { ...this.columnAnalysis[columnField] } : {
+            uniqueValues: [],
+            dataType: 'text' as const
+          }
+        };
+      }
+      
+      // Remove filter values for the unselected column from active state
       if (this.filterValues[columnField]) {
         delete this.filterValues[columnField];
       }
       
-      // Remove filter types for the unselected column
+      // Remove filter types for the unselected column from active state
       if (this.filterTypes[columnField]) {
         delete this.filterTypes[columnField];
       }
       
-      // Remove column analysis for the unselected column
+      // Remove column analysis for the unselected column from active state
       if (this.columnAnalysis[columnField]) {
         delete this.columnAnalysis[columnField];
       }
