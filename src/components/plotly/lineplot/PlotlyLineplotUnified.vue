@@ -56,6 +56,9 @@ export default defineComponent({
       // Annotation toggle state
       annotationsVisible: true as Boolean,
       
+      // Deconvolved peaks highlighting mode
+      deconvolvedPeaksHighlightMode: false as Boolean,
+      
       // Local state for title to avoid prop mutation
       localTitle: '' as string
     }
@@ -359,7 +362,55 @@ export default defineComponent({
 
     highlightedValues(): HighlightData[] {
       try {
-    
+        // When deconvolved peaks highlighting mode is active, highlight ALL signal peaks
+        if (this.deconvolvedPeaksHighlightMode) {
+          const massValues = this.MassValues
+          const signals = this.mzSignals
+          
+          if (massValues.length === 0) return []
+          
+          let highlightValues: HighlightData[] = []
+          
+          for (let i = 0; i < massValues.length; i++) {
+            // Deconvolved only spectrum
+            if (signals.length === 0) {
+              highlightValues.push({
+                mass: this.MassValues[i],
+                mzs: [],
+                charges: [],
+                intensity: []
+              })
+              continue
+            }
+            
+            const mass = massValues[i]
+            let mzs: number[] = []
+            let charges: number[] = []
+            let intensity: number[] = []
+            
+            const signalGroup = signals[i]
+            if (Array.isArray(signalGroup)) {
+              for (let j = 0; j < signalGroup.length; j++) {
+                const signal = signalGroup[j]
+                if (Array.isArray(signal) && signal.length >= 4) {
+                  mzs.push(signal[1])
+                  intensity.push(signal[2])
+                  charges.push(signal[3])
+                }
+              }
+            }
+            
+            highlightValues.push({
+              mass: mass,
+              mzs: mzs,
+              charges: charges,
+              intensity: intensity
+            })
+          }
+          return highlightValues
+        }
+        
+        // Original highlighting logic for selected peaks only
         // Highlight by mass value (tags)
         let mass_values : number[] = []
         if (this.selectionStore.selectedTag?.masses !== undefined) {
@@ -669,6 +720,14 @@ export default defineComponent({
       try {
 
         if (!this.annotationsVisible) {
+          return { shapes: [], annotations: [], traces: [] }
+        }
+        
+        // When deconvolved peaks highlighting is active but annotations are hidden,
+        // or when both are active but no specific mass is selected, don't show annotations
+        if (this.deconvolvedPeaksHighlightMode && (!this.annotationsVisible ||
+            (this.selectionStore.selectedMassIndex === undefined &&
+             this.selectionStore.selectedTag?.masses === undefined))) {
           return { shapes: [], annotations: [], traces: [] }
         }
         
@@ -1104,6 +1163,10 @@ export default defineComponent({
       this.safeGraph()
     },
     
+    deconvolvedPeaksHighlightMode() {
+      this.safeGraph()
+    },
+    
     'selectionStore.selectedMassIndex'() {
       this.manual = false
       this.safeGraph()
@@ -1500,6 +1563,18 @@ export default defineComponent({
               },
             },
             {
+              title: this.deconvolvedPeaksHighlightMode ? 'Hide Deconvolved Peaks' : 'Show Deconvolved Peaks',
+              name: 'toggleDeconvolvedPeaks',
+              icon: {
+                width: 1792,
+                height: 1792,
+                path: 'M448 1024h896v128h-896v-128zm0-256h896v128h-896v-128zm0-256h896v128h-896v-128zm0-256h896v128h-896v-128zm-448 768h384v128h-384v-128zm0-256h384v128h-384v-128zm0-256h384v128h-384v-128zm0-256h384v128h-384v-128z'
+              },
+              click: () => {
+                this.toggleDeconvolvedPeaksHighlight()
+              },
+            },
+            {
               title: 'Download as SVG',
               name: 'toImageSvg',
               icon: Plotly.Icons.camera,
@@ -1566,6 +1641,11 @@ export default defineComponent({
     
     toggleAnnotations(): void {
       this.annotationsVisible = !this.annotationsVisible
+      this.safeGraph()
+    },
+    
+    toggleDeconvolvedPeaksHighlight(): void {
+      this.deconvolvedPeaksHighlightMode = !this.deconvolvedPeaksHighlightMode
       this.safeGraph()
     },
     
