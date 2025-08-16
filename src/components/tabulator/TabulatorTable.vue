@@ -900,52 +900,164 @@ export default defineComponent({
       const container = this.parentDocument!.createElement('div');
       container.style.cssText = 'padding: 8px 0;';
 
-      const inputsContainer = this.parentDocument!.createElement('div');
-      inputsContainer.style.cssText = 'display: flex; gap: 8px;';
-
       const minValue = this.getMinValue(columnField);
       const maxValue = this.getMaxValue(columnField);
       const currentFilter = this.filterValues[columnField]?.numeric;
+      
+      // Calculate appropriate step value based on data range
+      const range = maxValue - minValue;
+      const step = range > 1000 ? Math.ceil(range / 100) : range > 100 ? Math.ceil(range / 50) : range > 10 ? 0.1 : 0.01;
 
-      // Min input
-      const minInput = this.parentDocument!.createElement('input');
-      minInput.type = 'number';
-      minInput.placeholder = `Min: ${minValue}`;
-      minInput.value = String(currentFilter?.min || minValue);
-      minInput.min = String(minValue);
-      minInput.max = String(maxValue);
-      minInput.style.cssText = `
-        padding: 8px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 14px;
+      // Values display
+      const valuesDisplay = this.parentDocument!.createElement('div');
+      valuesDisplay.style.cssText = 'display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; color: #333;';
+      
+      const minValueDisplay = this.parentDocument!.createElement('span');
+      minValueDisplay.textContent = String(currentFilter?.min || minValue);
+      minValueDisplay.style.cssText = 'font-weight: 500; padding: 4px 8px; background: #f0f0f0; border-radius: 4px;';
+      
+      const maxValueDisplay = this.parentDocument!.createElement('span');
+      maxValueDisplay.textContent = String(currentFilter?.max || maxValue);
+      maxValueDisplay.style.cssText = 'font-weight: 500; padding: 4px 8px; background: #f0f0f0; border-radius: 4px;';
+
+      valuesDisplay.appendChild(minValueDisplay);
+      valuesDisplay.appendChild(maxValueDisplay);
+
+      // Dual range slider container
+      const sliderContainer = this.parentDocument!.createElement('div');
+      sliderContainer.style.cssText = 'position: relative; margin: 16px 0;';
+
+      // Track background
+      const track = this.parentDocument!.createElement('div');
+      track.style.cssText = `
+        position: absolute;
+        width: 100%;
+        height: 6px;
+        background: #ddd;
+        border-radius: 3px;
+        top: 50%;
+        transform: translateY(-50%);
       `;
 
-      // Max input
-      const maxInput = this.parentDocument!.createElement('input');
-      maxInput.type = 'number';
-      maxInput.placeholder = `Max: ${maxValue}`;
-      maxInput.value = String(currentFilter?.max || maxValue);
-      maxInput.min = String(minValue);
-      maxInput.max = String(maxValue);
-      maxInput.style.cssText = `
-        padding: 8px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 14px;
+      // Active range
+      const activeRange = this.parentDocument!.createElement('div');
+      activeRange.style.cssText = `
+        position: absolute;
+        height: 6px;
+        background: #1976d2;
+        border-radius: 3px;
+        top: 50%;
+        transform: translateY(-50%);
       `;
+
+      // Min slider
+      const minSlider = this.parentDocument!.createElement('input');
+      minSlider.type = 'range';
+      minSlider.min = String(minValue);
+      minSlider.max = String(maxValue);
+      minSlider.step = String(step);
+      minSlider.value = String(currentFilter?.min || minValue);
+      minSlider.style.cssText = `
+        position: absolute;
+        width: 100%;
+        height: 6px;
+        background: transparent;
+        outline: none;
+        -webkit-appearance: none;
+        pointer-events: none;
+      `;
+
+      // Max slider
+      const maxSlider = this.parentDocument!.createElement('input');
+      maxSlider.type = 'range';
+      maxSlider.min = String(minValue);
+      maxSlider.max = String(maxValue);
+      maxSlider.step = String(step);
+      maxSlider.value = String(currentFilter?.max || maxValue);
+      maxSlider.style.cssText = `
+        position: absolute;
+        width: 100%;
+        height: 6px;
+        background: transparent;
+        outline: none;
+        -webkit-appearance: none;
+        pointer-events: none;
+      `;
+
+      // Enable pointer events on the slider thumbs
+      const style = this.parentDocument!.createElement('style');
+      style.textContent = `
+        input[type="range"]::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          height: 18px;
+          width: 18px;
+          border-radius: 50%;
+          background: #1976d2;
+          cursor: pointer;
+          pointer-events: all;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        input[type="range"]::-moz-range-thumb {
+          height: 18px;
+          width: 18px;
+          border-radius: 50%;
+          background: #1976d2;
+          cursor: pointer;
+          pointer-events: all;
+          border: none;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+      `;
+      this.parentDocument!.head.appendChild(style);
+
+      const updateActiveRange = () => {
+        const minVal = parseFloat(minSlider.value);
+        const maxVal = parseFloat(maxSlider.value);
+        const dataRange = maxValue - minValue;
+        
+        const leftPercent = ((minVal - minValue) / dataRange) * 100;
+        const rightPercent = ((maxVal - minValue) / dataRange) * 100;
+        
+        activeRange.style.left = leftPercent + '%';
+        activeRange.style.width = (rightPercent - leftPercent) + '%';
+      };
 
       const updateNumeric = () => {
-        this.updateNumericFilterMin(columnField, minInput.value);
-        this.updateNumericFilterMax(columnField, maxInput.value);
+        // Ensure min is not greater than max
+        const minVal = parseFloat(minSlider.value);
+        const maxVal = parseFloat(maxSlider.value);
+        
+        if (minVal > maxVal) {
+          minSlider.value = String(maxVal);
+        }
+        if (maxVal < minVal) {
+          maxSlider.value = String(minVal);
+        }
+
+        // Update display values
+        minValueDisplay.textContent = minSlider.value;
+        maxValueDisplay.textContent = maxSlider.value;
+
+        // Update active range visualization
+        updateActiveRange();
+
+        // Update filter values
+        this.updateNumericFilterMin(columnField, minSlider.value);
+        this.updateNumericFilterMax(columnField, maxSlider.value);
         this.validateAndApplyNumericFilter(columnField);
       };
 
-      minInput.addEventListener('blur', updateNumeric);
-      maxInput.addEventListener('blur', updateNumeric);
+      minSlider.addEventListener('input', updateNumeric);
+      maxSlider.addEventListener('input', updateNumeric);
 
-      inputsContainer.appendChild(minInput);
-      inputsContainer.appendChild(maxInput);
+      // Initialize active range
+      updateActiveRange();
+
+      sliderContainer.appendChild(track);
+      sliderContainer.appendChild(activeRange);
+      sliderContainer.appendChild(minSlider);
+      sliderContainer.appendChild(maxSlider);
 
       const rangeInfo = this.parentDocument!.createElement('div');
       rangeInfo.style.cssText = `
@@ -953,11 +1065,14 @@ export default defineComponent({
         justify-content: space-between;
         font-size: 12px;
         color: #666;
-        margin-top: 4px;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid #eee;
       `;
-      rangeInfo.innerHTML = `<span>Data range: ${minValue} - ${maxValue}</span>`;
+      rangeInfo.innerHTML = `<span>Data range: ${minValue} - ${maxValue}</span><span>Step: ${step}</span>`;
 
-      container.appendChild(inputsContainer);
+      container.appendChild(valuesDisplay);
+      container.appendChild(sliderContainer);
       container.appendChild(rangeInfo);
       return container;
     },
