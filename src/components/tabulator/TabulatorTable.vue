@@ -29,12 +29,14 @@
     </div>
     <div :id="id" :class="tableClasses" @click="onTableClick"></div>
     
-    <!-- Filter Dialog - Optimized for component constraints -->
+    <!-- Filter Dialog - Fullscreen for better iframe experience -->
     <v-dialog
       v-model="filterDialog"
-      max-width="90%"
+      fullscreen
       :theme="streamlitDataStore.theme?.base ?? 'light'"
-      class="filter-dialog-constrained"
+      :attach="false"
+      :persistent="false"
+      transition="dialog-bottom-transition"
     >
       <v-card>
         <v-card-title class="d-flex justify-space-between align-center">
@@ -253,6 +255,11 @@ export default defineComponent({
         dataType: 'categorical' | 'numeric' | 'text'
       }>,
       debouncedTimeout: undefined as NodeJS.Timeout | undefined,
+      // Teleport-related properties
+      teleportDialog: false,
+      teleportBackdrop: null as HTMLElement | null,
+      teleportContainer: null as HTMLElement | null,
+      parentDocument: null as Document | null,
     }
   },
   computed: {
@@ -331,6 +338,10 @@ export default defineComponent({
   },
   mounted() {
     this.drawTable()
+    this.initializeTeleport()
+  },
+  beforeUnmount() {
+    this.cleanupTeleport()
   },
   methods: {
     drawTable() {
@@ -398,7 +409,11 @@ export default defineComponent({
       if (this.tabulator !== undefined) this.tabulator.download('csv', `${this.title}.csv`)
     },
     openFilterDialog() {
-      this.filterDialog = true
+      if (this.canUseTeleport()) {
+        this.openTeleportDialog()
+      } else {
+        this.filterDialog = true
+      }
     },
     toggleColumnSelection(columnField: string) {
       const index = this.selectedColumns.indexOf(columnField);
@@ -648,10 +663,500 @@ export default defineComponent({
       if (this.columnAnalysis[columnField]) {
         delete this.columnAnalysis[columnField];
       }
-      
       // Reapply filters after cleanup
       this.applyFilters();
     },
+
+    // Teleport functionality methods
+    canUseTeleport(): boolean {
+      try {
+        // Check if we can access parent document (same-origin policy)
+        return window.parent && window.parent.document && window.parent !== window;
+      } catch (e) {
+        return false;
+      }
+    },
+
+    initializeTeleport() {
+      if (this.canUseTeleport()) {
+        this.parentDocument = window.parent.document;
+      }
+    },
+
+    openTeleportDialog() {
+      if (!this.parentDocument || this.teleportDialog) return;
+      
+      this.teleportDialog = true;
+      this.createTeleportBackdrop();
+      this.createTeleportContainer();
+      this.renderFilterDialog();
+    },
+
+    createTeleportBackdrop() {
+      if (!this.parentDocument) return;
+
+      // Create backdrop
+      this.teleportBackdrop = this.parentDocument.createElement('div');
+      this.teleportBackdrop.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      `;
+      
+      // Close dialog when clicking backdrop
+      this.teleportBackdrop.addEventListener('click', (e) => {
+        if (e.target === this.teleportBackdrop) {
+          this.closeTeleportDialog();
+        }
+      });
+
+      this.parentDocument.body.appendChild(this.teleportBackdrop);
+    },
+
+    createTeleportContainer() {
+      if (!this.parentDocument || !this.teleportBackdrop) return;
+
+      // Create dialog container
+      this.teleportContainer = this.parentDocument.createElement('div');
+      this.teleportContainer.style.cssText = `
+        background: white;
+        border-radius: 8px;
+        max-width: 90vw;
+        max-height: 90vh;
+        width: 800px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      `;
+
+      this.teleportBackdrop.appendChild(this.teleportContainer);
+    },
+
+    renderFilterDialog() {
+      if (!this.teleportContainer) return;
+
+      // Create dialog header
+      const header = this.parentDocument!.createElement('div');
+      header.style.cssText = `
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 24px;
+        border-bottom: 1px solid #e0e0e0;
+        background: white;
+      `;
+      
+      const title = this.parentDocument!.createElement('span');
+      title.textContent = 'Filter Options';
+      title.style.cssText = 'font-size: 20px; font-weight: 500; color: #333;';
+      
+      const closeBtn = this.parentDocument!.createElement('button');
+      closeBtn.innerHTML = '×';
+      closeBtn.style.cssText = `
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #666;
+        padding: 4px 8px;
+        border-radius: 4px;
+      `;
+      closeBtn.addEventListener('click', () => this.closeTeleportDialog());
+      closeBtn.addEventListener('mouseenter', () => {
+        closeBtn.style.backgroundColor = '#f5f5f5';
+      });
+      closeBtn.addEventListener('mouseleave', () => {
+        closeBtn.style.backgroundColor = 'transparent';
+      });
+
+      header.appendChild(title);
+      header.appendChild(closeBtn);
+
+      // Create dialog content
+      const content = this.parentDocument!.createElement('div');
+      content.style.cssText = `
+        padding: 24px;
+        overflow-y: auto;
+        flex: 1;
+        min-height: 0;
+      `;
+
+      this.renderColumnSelection(content);
+      this.renderFilterControls(content);
+
+      // Create dialog footer
+      const footer = this.parentDocument!.createElement('div');
+      footer.style.cssText = `
+        padding: 16px 24px;
+        border-top: 1px solid #e0e0e0;
+        display: flex;
+        justify-content: flex-end;
+        background: white;
+      `;
+
+      const closeFooterBtn = this.parentDocument!.createElement('button');
+      closeFooterBtn.textContent = 'Close';
+      closeFooterBtn.style.cssText = `
+        background: #1976d2;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      `;
+      closeFooterBtn.addEventListener('click', () => this.closeTeleportDialog());
+      closeFooterBtn.addEventListener('mouseenter', () => {
+        closeFooterBtn.style.backgroundColor = '#1565c0';
+      });
+      closeFooterBtn.addEventListener('mouseleave', () => {
+        closeFooterBtn.style.backgroundColor = '#1976d2';
+      });
+
+      footer.appendChild(closeFooterBtn);
+
+      // Assemble dialog
+      this.teleportContainer.appendChild(header);
+      this.teleportContainer.appendChild(content);
+      this.teleportContainer.appendChild(footer);
+    },
+
+    renderColumnSelection(content: HTMLElement) {
+      const columnSection = this.parentDocument!.createElement('div');
+      columnSection.style.cssText = `
+        background-color: white;
+        border-radius: 4px;
+        border: 1px solid #e0e0e0;
+        padding: 16px;
+        margin-bottom: 24px;
+      `;
+
+      const columnTitle = this.parentDocument!.createElement('h6');
+      columnTitle.textContent = 'Select Columns:';
+      columnTitle.style.cssText = 'color: #333; margin: 0 0 12px 0; font-size: 16px; font-weight: 500;';
+
+      const chipsContainer = this.parentDocument!.createElement('div');
+      chipsContainer.style.cssText = 'display: flex; flex-wrap: wrap; gap: 8px;';
+
+      // Create column chips
+      this.columnNames.forEach(column => {
+        const chip = this.parentDocument!.createElement('div');
+        const isSelected = this.selectedColumns.includes(column.field);
+        
+        chip.textContent = column.title;
+        chip.style.cssText = `
+          padding: 6px 12px;
+          border-radius: 16px;
+          font-size: 14px;
+          cursor: pointer;
+          user-select: none;
+          transition: all 0.2s;
+          ${isSelected ?
+            'background: #1976d2; color: white; border: 1px solid #1976d2;' :
+            'background: white; color: #333; border: 1px solid #e0e0e0;'
+          }
+        `;
+        
+        chip.addEventListener('click', () => {
+          this.toggleColumnSelection(column.field);
+          this.refreshTeleportDialog();
+        });
+
+        chip.addEventListener('mouseenter', () => {
+          if (!isSelected) {
+            chip.style.backgroundColor = '#f5f5f5';
+          }
+        });
+
+        chip.addEventListener('mouseleave', () => {
+          if (!isSelected) {
+            chip.style.backgroundColor = 'white';
+          }
+        });
+
+        chipsContainer.appendChild(chip);
+      });
+
+      // Create action buttons
+      const actionsContainer = this.parentDocument!.createElement('div');
+      actionsContainer.style.cssText = `
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid #e0e0e0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      `;
+
+      const selectionInfo = this.parentDocument!.createElement('span');
+      selectionInfo.textContent = `${this.selectedColumns.length} of ${this.columnNames.length} columns selected`;
+      selectionInfo.style.cssText = 'color: #666; font-size: 14px;';
+
+      const buttonsDiv = this.parentDocument!.createElement('div');
+      
+      const selectAllBtn = this.createActionButton('Select All', () => {
+        this.selectAllColumns();
+        this.refreshTeleportDialog();
+      });
+      
+      const clearAllBtn = this.createActionButton('Clear All', () => {
+        this.clearColumnSelection();
+        this.refreshTeleportDialog();
+      });
+
+      buttonsDiv.appendChild(selectAllBtn);
+      buttonsDiv.appendChild(clearAllBtn);
+
+      actionsContainer.appendChild(selectionInfo);
+      actionsContainer.appendChild(buttonsDiv);
+
+      columnSection.appendChild(columnTitle);
+      columnSection.appendChild(chipsContainer);
+      columnSection.appendChild(actionsContainer);
+      content.appendChild(columnSection);
+    },
+
+    createActionButton(text: string, onClick: () => void): HTMLElement {
+      const btn = this.parentDocument!.createElement('button');
+      btn.textContent = text;
+      btn.style.cssText = `
+        background: white;
+        color: #1976d2;
+        border: 1px solid #1976d2;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-left: 8px;
+      `;
+      btn.addEventListener('click', onClick);
+      btn.addEventListener('mouseenter', () => {
+        btn.style.backgroundColor = '#f5f5f5';
+      });
+      btn.addEventListener('mouseleave', () => {
+        btn.style.backgroundColor = 'white';
+      });
+      return btn;
+    },
+
+    renderFilterControls(content: HTMLElement) {
+      if (this.selectedColumns.length === 0) return;
+
+      const filterSection = this.parentDocument!.createElement('div');
+      
+      const filterTitle = this.parentDocument!.createElement('h6');
+      filterTitle.textContent = 'Filter Settings:';
+      filterTitle.style.cssText = 'color: #333; margin: 0 0 16px 0; font-size: 16px; font-weight: 500;';
+
+      const filterGrid = this.parentDocument!.createElement('div');
+      filterGrid.style.cssText = `
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        background-color: #f9f9f9;
+        border-radius: 4px;
+        padding: 16px;
+      `;
+
+      this.selectedColumns.forEach(columnField => {
+        const filterItem = this.createFilterItem(columnField);
+        filterGrid.appendChild(filterItem);
+      });
+
+      filterSection.appendChild(filterTitle);
+      filterSection.appendChild(filterGrid);
+      content.appendChild(filterSection);
+    },
+
+    createFilterItem(columnField: string): HTMLElement {
+      const filterItem = this.parentDocument!.createElement('div');
+      filterItem.style.cssText = 'display: flex; flex-direction: column; gap: 8px;';
+
+      const label = this.parentDocument!.createElement('label');
+      label.style.cssText = 'font-weight: 500; font-size: 14px; color: #555;';
+      
+      const title = this.getColumnTitle(columnField);
+      const type = this.getFilterType(columnField);
+      label.innerHTML = `${title} <span style="font-size: 12px; color: #888; font-weight: normal;">(${type})</span>`;
+
+      filterItem.appendChild(label);
+
+      const filterType = this.getFilterType(columnField);
+      
+      if (filterType === 'categorical') {
+        const select = this.createCategoricalFilter(columnField);
+        filterItem.appendChild(select);
+      } else if (filterType === 'numeric') {
+        const numericFilter = this.createNumericFilter(columnField);
+        filterItem.appendChild(numericFilter);
+      } else {
+        const textFilter = this.createTextFilter(columnField);
+        filterItem.appendChild(textFilter);
+      }
+
+      return filterItem;
+    },
+
+    createCategoricalFilter(columnField: string): HTMLElement {
+      const container = this.parentDocument!.createElement('div');
+      
+      const select = this.parentDocument!.createElement('select');
+      select.multiple = true;
+      select.style.cssText = `
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        min-height: 80px;
+      `;
+
+      const uniqueValues = this.getUniqueValues(columnField);
+      const currentValues = this.filterValues[columnField]?.categorical || [];
+
+      uniqueValues.forEach(value => {
+        const option = this.parentDocument!.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        option.selected = currentValues.includes(value);
+        select.appendChild(option);
+      });
+
+      select.addEventListener('change', () => {
+        const selectedValues = Array.from(select.selectedOptions).map(opt => opt.value);
+        if (!this.filterValues[columnField]) {
+          this.filterValues[columnField] = {};
+        }
+        this.filterValues[columnField].categorical = selectedValues;
+        this.applyFilters();
+      });
+
+      container.appendChild(select);
+      return container;
+    },
+
+    createNumericFilter(columnField: string): HTMLElement {
+      const container = this.parentDocument!.createElement('div');
+      container.style.cssText = 'padding: 8px 0;';
+
+      const inputsContainer = this.parentDocument!.createElement('div');
+      inputsContainer.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr; gap: 8px;';
+
+      const minValue = this.getMinValue(columnField);
+      const maxValue = this.getMaxValue(columnField);
+      const currentFilter = this.filterValues[columnField]?.numeric;
+
+      // Min input
+      const minInput = this.parentDocument!.createElement('input');
+      minInput.type = 'number';
+      minInput.placeholder = `Min: ${minValue}`;
+      minInput.value = String(currentFilter?.min || minValue);
+      minInput.min = String(minValue);
+      minInput.max = String(maxValue);
+      minInput.style.cssText = `
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+      `;
+
+      // Max input
+      const maxInput = this.parentDocument!.createElement('input');
+      maxInput.type = 'number';
+      maxInput.placeholder = `Max: ${maxValue}`;
+      maxInput.value = String(currentFilter?.max || maxValue);
+      maxInput.min = String(minValue);
+      maxInput.max = String(maxValue);
+      maxInput.style.cssText = `
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+      `;
+
+      const updateNumeric = () => {
+        this.updateNumericFilterMin(columnField, minInput.value);
+        this.updateNumericFilterMax(columnField, maxInput.value);
+        this.validateAndApplyNumericFilter(columnField);
+      };
+
+      minInput.addEventListener('blur', updateNumeric);
+      maxInput.addEventListener('blur', updateNumeric);
+
+      inputsContainer.appendChild(minInput);
+      inputsContainer.appendChild(maxInput);
+
+      const rangeInfo = this.parentDocument!.createElement('div');
+      rangeInfo.style.cssText = `
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: #666;
+        margin-top: 4px;
+      `;
+      rangeInfo.innerHTML = `<span>Data range: ${minValue} - ${maxValue}</span>`;
+
+      container.appendChild(inputsContainer);
+      container.appendChild(rangeInfo);
+      return container;
+    },
+
+    createTextFilter(columnField: string): HTMLElement {
+      const input = this.parentDocument!.createElement('input');
+      input.type = 'text';
+      input.placeholder = 'Search pattern (regex supported)';
+      input.value = this.filterValues[columnField]?.text || '';
+      input.style.cssText = `
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+      `;
+
+      input.addEventListener('input', () => {
+        if (!this.filterValues[columnField]) {
+          this.filterValues[columnField] = {};
+        }
+        this.filterValues[columnField].text = input.value;
+        this.applyFilters();
+      });
+
+      return input;
+    },
+
+    refreshTeleportDialog() {
+      if (!this.teleportDialog || !this.teleportContainer) return;
+      
+      // Clear and re-render content
+      this.teleportContainer.innerHTML = '';
+      this.renderFilterDialog();
+    },
+
+    closeTeleportDialog() {
+      this.teleportDialog = false;
+      this.cleanupTeleport();
+    },
+
+    cleanupTeleport() {
+      if (this.teleportBackdrop && this.parentDocument) {
+        this.parentDocument.body.removeChild(this.teleportBackdrop);
+        this.teleportBackdrop = null;
+      }
+      if (this.teleportContainer) {
+        this.teleportContainer = null;
+      }
+    },
+
+
   },
 })
 </script>
@@ -672,18 +1177,20 @@ export default defineComponent({
   font-size: 14px;
 }
 
-// Optimized dialog for component constraints
-.filter-dialog-constrained {
-  .v-card {
-    max-height: 80vh;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .v-card-text {
-    overflow-y: auto;
-    flex: 1;
-    min-height: 0;
+// Fullscreen dialog for better iframe experience
+.v-overlay--active {
+  .v-dialog {
+    .v-card {
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .v-card-text {
+      overflow-y: auto;
+      flex: 1;
+      min-height: 0;
+    }
   }
 }
 </style>
