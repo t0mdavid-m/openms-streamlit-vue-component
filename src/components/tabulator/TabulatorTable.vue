@@ -346,7 +346,7 @@ export default defineComponent({
           maxValue = Math.max(...numbers);
           
           // If less than 20 unique values, treat as categorical
-          dataType = uniqueValues.length <= 20 ? 'categorical' : 'numeric';
+          dataType = uniqueValues.length <= 10 ? 'categorical' : 'numeric';
         } else {
           dataType = 'text';
         }
