@@ -13,6 +13,7 @@ export interface UnifiedPlotlyLineArguments extends PlotlyLineArguments {
     maxAnnotationRange?: number
     enableManualZoom?: boolean
     showChargeLabels?: boolean
+    minAnnotationWidth?: number
   }
   
   // Styling Overrides
@@ -59,7 +60,8 @@ export const DEFAULT_CONFIG = {
   xPosScalingFactor: 27.5,
   xPosScalingThreshold: 30,
   enableManualZoom: true,
-  showChargeLabels: true
+  showChargeLabels: true,
+  minAnnotationWidth: 2.0
 }
 
 export const DEFAULT_STYLING = {

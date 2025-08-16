@@ -539,6 +539,10 @@ export default defineComponent({
       return this.xPosScalingFactor * this.xPosScalingThreshold
     },
 
+    minAnnotationWidth(): number {
+      return this.config.minAnnotationWidth
+    },
+
     // Shared coordinate calculation utilities
     getAnnotationPositioning(): {
       ymax: number;
@@ -560,7 +564,10 @@ export default defineComponent({
       const ypos_low = ymax * 1.18
       const ypos = ymax * 1.25
       const ypos_high = ymax * 1.32
-      const xpos_scaling = (xRange[1] - xRange[0]) / this.xPosScalingFactor
+      
+      // Apply minimum width constraint to prevent backgrounds from becoming too narrow
+      const calculatedScaling = (xRange[1] - xRange[0]) / this.xPosScalingFactor
+      const xpos_scaling = Math.max(calculatedScaling, this.minAnnotationWidth)
 
       return {
         ymax,
@@ -1131,7 +1138,10 @@ export default defineComponent({
         const ymax = yRange[1] / 1.8
         const ypos_low = ymax * 1.18
         const ypos_high = ymax * 1.32
-        const xpos_scaling = (xRange[1] - xRange[0]) / this.xPosScalingFactor
+        
+        // Apply minimum width constraint to prevent backgrounds from becoming too narrow
+        const calculatedScaling = (xRange[1] - xRange[0]) / this.xPosScalingFactor
+        const xpos_scaling = Math.max(calculatedScaling, this.minAnnotationWidth)
 
         const boxes: Array<{
           x: number;
