@@ -816,9 +816,12 @@ export default defineComponent({
         padding: 16px;
       `;
 
-      this.selectedColumns.forEach(columnField => {
-        const filterItem = this.createFilterItem(columnField);
-        filterContainer.appendChild(filterItem);
+      // Iterate through columnNames in original order, filter for selected columns
+      this.columnNames.forEach(column => {
+        if (this.selectedColumns.includes(column.field)) {
+          const filterItem = this.createFilterItem(column.field);
+          filterContainer.appendChild(filterItem);
+        }
       });
 
       filterSection.appendChild(filterTitle);
