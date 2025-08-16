@@ -900,13 +900,13 @@ export default defineComponent({
       const container = this.parentDocument!.createElement('div');
       container.style.cssText = 'padding: 8px 0;';
 
-      const minValue = this.getMinValue(columnField);
-      const maxValue = this.getMaxValue(columnField);
+      const minValue = Math.floor(this.getMinValue(columnField));
+      const maxValue = Math.ceil(this.getMaxValue(columnField));
       const currentFilter = this.filterValues[columnField]?.numeric;
       
       // Calculate appropriate step value based on data range
       const range = maxValue - minValue;
-      const step = range > 1000 ? Math.ceil(range / 100) : range > 100 ? Math.ceil(range / 50) : range > 10 ? 0.1 : 0.01;
+      const step = range > 1 ? 1 : 0.01;
 
       // Values display
       const valuesDisplay = this.parentDocument!.createElement('div');
