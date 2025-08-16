@@ -97,12 +97,12 @@
               <h6 style="color: #333; margin: 0;">Filter Settings:</h6>
             </div>
             
-            <div class="filter-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; background-color: #f9f9f9; border-radius: 4px; padding: 16px;">
+            <div class="filter-container" style="display: flex; flex-direction: column; gap: 16px; background-color: #f9f9f9; border-radius: 4px; padding: 16px;">
               <div
                 v-for="columnField in selectedColumns"
                 :key="columnField"
                 class="filter-item"
-                style="display: flex; flex-direction: column; gap: 8px;"
+                style="display: flex; flex-direction: column; gap: 8px; padding: 12px; background-color: white; border-radius: 4px; border: 1px solid #e0e0e0;"
               >
                 <label style="font-weight: 500; font-size: 14px; color: #555;">
                   {{ getColumnTitle(columnField) }}
@@ -127,7 +127,7 @@
 
                 <!-- Numeric Range Filter -->
                 <div v-else-if="getFilterType(columnField) === 'numeric' && filterValues[columnField]" style="padding: 8px 0;">
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                  <div style="display: flex; gap: 8px;">
                     <v-text-field
                       :model-value="filterValues[columnField]?.numeric?.min || getMinValue(columnField)"
                       type="number"
@@ -956,10 +956,10 @@ export default defineComponent({
       filterTitle.textContent = 'Filter Settings:';
       filterTitle.style.cssText = 'color: #333; margin: 0 0 16px 0; font-size: 16px; font-weight: 500;';
 
-      const filterGrid = this.parentDocument!.createElement('div');
-      filterGrid.style.cssText = `
-        display: grid;
-        grid-template-columns: 1fr 1fr;
+      const filterContainer = this.parentDocument!.createElement('div');
+      filterContainer.style.cssText = `
+        display: flex;
+        flex-direction: column;
         gap: 16px;
         background-color: #f9f9f9;
         border-radius: 4px;
@@ -968,17 +968,17 @@ export default defineComponent({
 
       this.selectedColumns.forEach(columnField => {
         const filterItem = this.createFilterItem(columnField);
-        filterGrid.appendChild(filterItem);
+        filterContainer.appendChild(filterItem);
       });
 
       filterSection.appendChild(filterTitle);
-      filterSection.appendChild(filterGrid);
+      filterSection.appendChild(filterContainer);
       content.appendChild(filterSection);
     },
 
     createFilterItem(columnField: string): HTMLElement {
       const filterItem = this.parentDocument!.createElement('div');
-      filterItem.style.cssText = 'display: flex; flex-direction: column; gap: 8px;';
+      filterItem.style.cssText = 'display: flex; flex-direction: column; gap: 8px; padding: 12px; background-color: white; border-radius: 4px; border: 1px solid #e0e0e0;';
 
       const label = this.parentDocument!.createElement('label');
       label.style.cssText = 'font-weight: 500; font-size: 14px; color: #555;';
@@ -1048,7 +1048,7 @@ export default defineComponent({
       container.style.cssText = 'padding: 8px 0;';
 
       const inputsContainer = this.parentDocument!.createElement('div');
-      inputsContainer.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr; gap: 8px;';
+      inputsContainer.style.cssText = 'display: flex; gap: 8px;';
 
       const minValue = this.getMinValue(columnField);
       const maxValue = this.getMaxValue(columnField);
