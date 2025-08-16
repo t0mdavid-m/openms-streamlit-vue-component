@@ -423,6 +423,8 @@ export default defineComponent({
       const index = this.selectedColumns.indexOf(columnField);
       if (index > -1) {
         this.selectedColumns.splice(index, 1);
+        // Clean up filter state when column is unselected
+        this.cleanupFilterForColumn(columnField);
       } else {
         this.selectedColumns.push(columnField);
         // Immediately initialize filter value for new column
@@ -436,6 +438,12 @@ export default defineComponent({
     },
     clearColumnSelection() {
       this.selectedColumns = [];
+      // Clear all filter state when clearing column selection
+      this.filterValues = {};
+      this.filterTypes = {};
+      this.columnAnalysis = {};
+      // Clear tabulator filters
+      this.tabulator?.clearFilter(true);
     },
     // Data analysis utilities
     analyzeColumn(columnField: string) {
@@ -650,6 +658,25 @@ export default defineComponent({
       this.selectedColumns.forEach(columnField => {
         this.initializeFilterValue(columnField);
       });
+    },
+    cleanupFilterForColumn(columnField: string) {
+      // Remove filter values for the unselected column
+      if (this.filterValues[columnField]) {
+        delete this.filterValues[columnField];
+      }
+      
+      // Remove filter types for the unselected column
+      if (this.filterTypes[columnField]) {
+        delete this.filterTypes[columnField];
+      }
+      
+      // Remove column analysis for the unselected column
+      if (this.columnAnalysis[columnField]) {
+        delete this.columnAnalysis[columnField];
+      }
+      
+      // Reapply filters after cleanup
+      this.applyFilters();
     },
   },
 })
