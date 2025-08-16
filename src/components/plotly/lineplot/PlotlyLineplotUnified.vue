@@ -362,55 +362,15 @@ export default defineComponent({
 
     highlightedValues(): HighlightData[] {
       try {
-        // When deconvolved peaks highlighting mode is active, highlight ALL signal peaks
-        if (this.deconvolvedPeaksHighlightMode) {
-          const massValues = this.MassValues
-          const signals = this.mzSignals
-          
-          if (massValues.length === 0) return []
-          
-          let highlightValues: HighlightData[] = []
-          
-          for (let i = 0; i < massValues.length; i++) {
-            // Deconvolved only spectrum
-            if (signals.length === 0) {
-              highlightValues.push({
-                mass: this.MassValues[i],
-                mzs: [],
-                charges: [],
-                intensity: []
-              })
-              continue
-            }
-            
-            const mass = massValues[i]
-            let mzs: number[] = []
-            let charges: number[] = []
-            let intensity: number[] = []
-            
-            const signalGroup = signals[i]
-            if (Array.isArray(signalGroup)) {
-              for (let j = 0; j < signalGroup.length; j++) {
-                const signal = signalGroup[j]
-                if (Array.isArray(signal) && signal.length >= 4) {
-                  mzs.push(signal[1])
-                  intensity.push(signal[2])
-                  charges.push(signal[3])
-                }
-              }
-            }
-            
-            highlightValues.push({
-              mass: mass,
-              mzs: mzs,
-              charges: charges,
-              intensity: intensity
-            })
-          }
-          return highlightValues
-        }
+        const massValues = this.MassValues
+        const signals = this.mzSignals
         
-        // Original highlighting logic for selected peaks only
+        if (massValues.length === 0) return []
+        
+        let highlightValues: HighlightData[] = []
+        const highlightedIndices = new Set<number>()
+        
+        // First, handle selective highlighting (original logic for selected peaks)
         // Highlight by mass value (tags)
         let mass_values : number[] = []
         if (this.selectionStore.selectedTag?.masses !== undefined) {
@@ -435,17 +395,13 @@ export default defineComponent({
         ) {
           mass_positions = [this.selectionStore.selectedMassIndex]
         }
-
-        const massValues = this.MassValues
-        const signals = this.mzSignals
         
-        if (mass_positions.length === 0 || massValues.length === 0) return []
-        
-        let highlightValues: HighlightData[] = []
-        
+        // Add selective highlights to the set and result array
         for (let i = 0; i < mass_positions.length; i++) {
           const posIndex = mass_positions[i]
           if (posIndex >= massValues.length) continue
+          
+          highlightedIndices.add(posIndex)
           
           // Deconvolved only spectrum
           if (signals.length === 0) {
@@ -482,6 +438,50 @@ export default defineComponent({
             intensity: intensity
           })
         }
+        
+        // Second, when deconvolved peaks highlighting mode is active, add ALL signal peaks
+        if (this.deconvolvedPeaksHighlightMode) {
+          for (let i = 0; i < massValues.length; i++) {
+            // Skip if already highlighted by selective logic
+            if (highlightedIndices.has(i)) continue
+            
+            // Deconvolved only spectrum
+            if (signals.length === 0) {
+              highlightValues.push({
+                mass: this.MassValues[i],
+                mzs: [],
+                charges: [],
+                intensity: []
+              })
+              continue
+            }
+            
+            const mass = massValues[i]
+            let mzs: number[] = []
+            let charges: number[] = []
+            let intensity: number[] = []
+            
+            const signalGroup = signals[i]
+            if (Array.isArray(signalGroup)) {
+              for (let j = 0; j < signalGroup.length; j++) {
+                const signal = signalGroup[j]
+                if (Array.isArray(signal) && signal.length >= 4) {
+                  mzs.push(signal[1])
+                  intensity.push(signal[2])
+                  charges.push(signal[3])
+                }
+              }
+            }
+            
+            highlightValues.push({
+              mass: mass,
+              mzs: mzs,
+              charges: charges,
+              intensity: intensity
+            })
+          }
+        }
+        
         return highlightValues
       } catch (error) {
         this.handleError(error as Error, 'highlightedValues-computation')
@@ -723,15 +723,84 @@ export default defineComponent({
           return { shapes: [], annotations: [], traces: [] }
         }
         
-        // When deconvolved peaks highlighting is active but annotations are hidden,
-        // or when both are active but no specific mass is selected, don't show annotations
-        if (this.deconvolvedPeaksHighlightMode && (!this.annotationsVisible ||
-            (this.selectionStore.selectedMassIndex === undefined &&
-             this.selectionStore.selectedTag?.masses === undefined))) {
+        // Get highlighted values but only show annotations for selected masses
+        // Filter highlighted values to only include those from selective highlighting (not deconvolved mode)
+        let annotationHighlights: HighlightData[] = []
+        
+        // Highlight by mass value (tags)
+        let mass_values : number[] = []
+        if (this.selectionStore.selectedTag?.masses !== undefined) {
+          mass_values = this.selectionStore.selectedTag?.masses
+        }
+        let mass_positions : number[] = []
+        mass_values.forEach((v, i) => {
+          for (let j = 0; j < this.MassValues.length; j++) {
+            if (Math.abs(this.MassValues[j] - v) < 1e-5) {
+              mass_positions.push(j)
+              break
+            }
+          }
+        })
+
+        // Highlight by selected mass index
+        if (
+          this.selectionStore.selectedMassIndex !== undefined &&
+          this.selectionStore.selectedMassIndex >= 0 &&
+          this.selectionStore.selectedMassIndex < this.MassValues.length &&
+          this.currentTitle !== 'Augmented Deconvolved Spectrum'
+        ) {
+          mass_positions = [this.selectionStore.selectedMassIndex]
+        }
+        
+        // Build annotation highlights based on selective highlighting only
+        const massValues = this.MassValues
+        const signals = this.mzSignals
+        
+        if (mass_positions.length === 0 || massValues.length === 0) {
           return { shapes: [], annotations: [], traces: [] }
         }
         
-        const highlighted = this.highlightedValues
+        for (let i = 0; i < mass_positions.length; i++) {
+          const posIndex = mass_positions[i]
+          if (posIndex >= massValues.length) continue
+          
+          // Deconvolved only spectrum
+          if (signals.length === 0) {
+            annotationHighlights.push({
+              mass: this.MassValues[posIndex],
+              mzs: [],
+              charges: [],
+              intensity: []
+            })
+            continue
+          }
+          
+          const mass = massValues[posIndex]
+          let mzs: number[] = []
+          let charges: number[] = []
+          let intensity: number[] = []
+          
+          const signalGroup = signals[posIndex]
+          if (Array.isArray(signalGroup)) {
+            for (let j = 0; j < signalGroup.length; j++) {
+              const signal = signalGroup[j]
+              if (Array.isArray(signal) && signal.length >= 4) {
+                mzs.push(signal[1])
+                intensity.push(signal[2])
+                charges.push(signal[3])
+              }
+            }
+          }
+          
+          annotationHighlights.push({
+            mass: mass,
+            mzs: mzs,
+            charges: charges,
+            intensity: intensity
+          })
+        }
+        
+        const highlighted = annotationHighlights
         if (highlighted.length === 0) {
           return { shapes: [], annotations: [], traces: [] }
         }
@@ -1034,8 +1103,8 @@ export default defineComponent({
 
       let traces: Plotly.Data[] = []
       
-      // When annotations are hidden, force all peaks to use default color
-      if (!this.annotationsVisible) {
+      // When annotations are hidden AND deconvolved peaks highlighting is off, use single color
+      if (!this.annotationsVisible && !this.deconvolvedPeaksHighlightMode) {
         traces.push({
           x: this.xValues,
           y: this.yValues,
@@ -1047,7 +1116,7 @@ export default defineComponent({
         return traces
       }
       
-      // When annotations are visible, use highlighting logic
+      // When annotations are visible OR deconvolved peaks highlighting is active, use highlighting logic
       traces.push({
         x: this.plotData.unhighlighted_x,
         y: this.plotData.unhighlighted_y,
@@ -1072,8 +1141,11 @@ export default defineComponent({
         marker: { color: this.styling.selectedColor }
       })
       
-      const buttonTraces = this.annotationData.traces
-      traces.push(...buttonTraces)
+      // Only add button traces when annotations are visible
+      if (this.annotationsVisible) {
+        const buttonTraces = this.annotationData.traces
+        traces.push(...buttonTraces)
+      }
       
       return traces
     },
