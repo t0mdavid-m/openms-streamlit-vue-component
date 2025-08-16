@@ -29,155 +29,6 @@
     </div>
     <div :id="id" :class="tableClasses" @click="onTableClick"></div>
     
-    <!-- Filter Dialog - Fullscreen for better iframe experience -->
-    <v-dialog
-      v-model="filterDialog"
-      fullscreen
-      :theme="streamlitDataStore.theme?.base ?? 'light'"
-      :attach="false"
-      :persistent="false"
-      transition="dialog-bottom-transition"
-    >
-      <v-card>
-        <v-card-title class="d-flex justify-space-between align-center">
-          <span>Filter Options</span>
-          <v-btn icon size="small" @click="filterDialog = false">
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </v-card-title>
-        <v-divider></v-divider>
-        <v-card-text>
-          <!-- Column Pills Toolbar -->
-          <div style="background-color: white; border-radius: 4px; border: 1px solid #e0e0e0; padding: 16px;">
-            <div style="margin-bottom: 12px;">
-              <h6 style="color: #333; margin: 0;">Select Columns:</h6>
-            </div>
-            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-              <v-chip
-                v-for="column in columnNames"
-                :key="column.field"
-                :color="selectedColumns.includes(column.field) ? 'primary' : 'default'"
-                :variant="selectedColumns.includes(column.field) ? 'flat' : 'outlined'"
-                size="small"
-                clickable
-                @click="toggleColumnSelection(column.field)"
-              >
-                {{ column.title }}
-              </v-chip>
-            </div>
-            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e0e0e0;">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="color: #666; font-size: 14px;">
-                  {{ selectedColumns.length }} of {{ columnNames.length }} columns selected
-                </span>
-                <div>
-                  <v-btn
-                    size="small"
-                    variant="outlined"
-                    @click="selectAllColumns"
-                    style="margin-right: 8px;"
-                  >
-                    Select All
-                  </v-btn>
-                  <v-btn
-                    size="small"
-                    variant="outlined"
-                    @click="clearColumnSelection"
-                  >
-                    Clear All
-                  </v-btn>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Dynamic Filter Components -->
-          <div v-if="selectedColumns.length > 0" style="margin-top: 24px;">
-            <div style="margin-bottom: 16px;">
-              <h6 style="color: #333; margin: 0;">Filter Settings:</h6>
-            </div>
-            
-            <div class="filter-container" style="display: flex; flex-direction: column; gap: 16px; background-color: #f9f9f9; border-radius: 4px; padding: 16px;">
-              <div
-                v-for="columnField in selectedColumns"
-                :key="columnField"
-                class="filter-item"
-                style="display: flex; flex-direction: column; gap: 8px; padding: 12px; background-color: white; border-radius: 4px; border: 1px solid #e0e0e0;"
-              >
-                <label style="font-weight: 500; font-size: 14px; color: #555;">
-                  {{ getColumnTitle(columnField) }}
-                  <span style="font-size: 12px; color: #888; font-weight: normal;">
-                    ({{ getFilterType(columnField) }})
-                  </span>
-                </label>
-                
-                <!-- Categorical Filter -->
-                <v-select
-                  v-if="getFilterType(columnField) === 'categorical' && filterValues[columnField]"
-                  v-model="filterValues[columnField].categorical"
-                  :items="getUniqueValues(columnField)"
-                  multiple
-                  chips
-                  label="Select values"
-                  clearable
-                  density="compact"
-                  variant="outlined"
-                  @update:model-value="applyFilters"
-                />
-
-                <!-- Numeric Range Filter -->
-                <div v-else-if="getFilterType(columnField) === 'numeric' && filterValues[columnField]" style="padding: 8px 0;">
-                  <div style="display: flex; gap: 8px;">
-                    <v-text-field
-                      :model-value="filterValues[columnField]?.numeric?.min || getMinValue(columnField)"
-                      type="number"
-                      label="Min"
-                      :placeholder="`Min: ${getMinValue(columnField)}`"
-                      density="compact"
-                      variant="outlined"
-                      :min="getMinValue(columnField)"
-                      :max="getMaxValue(columnField)"
-                      @update:model-value="(value: string) => updateNumericFilterMin(columnField, value)"
-                      @blur="validateAndApplyNumericFilter(columnField)"
-                    />
-                    <v-text-field
-                      :model-value="filterValues[columnField]?.numeric?.max || getMaxValue(columnField)"
-                      type="number"
-                      label="Max"
-                      :placeholder="`Max: ${getMaxValue(columnField)}`"
-                      density="compact"
-                      variant="outlined"
-                      :min="getMinValue(columnField)"
-                      :max="getMaxValue(columnField)"
-                      @update:model-value="(value: string) => updateNumericFilterMax(columnField, value)"
-                      @blur="validateAndApplyNumericFilter(columnField)"
-                    />
-                  </div>
-                  <div style="display: flex; justify-content: space-between; font-size: 12px; color: #666; margin-top: 4px;">
-                    <span>Data range: {{ getMinValue(columnField) }} - {{ getMaxValue(columnField) }}</span>
-                  </div>
-                </div>
-
-                <!-- Text/Regex Filter -->
-                <v-text-field
-                  v-else-if="filterValues[columnField]"
-                  v-model="filterValues[columnField].text"
-                  label="Search pattern (regex supported)"
-                  clearable
-                  density="compact"
-                  variant="outlined"
-                  @update:model-value="applyFilters"
-                />
-              </div>
-            </div>
-          </div>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="primary" @click="filterDialog = false">Close</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
   </div>
 </template>
 
@@ -240,7 +91,6 @@ export default defineComponent({
     return {
       tabulator: undefined as Tabulator | undefined,
       initialized: 0 as number,
-      filterDialog: false,
       selectedColumns: [] as string[],
       filterValues: {} as Record<string, {
         categorical?: string[],
@@ -412,7 +262,7 @@ export default defineComponent({
       if (this.canUseTeleport()) {
         this.openTeleportDialog()
       } else {
-        this.filterDialog = true
+        console.log('Filter dialog cannot be opened: parent.document not accessible due to iframe constraints or security restrictions. This typically occurs when the component is embedded in an iframe with different origins.')
       }
     },
     toggleColumnSelection(columnField: string) {
@@ -1177,20 +1027,4 @@ export default defineComponent({
   font-size: 14px;
 }
 
-// Fullscreen dialog for better iframe experience
-.v-overlay--active {
-  .v-dialog {
-    .v-card {
-      max-height: 90vh;
-      display: flex;
-      flex-direction: column;
-    }
-    
-    .v-card-text {
-      overflow-y: auto;
-      flex: 1;
-      min-height: 0;
-    }
-  }
-}
 </style>
