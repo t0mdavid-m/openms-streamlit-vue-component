@@ -91,27 +91,8 @@
 
           <!-- Dynamic Filter Components -->
           <div v-if="selectedColumns.length > 0" style="margin-top: 24px;">
-            <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="margin-bottom: 16px;">
               <h6 style="color: #333; margin: 0;">Filter Settings:</h6>
-              <div>
-                <v-btn
-                  size="small"
-                  variant="outlined"
-                  @click="applyFilters"
-                  style="margin-right: 8px;"
-                  color="primary"
-                >
-                  Apply Filters
-                </v-btn>
-                <v-btn
-                  size="small"
-                  variant="outlined"
-                  @click="clearFilters"
-                  color="error"
-                >
-                  Clear Filters
-                </v-btn>
-              </div>
             </div>
             
             <div class="filter-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; background-color: #f9f9f9; border-radius: 4px; padding: 16px;">
@@ -651,13 +632,6 @@ export default defineComponent({
       }
 
       this.applyFilters();
-    },
-    clearFilters() {
-      this.tabulator?.clearFilter(true);
-      this.filterValues = {};
-      this.selectedColumns.forEach(columnField => {
-        this.initializeFilterValue(columnField);
-      });
     },
     cleanupFilterForColumn(columnField: string) {
       // Remove filter values for the unselected column
