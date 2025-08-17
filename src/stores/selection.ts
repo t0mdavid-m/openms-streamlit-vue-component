@@ -22,9 +22,8 @@ export const useSelectionStore = defineStore('selection', {
     massIndex: undefined as number | undefined,
     proteinIndex: undefined as number | undefined,
     tagIndex: undefined as number | undefined,
-    selectedObservedMass: undefined as number | undefined,
-    AApos: undefined as number | undefined, 
-    tagData: undefined as TagData | undefined, 
+    AApos: undefined as number | undefined,
+    tagData: undefined as TagData | undefined,
     counter: undefined as number | undefined,
     id: undefined as number | undefined,
     heatmap_deconv: undefined as HeatmapData | undefined,
@@ -43,24 +42,22 @@ export const useSelectionStore = defineStore('selection', {
     selectedDeconvHeatmap: (state): HeatmapData | undefined => state.heatmap_deconv,
     selectedRawHeatmap: (state): HeatmapData | undefined => state.heatmap_raw,
     selectedRawMS2Heatmap: (state): HeatmapData | undefined => state.heatmap_raw2,
-    selectedObservedMassFromFragmentTable: (state): number | undefined =>
-      state.selectedObservedMass,
   },
   actions: {
     updateSelectedScan(rowIndex: number) {
       this.scanIndex = rowIndex
     },
     updateSelectedMass(rowIndex?: number) {
+      console.log('🔍 [DEBUG] Selection store updateSelectedMass called with:', rowIndex)
+      console.log('🔍 [DEBUG] Previous mass index:', this.massIndex)
       this.massIndex = rowIndex
+      console.log('🔍 [DEBUG] New mass index set to:', this.massIndex)
     },
     updateSelectedProtein(rowIndex?: number) {
       this.proteinIndex = rowIndex
     },
     updateSelectedTag(rowIndex?: number) {
       this.tagIndex = rowIndex
-    },
-    selectedAminoAcid(fragmentMass?: number) {
-      this.selectedObservedMass = fragmentMass
     },
     updateSelectedAA(pos?: number) {
       this.AApos = pos

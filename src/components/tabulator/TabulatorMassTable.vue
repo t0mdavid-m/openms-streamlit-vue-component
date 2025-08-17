@@ -84,7 +84,6 @@ export default defineComponent({
           headerTooltip: 'The quality score indicating the confidence of the mass detection (higher is better).'
         },
       ] as ColumnDefinition[],
-      selectedMassIndex: undefined as number | undefined,
     }
   },
   computed: {
@@ -95,7 +94,9 @@ export default defineComponent({
       return this.selectionStore.selectedScanIndex
     },
     selectedMassTableRow(): number | undefined {
-      return this.selectionStore.selectedMassIndex
+      const massIndex = this.selectionStore.selectedMassIndex
+      console.log('🔍 [DEBUG] Mass Table selectedMassTableRow computed:', massIndex)
+      return massIndex
     },
     tableData(): Record<string, unknown>[] {
       if (this.selectedRow === undefined) return []
@@ -133,20 +134,10 @@ export default defineComponent({
 
       return tableData
     },
-    selectedMassFromFragmentTable(): number | undefined {
-      return this.selectionStore.selectedObservedMassFromFragmentTable
-    },
-  },
-  watch: {
-    selectedMassFromFragmentTable(newMass: number | undefined) {
-      const foundMassIndex = this.tableData.findIndex((x) => x.MonoMass === newMass)
-      if (foundMassIndex !== -1) {
-        this.selectedMassIndex = foundMassIndex
-      }
-    },
   },
   methods: {
     updateSelectedMass(selectedRow?: number) {
+      console.log('🔍 [DEBUG] Mass Table updateSelectedMass called with:', selectedRow)
       if (selectedRow !== undefined) {
         this.selectionStore.updateSelectedMass(selectedRow)
       }
