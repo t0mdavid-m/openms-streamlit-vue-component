@@ -1,6 +1,6 @@
 <template>
   <div :id="id" class="plot-container">
-    <button class="simple-button" @click="backButton" v-if="showBackButton">↩</button>
+    <button v-if="showBackButton" class="simple-button" @click="backButton">↩</button>
   </div>
 </template>
 

@@ -4,9 +4,9 @@
     :column-definitions="columnDefinitions"
     title="Tag Table"
     :index="index"
-    @row-selected="updateSelectedTag"
     :default-row=0
     :initial-sort="initialSort"
+    @row-selected="updateSelectedTag"
   />
 </template>
 

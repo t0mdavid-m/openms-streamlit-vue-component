@@ -227,7 +227,9 @@ export default defineComponent({
       this.drawTable()
     },
     selectedRowIndexFromListening(newVal: number | undefined) {
+      console.log('🔍 [DEBUG] TabulatorTable selectedRowIndexFromListening watcher triggered:', newVal)
       if (newVal !== undefined) {
+        console.log('🔍 [DEBUG] TabulatorTable calling onSelectedRowListener with:', newVal)
         this.onSelectedRowListener(newVal)
       }
     },
@@ -277,6 +279,9 @@ export default defineComponent({
         } else {
           this.selectDefaultRow()
         }
+        
+        // Restore existing filter state after table is built
+        this.applyFilters()
       })
     },
     selectDefaultRow(): void {
@@ -300,14 +305,19 @@ export default defineComponent({
     },
     onTableClick(): void {
       const selectedRow = this.tabulator?.getSelectedRows()[0]?.getIndex()
+      console.log('🔍 [DEBUG] TabulatorTable onTableClick - selected row:', selectedRow)
       if (selectedRow !== undefined) {
+        console.log('🔍 [DEBUG] TabulatorTable emitting rowSelected event with:', selectedRow)
         this.$emit('rowSelected', selectedRow)
       }
     },
     onSelectedRowListener(row: number): void {
+      console.log('🔍 [DEBUG] TabulatorTable onSelectedRowListener called with row:', row)
+      console.log('🔍 [DEBUG] TabulatorTable tabulator instance available:', !!this.tabulator)
       this.tabulator?.scrollToRow(row, 'top', false)
       this.tabulator?.deselectRow()
       this.tabulator?.selectRow([row])
+      console.log('🔍 [DEBUG] TabulatorTable calling onTableClick after selection')
       this.onTableClick()
     },
     downloadTable(): void {

@@ -5,9 +5,9 @@
     title="Scan Table"
     :index="index"
     table-layout-param="fitColumns"
-    @row-selected="updateSelectedScan"
     :selected-row-index-from-listening="selectedRow"
     :default-row=0
+    @row-selected="updateSelectedScan"
   />
 </template>
 

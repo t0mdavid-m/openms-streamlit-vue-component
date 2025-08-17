@@ -20,6 +20,18 @@
         <div>
           <SvgScreenshot element-id="sequence-part" />
           <SequenceViewInformation />
+          <v-btn
+            variant="text"
+            icon="mdi-content-copy"
+            size="large"
+            :disabled="sequence.length === 0"
+            @click="copySequence"
+          >
+            <v-icon>mdi-content-copy</v-icon>
+            <v-tooltip activator="parent" location="bottom">
+              Copy sequence to clipboard
+            </v-tooltip>
+          </v-btn>
           <v-btn id="settings-button" variant="text" icon="mdi-cog" size="large"></v-btn>
           <v-menu :close-on-content-click="false" activator="#settings-button" location="bottom">
             <v-card min-width="300">
@@ -59,8 +71,8 @@
                       hide-details
                       density="comfortable"
                       :label="category.text"
-                      @click="toggleIonTypeSelected(ionIndex)"
                       :disabled="!showFragments"
+                      @click="toggleIonTypeSelected(ionIndex)"
                     >
                     </v-checkbox>
                   </div>
@@ -84,8 +96,8 @@
                     type="number"
                     hide-details="auto"
                     label="mass tolerance in ppm"
-                    @change="updateMassTolerance"
                     :disabled="!showFragments"
+                    @change="updateMassTolerance"
                   ></v-text-field>
                   <!-- TODO: add "required" -->
                 </v-list-item>
@@ -104,15 +116,15 @@
           </div>
           <ProteinTerminalCell v-if="aa_index === 0" protein-terminal="N-term" :truncated=n_truncation :index="-1" :disable-variable-modification-selection="disableVariableModifications" :determined="n_determined"/>
           <AminoAcidCell
+            v-if="showTruncations || ((sequence_start <= aa_index) && (sequence_end >= aa_index))"
             :index="aa_index"
             :sequence-object="aminoAcidObj"
             :fixed-modification="fixedModification(aminoAcidObj.aminoAcid)"
             :disable-variable-modification-selection="disableVariableModifications"
-            :showTags="showTags"
-            :showFragments="showFragments"
-            :showModifications="showModifications"
+            :show-tags="showTags"
+            :show-fragments="showFragments"
+            :show-modifications="showModifications"
             @selected="aminoAcidSelected"
-            v-if="showTruncations || ((sequence_start <= aa_index) && (sequence_end >= aa_index))"
           />
           <div
             v-if="(showTruncations && (aa_index % rowWidth === rowWidth - 1 && aa_index !== sequence.length - 1)) || (!showTruncations && ((aa_index - sequence_start) % rowWidth === rowWidth - 1) && (aa_index < sequence_end) && (aa_index > sequence_start))"
@@ -144,6 +156,7 @@
           :index="index"
           :selected-row-index-from-listening="selectedFragTableRowIndex"
           table-layout-param="fitColumns"
+          @row-selected="onFragmentTableRowSelected"
         >
           <template #default>{{ fragmentTableTitle }}</template>
           <template #end-title-row
@@ -153,6 +166,23 @@
       </template>
     </div>
   </v-sheet>
+  
+  <v-snackbar
+    v-model="copySnackbar"
+    :timeout="3000"
+    location="bottom"
+  >
+    {{ copySnackbarText }}
+    <template #actions>
+      <v-btn
+        color="blue"
+        variant="text"
+        @click="copySnackbar = false"
+      >
+        Close
+      </v-btn>
+    </template>
+  </v-snackbar>
 </template>
 
 <script lang="ts">
@@ -252,6 +282,10 @@ export default defineComponent({
       residueCleavagePercentage: 0 as number,
       sequenceObjects: [] as SequenceObject[],
       selectedFragTableRowIndex: undefined as number | undefined,
+      copySnackbar: false as boolean,
+      copySnackbarText: '' as string,
+      _updatingFromMass: false as boolean,
+      _updatingFromFragment: false as boolean,
     }
   },
   computed: {
@@ -491,6 +525,15 @@ export default defineComponent({
       this.prepareFragmentTable()
       this.prepareAmbigiousModifications()
     },
+    // Watch for changes in mass table selection
+    'selectionStore.selectedMassIndex': {
+      handler(newMassIndex: number | null) {
+        if (newMassIndex !== null) {
+          this.updateFragmentTableFromMassSelection(newMassIndex);
+        }
+      },
+      immediate: false
+    }
   },
   mounted() {
     this.selectionStore.updateSelectedAA(undefined)
@@ -752,10 +795,158 @@ export default defineComponent({
       }
       // find matching fragments from the table
       this.selectedFragTableRowIndex = this.fragmentTableData.findIndex((x) => x.Name === ionName)
-      // set observed mass in data store for the mass table
-      this.selectionStore.selectedAminoAcid(
-        this.fragmentTableData[this.selectedFragTableRowIndex].ObservedMass as number
-      )
+      // update mass table selection using the observed mass
+      if (this.selectedFragTableRowIndex >= 0) {
+        this.updateMassTableFromFragmentMass(
+          this.fragmentTableData[this.selectedFragTableRowIndex].ObservedMass as number
+        )
+      }
+    },
+    onFragmentTableRowSelected(rowIndex?: number) {
+      if (rowIndex !== undefined && this.fragmentTableData[rowIndex]) {
+        const observedMass = this.fragmentTableData[rowIndex].ObservedMass as number
+        this.updateMassTableFromFragmentMass(observedMass)
+      }
+    },
+    updateMassTableFromFragmentMass(observedMass: number) {
+      // Prevent circular updates
+      if (this._updatingFromMass) {
+        return
+      }
+      
+      this._updatingFromFragment = true
+      
+      // Get mass data from available sources - work independently of scan selection
+      let massArray: number[] | undefined = undefined
+      
+      // First try to get mass data from selected scan if available
+      const selectedScanIndex = this.selectionStore.selectedScanIndex
+      
+      if (selectedScanIndex !== undefined) {
+        const scanData = this.streamlitDataStore.allDataForDrawing.per_scan_data[selectedScanIndex]
+        if (scanData && scanData.MonoMass) {
+          massArray = scanData.MonoMass as number[]
+        }
+      }
+      
+      // If scan-specific data is not available, try to get mass data from fallback sources
+      if (!massArray) {
+        const allDrawingData = this.streamlitDataStore.allDataForDrawing
+        if (allDrawingData.per_scan_data?.length > 0) {
+          // Fall back to first available scan data if mass table data is not available
+          for (const scanData of allDrawingData.per_scan_data) {
+            if (scanData && scanData.MonoMass) {
+              massArray = scanData.MonoMass as number[]
+              break
+            }
+          }
+        }
+      }
+      
+      if (!massArray || massArray.length === 0) {
+        this._updatingFromFragment = false
+        return
+      }
+
+      // Try exact match first
+      let massIndex = massArray.findIndex((mass) => mass === observedMass)
+      
+      // If no exact match, find the closest match within tolerance (floating point precision issue)
+      if (massIndex < 0) {
+        const tolerance = 0.001 // 0.001 Da tolerance for floating point precision
+        const closeMatches = massArray.map((mass, index) => ({
+          index,
+          mass,
+          diff: Math.abs(mass - observedMass)
+        })).filter(item => item.diff < tolerance).sort((a, b) => a.diff - b.diff)
+        
+        if (closeMatches.length > 0) {
+          massIndex = closeMatches[0].index
+        }
+      }
+      
+      if (massIndex >= 0) {
+        this.selectionStore.updateSelectedMass(massIndex)
+      }
+      
+      this._updatingFromFragment = false
+    },
+    updateFragmentTableFromMassSelection(massIndex: number) {
+      // Prevent circular updates
+      if (this._updatingFromFragment) {
+        return
+      }
+      
+      this._updatingFromMass = true
+      
+      // Get the mass value from the mass data at the given index
+      let massArray: number[] | undefined = undefined
+      let selectedMass: number | undefined = undefined
+      
+      // Try to get mass data from available sources - same approach as updateMassTableFromFragmentMass
+      const selectedScanIndex = this.selectionStore.selectedScanIndex
+      
+      if (selectedScanIndex !== undefined) {
+        const scanData = this.streamlitDataStore.allDataForDrawing.per_scan_data[selectedScanIndex]
+        if (scanData && scanData.MonoMass) {
+          massArray = scanData.MonoMass as number[]
+        }
+      }
+      
+      // If scan-specific data is not available, try alternative sources
+      if (!massArray) {
+        const allDrawingData = this.streamlitDataStore.allDataForDrawing
+        if (allDrawingData.per_scan_data?.length > 0) {
+          // Fall back to first available scan data
+          for (const scanData of allDrawingData.per_scan_data) {
+            if (scanData && scanData.MonoMass) {
+              massArray = scanData.MonoMass as number[]
+              break
+            }
+          }
+        }
+      }
+      
+      if (!massArray || massIndex >= massArray.length || massIndex < 0) {
+        this._updatingFromMass = false
+        return
+      }
+      
+      selectedMass = massArray[massIndex]
+      
+      if (!selectedMass) {
+        this._updatingFromMass = false
+        return
+      }
+      
+      // Find matching fragment in the fragment table data using tolerance-based matching
+      const tolerance = 0.001 // 0.001 Da tolerance for floating point precision
+      let bestMatch: { index: number; diff: number } | null = null
+      
+      for (let i = 0; i < this.fragmentTableData.length; i++) {
+        const fragmentRow = this.fragmentTableData[i]
+        const observedMass = fragmentRow.ObservedMass as number
+        
+        if (observedMass !== undefined) {
+          const massDiff = Math.abs(observedMass - selectedMass)
+          
+          if (massDiff < tolerance) {
+            if (!bestMatch || massDiff < bestMatch.diff) {
+              bestMatch = { index: i, diff: massDiff }
+            }
+          }
+        }
+      }
+      
+      if (bestMatch) {
+        if (this.selectedFragTableRowIndex !== bestMatch.index) {
+          this.selectedFragTableRowIndex = bestMatch.index
+        }
+      } else {
+        this.selectedFragTableRowIndex = undefined
+      }
+      
+      this._updatingFromMass = false
     },
     updateTagPosition() {
       // Protein without sequence selected
@@ -795,6 +986,27 @@ export default defineComponent({
           }
         }
       })
+    },
+    async copySequence(): Promise<void> {
+      try {
+        if (this.sequence.length === 0) {
+          return
+        }
+        
+        const sequenceToCopy = this.sequence.slice(this.sequence_start, this.sequence_end + 1).join('')
+        
+        if (!navigator.clipboard) {
+          throw new Error('Clipboard API not available')
+        }
+        
+        await navigator.clipboard.writeText(sequenceToCopy)
+        this.copySnackbarText = 'Sequence copied to clipboard!'
+        this.copySnackbar = true
+      } catch (error) {
+        this.copySnackbarText = 'Failed to copy sequence to clipboard'
+        this.copySnackbar = true
+        console.error('Copy failed:', error)
+      }
     },
   },
 })

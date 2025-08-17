@@ -113,7 +113,35 @@ export default defineComponent({
     updateSelectedProtein(selectedRow?: number) {
       if (selectedRow !== undefined) {
         this.selectionStore.updateSelectedProtein(selectedRow)
-        const scan_number = this.streamlitDataStore.dataForDrawing.protein_table[selectedRow]['Scan']
+        
+        // Add diagnostic logging for debugging
+        const proteinTable = this.streamlitDataStore.dataForDrawing.protein_table
+        console.log('[DEBUG] updateSelectedProtein called:')
+        console.log('  selectedRow (from getIndex()):', selectedRow)
+        console.log('  protein_table length:', proteinTable?.length)
+        
+        // Validate protein table exists
+        if (!proteinTable || !Array.isArray(proteinTable) || proteinTable.length === 0) {
+          console.error('[ERROR] protein_table is not available or empty')
+          return
+        }
+        
+        // FIX: Find protein by index field instead of using selectedRow as array index
+        // selectedRow is actually the ProteoformIndex (ID), not array position
+        const selectedProtein = proteinTable.find(protein =>
+          protein && (protein.index === selectedRow || protein.id === selectedRow)
+        )
+        
+        if (!selectedProtein) {
+          console.error('[ERROR] Could not find protein with index/id:', selectedRow)
+          console.error('  Available protein indices:', proteinTable.map(p => p?.index || p?.id).slice(0, 10))
+          return
+        }
+        
+        console.log('  Found protein:', selectedProtein)
+        const scan_number = selectedProtein['Scan']
+        console.log('  scan_number found:', scan_number)
+        
         if ((scan_number !== undefined) && (typeof scan_number == 'number')) {
           const scan_id = this.streamlitDataStore.allDataForDrawing.per_scan_data.findIndex((data) => data['Scan'] === scan_number)
           this.selectionStore.updateSelectedScan(scan_id)
