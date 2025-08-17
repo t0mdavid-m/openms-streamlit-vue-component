@@ -56,6 +56,9 @@ export default defineComponent({
       // Annotation toggle state
       annotationsVisible: true as Boolean,
       
+      // Deconvolved peaks highlighting mode
+      deconvolvedPeaksHighlightMode: false as Boolean,
+      
       // Local state for title to avoid prop mutation
       localTitle: '' as string
     }
@@ -112,6 +115,11 @@ export default defineComponent({
     
     isTnTMode(): boolean {
       return this.selectionStore.selectedTag !== undefined
+    },
+
+    isAnnotatedSpectraMode(): boolean {
+      // Annotated spectra modes use 'm/z' axis, deconvolved modes use 'Monoisotopic Mass'
+      return this.xAxisLabel === 'm/z'
     },
 
     config(): typeof DEFAULT_CONFIG {
@@ -359,7 +367,15 @@ export default defineComponent({
 
     highlightedValues(): HighlightData[] {
       try {
-    
+        const massValues = this.MassValues
+        const signals = this.mzSignals
+        
+        if (massValues.length === 0) return []
+        
+        let highlightValues: HighlightData[] = []
+        const highlightedIndices = new Set<number>()
+        
+        // First, handle selective highlighting (original logic for selected peaks)
         // Highlight by mass value (tags)
         let mass_values : number[] = []
         if (this.selectionStore.selectedTag?.masses !== undefined) {
@@ -384,17 +400,13 @@ export default defineComponent({
         ) {
           mass_positions = [this.selectionStore.selectedMassIndex]
         }
-
-        const massValues = this.MassValues
-        const signals = this.mzSignals
         
-        if (mass_positions.length === 0 || massValues.length === 0) return []
-        
-        let highlightValues: HighlightData[] = []
-        
+        // Add selective highlights to the set and result array
         for (let i = 0; i < mass_positions.length; i++) {
           const posIndex = mass_positions[i]
           if (posIndex >= massValues.length) continue
+          
+          highlightedIndices.add(posIndex)
           
           // Deconvolved only spectrum
           if (signals.length === 0) {
@@ -431,6 +443,50 @@ export default defineComponent({
             intensity: intensity
           })
         }
+        
+        // Second, when deconvolved peaks highlighting mode is active, add ALL signal peaks
+        if (this.deconvolvedPeaksHighlightMode) {
+          for (let i = 0; i < massValues.length; i++) {
+            // Skip if already highlighted by selective logic
+            if (highlightedIndices.has(i)) continue
+            
+            // Deconvolved only spectrum
+            if (signals.length === 0) {
+              highlightValues.push({
+                mass: this.MassValues[i],
+                mzs: [],
+                charges: [],
+                intensity: []
+              })
+              continue
+            }
+            
+            const mass = massValues[i]
+            let mzs: number[] = []
+            let charges: number[] = []
+            let intensity: number[] = []
+            
+            const signalGroup = signals[i]
+            if (Array.isArray(signalGroup)) {
+              for (let j = 0; j < signalGroup.length; j++) {
+                const signal = signalGroup[j]
+                if (Array.isArray(signal) && signal.length >= 4) {
+                  mzs.push(signal[1])
+                  intensity.push(signal[2])
+                  charges.push(signal[3])
+                }
+              }
+            }
+            
+            highlightValues.push({
+              mass: mass,
+              mzs: mzs,
+              charges: charges,
+              intensity: intensity
+            })
+          }
+        }
+        
         return highlightValues
       } catch (error) {
         this.handleError(error as Error, 'highlightedValues-computation')
@@ -539,6 +595,10 @@ export default defineComponent({
       return this.xPosScalingFactor * this.xPosScalingThreshold
     },
 
+    minAnnotationWidth(): number {
+      return this.config.minAnnotationWidth
+    },
+
     // Shared coordinate calculation utilities
     getAnnotationPositioning(): {
       ymax: number;
@@ -560,7 +620,10 @@ export default defineComponent({
       const ypos_low = ymax * 1.18
       const ypos = ymax * 1.25
       const ypos_high = ymax * 1.32
-      const xpos_scaling = (xRange[1] - xRange[0]) / this.xPosScalingFactor
+      
+      // Apply minimum width constraint to prevent backgrounds from becoming too narrow
+      const calculatedScaling = (xRange[1] - xRange[0]) / this.xPosScalingFactor
+      const xpos_scaling = Math.max(calculatedScaling, this.minAnnotationWidth)
 
       return {
         ymax,
@@ -596,6 +659,18 @@ export default defineComponent({
         const xValues = this.xValues
         if (xValues.length === 0) return [0, 1]
         
+        // Smart Zoom Range Logic with Priority Order:
+        // 1. Deconvolved peaks ON (regardless of annotation state): Show entire spectrum
+        // 2. Deconvolved peaks OFF + Selective highlighting: Fit to highlighted peaks
+        // 3. Both deconvolved and selective highlighting ON: Default to whole spectrum
+        
+        // Priority 1: If deconvolved peaks highlighting is active, show entire spectrum
+        if (this.deconvolvedPeaksHighlightMode) {
+          const minX = Math.min(...xValues)
+          const maxX = Math.max(...xValues)
+          return [minX * 0.98, maxX * 1.02]
+        }
+        
         if (!this.annotationsVisible && !this.manual) {
           const minX = Math.min(...xValues)
           const maxX = Math.max(...xValues)
@@ -609,6 +684,7 @@ export default defineComponent({
 
         const highlighted = this.highlightedValues
         
+        // Priority 2: Deconvolved peaks OFF + Selective highlighting: Fit to highlighted peaks
         // Skip iterative adjustment if no highlighted values
         if (highlighted.length === 0) {
           const minX = Math.min(...xValues)
@@ -665,7 +741,84 @@ export default defineComponent({
           return { shapes: [], annotations: [], traces: [] }
         }
         
-        const highlighted = this.highlightedValues
+        // Get highlighted values but only show annotations for selected masses
+        // Filter highlighted values to only include those from selective highlighting (not deconvolved mode)
+        let annotationHighlights: HighlightData[] = []
+        
+        // Highlight by mass value (tags)
+        let mass_values : number[] = []
+        if (this.selectionStore.selectedTag?.masses !== undefined) {
+          mass_values = this.selectionStore.selectedTag?.masses
+        }
+        let mass_positions : number[] = []
+        mass_values.forEach((v, i) => {
+          for (let j = 0; j < this.MassValues.length; j++) {
+            if (Math.abs(this.MassValues[j] - v) < 1e-5) {
+              mass_positions.push(j)
+              break
+            }
+          }
+        })
+
+        // Highlight by selected mass index
+        if (
+          this.selectionStore.selectedMassIndex !== undefined &&
+          this.selectionStore.selectedMassIndex >= 0 &&
+          this.selectionStore.selectedMassIndex < this.MassValues.length &&
+          this.currentTitle !== 'Augmented Deconvolved Spectrum'
+        ) {
+          mass_positions = [this.selectionStore.selectedMassIndex]
+        }
+        
+        // Build annotation highlights based on selective highlighting only
+        const massValues = this.MassValues
+        const signals = this.mzSignals
+        
+        if (mass_positions.length === 0 || massValues.length === 0) {
+          return { shapes: [], annotations: [], traces: [] }
+        }
+        
+        for (let i = 0; i < mass_positions.length; i++) {
+          const posIndex = mass_positions[i]
+          if (posIndex >= massValues.length) continue
+          
+          // Deconvolved only spectrum
+          if (signals.length === 0) {
+            annotationHighlights.push({
+              mass: this.MassValues[posIndex],
+              mzs: [],
+              charges: [],
+              intensity: []
+            })
+            continue
+          }
+          
+          const mass = massValues[posIndex]
+          let mzs: number[] = []
+          let charges: number[] = []
+          let intensity: number[] = []
+          
+          const signalGroup = signals[posIndex]
+          if (Array.isArray(signalGroup)) {
+            for (let j = 0; j < signalGroup.length; j++) {
+              const signal = signalGroup[j]
+              if (Array.isArray(signal) && signal.length >= 4) {
+                mzs.push(signal[1])
+                intensity.push(signal[2])
+                charges.push(signal[3])
+              }
+            }
+          }
+          
+          annotationHighlights.push({
+            mass: mass,
+            mzs: mzs,
+            charges: charges,
+            intensity: intensity
+          })
+        }
+        
+        const highlighted = annotationHighlights
         if (highlighted.length === 0) {
           return { shapes: [], annotations: [], traces: [] }
         }
@@ -968,8 +1121,8 @@ export default defineComponent({
 
       let traces: Plotly.Data[] = []
       
-      // When annotations are hidden, force all peaks to use default color
-      if (!this.annotationsVisible) {
+      // When annotations are hidden AND deconvolved peaks highlighting is off, use single color
+      if (!this.annotationsVisible && !this.deconvolvedPeaksHighlightMode) {
         traces.push({
           x: this.xValues,
           y: this.yValues,
@@ -981,7 +1134,7 @@ export default defineComponent({
         return traces
       }
       
-      // When annotations are visible, use highlighting logic
+      // When annotations are visible OR deconvolved peaks highlighting is active, use highlighting logic
       traces.push({
         x: this.plotData.unhighlighted_x,
         y: this.plotData.unhighlighted_y,
@@ -1006,8 +1159,11 @@ export default defineComponent({
         marker: { color: this.styling.selectedColor }
       })
       
-      const buttonTraces = this.annotationData.traces
-      traces.push(...buttonTraces)
+      // Only add button traces when annotations are visible
+      if (this.annotationsVisible) {
+        const buttonTraces = this.annotationData.traces
+        traces.push(...buttonTraces)
+      }
       
       return traces
     },
@@ -1097,6 +1253,10 @@ export default defineComponent({
       this.safeGraph()
     },
     
+    deconvolvedPeaksHighlightMode() {
+      this.safeGraph()
+    },
+    
     'selectionStore.selectedMassIndex'() {
       this.manual = false
       this.safeGraph()
@@ -1131,7 +1291,10 @@ export default defineComponent({
         const ymax = yRange[1] / 1.8
         const ypos_low = ymax * 1.18
         const ypos_high = ymax * 1.32
-        const xpos_scaling = (xRange[1] - xRange[0]) / this.xPosScalingFactor
+        
+        // Apply minimum width constraint to prevent backgrounds from becoming too narrow
+        const calculatedScaling = (xRange[1] - xRange[0]) / this.xPosScalingFactor
+        const xpos_scaling = Math.max(calculatedScaling, this.minAnnotationWidth)
 
         const boxes: Array<{
           x: number;
@@ -1474,35 +1637,64 @@ export default defineComponent({
           return
         }
         
-        const plotInstance = await Plotly.newPlot(this.id, this.data, this.layout, {
-          modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'],
-          modeBarButtonsToAdd: [
-            {
-              title: this.annotationsVisible ? 'Hide Annotations' : 'Show Annotations',
-              name: 'toggleAnnotations',
-              icon: {
-                width: 1792,
-                height: 1792,
-                path: 'M1664 960q-152-236-381-353 61 104 61 225 0 185-131.5 316.5t-316.5 131.5-316.5-131.5-131.5-316.5q0-121 61-225-229 117-381 353 133 205 333.5 326.5t434.5 121.5 434.5-121.5 333.5-326.5zm-720-384q0-20-14-34t-34-14q-125 0-214.5 89.5t-89.5 214.5q0 20 14 34t34 14 34-14 14-34q0-86 61-147t147-61q20 0 34-14t14-34zm848 384q0 34-20 69-140 230-376.5 368.5t-499.5 138.5-499.5-139-376.5-368q-20-35-20-69t20-69q140-229 376.5-368t499.5-139 499.5 139 376.5 368q20 35 20 69z'
-              },
-              click: () => {
-                this.toggleAnnotations()
-              },
+        // Build modeBarButtonsToAdd array conditionally
+        const modeBarButtons = [
+          {
+            title: this.annotationsVisible ? 'Hide Annotations' : 'Show Annotations',
+            name: 'toggleAnnotations',
+            icon: {
+              width: 1792,
+              height: 1792,
+              path: 'M1664 960q-152-236-381-353 61 104 61 225 0 185-131.5 316.5t-316.5 131.5-316.5-131.5-131.5-316.5q0-121 61-225-229 117-381 353 133 205 333.5 326.5t434.5 121.5 434.5-121.5 333.5-326.5zm-720-384q0-20-14-34t-34-14q-125 0-214.5 89.5t-89.5 214.5q0 20 14 34t34 14 34-14 14-34q0-86 61-147t147-61q20 0 34-14t14-34zm848 384q0 34-20 69-140 230-376.5 368.5t-499.5 138.5-499.5-139-376.5-368q-20-35-20-69t20-69q140-229 376.5-368t499.5-139 499.5 139 376.5 368q20 35 20 69z'
             },
-            {
-              title: 'Download as SVG',
-              name: 'toImageSvg',
-              icon: Plotly.Icons.camera,
-              click: (plotlyElement) => {
-                Plotly.downloadImage(plotlyElement, {
+            click: () => {
+              this.toggleAnnotations()
+            },
+          }
+        ]
+
+        // Only add deconvolved peaks button in annotated spectra modes
+        if (this.isAnnotatedSpectraMode) {
+          modeBarButtons.push({
+            title: this.deconvolvedPeaksHighlightMode ? 'Hide Deconvolved Peaks' : 'Show Deconvolved Peaks',
+            name: 'toggleDeconvolvedPeaks',
+            icon: {
+              width: 1792,
+              height: 1792,
+              path: 'M448 1024h896v128h-896v-128zm0-256h896v128h-896v-128zm0-256h896v128h-896v-128zm0-256h896v128h-896v-128zm-448 768h384v128h-384v-128zm0-256h384v128h-384v-128zm0-256h384v128h-384v-128zm0-256h384v128h-384v-128z'
+            },
+            click: () => {
+              this.toggleDeconvolvedPeaksHighlight()
+            },
+          })
+        }
+
+        modeBarButtons.push(
+          {
+            title: 'Download as SVG',
+            name: 'toImageSvg',
+            icon: {
+              width: 1792,
+              height: 1792,
+              path: 'M1152 1376v-160q0-14-9-23t-23-9h-96v-512q0-14-9-23t-23-9h-320q-14 0-23 9t-9 23v160q0 14 9 23t23 9h96v320h-96q-14 0-23 9t-9 23v160q0 14 9 23t23 9h320q14 0 23-9t9-23zm-128-896v-160q0-14-9-23t-23-9h-192q-14 0-23 9t-9 23v160q0 14 9 23t23 9h192q14 0 23-9t9-23zm640 416q0 209-103 385.5t-279.5 279.5-385.5 103-385.5-103-279.5-279.5-103-385.5 103-385.5 279.5-279.5 385.5-103 385.5 103 279.5 279.5 103 385.5z'
+            },
+            click: () => {
+              const element = document.getElementById(this.id)
+              if (element) {
+                Plotly.downloadImage(element, {
                   filename: 'FLASHViewer-lineplot',
                   height: 400,
                   width: 1200,
                   format: 'svg',
                 })
-              },
+              }
             },
-          ],
+          }
+        )
+
+        const plotInstance = await Plotly.newPlot(this.id, this.data, this.layout, {
+          modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'],
+          modeBarButtonsToAdd: modeBarButtons,
           scrollZoom: true
         })
         
@@ -1556,6 +1748,11 @@ export default defineComponent({
     
     toggleAnnotations(): void {
       this.annotationsVisible = !this.annotationsVisible
+      this.safeGraph()
+    },
+    
+    toggleDeconvolvedPeaksHighlight(): void {
+      this.deconvolvedPeaksHighlightMode = !this.deconvolvedPeaksHighlightMode
       this.safeGraph()
     },
     

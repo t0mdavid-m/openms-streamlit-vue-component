@@ -30,12 +30,27 @@ export default defineComponent({
   },
   data() {
     return {
-      zoomRange: undefined as HeatmapData | undefined
+      zoomRange: undefined as HeatmapData | undefined,
+      colorbarVisible: true,
+      userOverrideColorbar: false, // Track if user has manually set preference
+      plotWidth: 800,
+      resizeObserver: null as ResizeObserver | null
     }
   },
   computed: {
     id(): string {
       return `graph-${this.index}`
+    },
+    isNarrowPlot(): boolean {
+      return this.plotWidth < 600
+    },
+    effectiveColorbarVisible(): boolean {
+      // If user has manually overridden, respect their choice regardless of plot width
+      if (this.userOverrideColorbar) {
+        return this.colorbarVisible
+      }
+      // Otherwise, auto-hide when narrow but show when wide
+      return this.isNarrowPlot ? false : this.colorbarVisible
     },
     renderData(): RenderData | null {
       return this.streamlitDataStore.renderData
@@ -139,7 +154,7 @@ export default defineComponent({
           marker: {
             color: this.markerColorValues.map(v => v > 0 ? Math.log10(v) : 0),
             colorscale: 'Portland',
-            showscale: true,
+            showscale: this.effectiveColorbarVisible,
             colorbar: {
               title: 'Intensity',
               tickvals: tickValues.map(v => Math.log10(v)),
@@ -171,6 +186,13 @@ export default defineComponent({
           color: this.theme?.textColor,
           family: this.theme?.font,
         },
+        // Ensure plot uses full available space when colorbar is hidden
+        margin: {
+          l: 60,
+          r: this.effectiveColorbarVisible ? 120 : 20,
+          t: 60,
+          b: 60
+        }
       }
     },
   },
@@ -198,17 +220,87 @@ export default defineComponent({
   },
   mounted() {
     this.graph()
+    this.setupResizeObserver()
+  },
+  beforeUnmount() {
+    this.cleanupResizeObserver()
   },
   methods: {
+    async toggleColorbar() {
+      this.colorbarVisible = !this.colorbarVisible
+      this.userOverrideColorbar = true // Mark that user has manually set preference
+      await this.updatePlot()
+    },
+    async updatePlot() {
+      const plotElement = document.getElementById(this.id) as Plotly.PlotlyHTMLElement
+      if (plotElement) {
+        try {
+          // Update colorbar visibility first
+          await Plotly.restyle(plotElement, {
+            'marker.showscale': this.effectiveColorbarVisible
+          }, [0])
+          
+          // Then update layout margins
+          await Plotly.relayout(plotElement, {
+            margin: {
+              r: this.effectiveColorbarVisible ? 120 : 20
+            }
+          })
+        } catch (error) {
+          // Silently handle errors to avoid console spam
+        }
+      }
+    },
+    setupResizeObserver() {
+      const plotElement = document.getElementById(this.id)
+      if (plotElement && window.ResizeObserver) {
+        this.resizeObserver = new ResizeObserver((entries) => {
+          for (const entry of entries) {
+            const newWidth = entry.contentRect.width
+            if (Math.abs(newWidth - this.plotWidth) > 10) { // Avoid too frequent updates
+              const wasNarrow = this.isNarrowPlot
+              this.plotWidth = newWidth
+              const isNowNarrow = this.isNarrowPlot
+              
+              // Handle transitions between narrow and wide
+              if (wasNarrow !== isNowNarrow) {
+                if (!this.userOverrideColorbar) {
+                  // Only auto-adjust if user hasn't manually overridden
+                  if (isNowNarrow) {
+                    // Becoming narrow: hide colorbar by default
+                    this.colorbarVisible = false
+                  } else {
+                    // Becoming wide: show colorbar by default
+                    this.colorbarVisible = true
+                  }
+                }
+                this.updatePlot()
+              }
+            }
+          }
+        })
+        this.resizeObserver.observe(plotElement)
+      }
+    },
+    cleanupResizeObserver() {
+      if (this.resizeObserver) {
+        this.resizeObserver.disconnect()
+        this.resizeObserver = null
+      }
+    },
     async graph() {
-      await Plotly.newPlot(this.id, this.data, this.layout, {
-        modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'],
+      await Plotly.newPlot(this.id, this.data, this.layout, this.getPlotConfig())
+      this.setupPlotEventHandlers()
+    },
+    getPlotConfig(): Partial<Plotly.Config> {
+      return {
+        modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'] as any,
         modeBarButtonsToAdd: [
           {
             title: 'Download as SVG',
             name: 'toImageSvg',
             icon: Plotly.Icons.camera,
-            click: (plotlyElement) => {
+            click: (plotlyElement: any) => {
               Plotly.downloadImage(plotlyElement, {
                 filename: 'FLASHViewer-heatmap',
                 height: 400,
@@ -217,8 +309,23 @@ export default defineComponent({
               })
             },
           },
+          {
+            title: 'Toggle Colorbar',
+            name: 'toggleColorbar',
+            icon: {
+              'width': 1792,
+              'height': 1792,
+              'path': 'M1408 768v192q0 40-28 68t-68 28H480q-40 0-68-28t-28-68V768q0-40 28-68t68-28h832q40 0 68 28t28 68zm0-384v192q0 40-28 68t-68 28H480q-40 0-68-28t-28-68V384q0-40 28-68t68-28h832q40 0 68 28t28 68zm0-384v192q0 40-28 68t-68 28H480q-40 0-68-28t-28-68V0q0-40 28-68t68-28h832q40 0 68 28t28 68z',
+              'transform': 'matrix(1 0 0 -1 0 1792)'
+            },
+            click: () => {
+              this.toggleColorbar()
+            },
+          },
         ],
-      })
+      }
+    },
+    setupPlotEventHandlers() {
       // Monitor zoom level
       const plotElement = document.getElementById(this.id) as Plotly.PlotlyHTMLElement
       if (plotElement) {
@@ -231,9 +338,9 @@ export default defineComponent({
             }
           }
           else if (
-            eventData['xaxis.range[0]'] !== undefined && 
-            eventData['xaxis.range[1]'] !== undefined && 
-            eventData['yaxis.range[0]'] !== undefined && 
+            eventData['xaxis.range[0]'] !== undefined &&
+            eventData['xaxis.range[1]'] !== undefined &&
+            eventData['yaxis.range[0]'] !== undefined &&
             eventData['yaxis.range[1]'] !== undefined
           ) {
             this.zoomRange = {
