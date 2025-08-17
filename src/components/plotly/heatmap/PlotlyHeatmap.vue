@@ -227,31 +227,18 @@ export default defineComponent({
   },
   methods: {
     async toggleColorbar() {
-      console.log('toggleColorbar called - before:', {
-        colorbarVisible: this.colorbarVisible,
-        effectiveColorbarVisible: this.effectiveColorbarVisible,
-        userOverrideColorbar: this.userOverrideColorbar
-      })
       this.colorbarVisible = !this.colorbarVisible
       this.userOverrideColorbar = true // Mark that user has manually set preference
-      console.log('toggleColorbar called - after:', {
-        colorbarVisible: this.colorbarVisible,
-        effectiveColorbarVisible: this.effectiveColorbarVisible,
-        userOverrideColorbar: this.userOverrideColorbar
-      })
       await this.updatePlot()
     },
     async updatePlot() {
-      console.log('updatePlot called with effectiveColorbarVisible:', this.effectiveColorbarVisible)
       const plotElement = document.getElementById(this.id) as Plotly.PlotlyHTMLElement
       if (plotElement) {
-        console.log('plotElement found, updating plot...')
         try {
           // Update colorbar visibility first
           await Plotly.restyle(plotElement, {
             'marker.showscale': this.effectiveColorbarVisible
           }, [0])
-          console.log('restyle completed successfully')
           
           // Then update layout margins
           await Plotly.relayout(plotElement, {
@@ -259,12 +246,9 @@ export default defineComponent({
               r: this.effectiveColorbarVisible ? 120 : 20
             }
           })
-          console.log('relayout completed successfully')
         } catch (error) {
-          console.error('Error updating plot:', error)
+          // Silently handle errors to avoid console spam
         }
-      } else {
-        console.error('plotElement not found with id:', this.id)
       }
     },
     setupResizeObserver() {
@@ -335,7 +319,6 @@ export default defineComponent({
               'transform': 'matrix(1 0 0 -1 0 1792)'
             },
             click: () => {
-              console.log('Colorbar toggle button clicked!')
               this.toggleColorbar()
             },
           },
@@ -389,13 +372,6 @@ export default defineComponent({
             this.selectionStore.updateSelectedMass(mass_idx)
           }
         })
-      }
-    },
-    async updateModeBar() {
-      const plotElement = document.getElementById(this.id) as Plotly.PlotlyHTMLElement
-      if (plotElement) {
-        // Update the modebar with new configuration including updated button title
-        await Plotly.react(plotElement, this.data, this.layout, this.getPlotConfig())
       }
     },
   },
