@@ -20,6 +20,18 @@
         <div>
           <SvgScreenshot element-id="sequence-part" />
           <SequenceViewInformation />
+          <v-btn
+            variant="text"
+            icon="mdi-content-copy"
+            size="large"
+            @click="copySequence"
+            :disabled="sequence.length === 0"
+          >
+            <v-icon>mdi-content-copy</v-icon>
+            <v-tooltip activator="parent" location="bottom">
+              Copy sequence to clipboard
+            </v-tooltip>
+          </v-btn>
           <v-btn id="settings-button" variant="text" icon="mdi-cog" size="large"></v-btn>
           <v-menu :close-on-content-click="false" activator="#settings-button" location="bottom">
             <v-card min-width="300">
@@ -153,6 +165,23 @@
       </template>
     </div>
   </v-sheet>
+  
+  <v-snackbar
+    v-model="copySnackbar"
+    :timeout="3000"
+    location="bottom"
+  >
+    {{ copySnackbarText }}
+    <template v-slot:actions>
+      <v-btn
+        color="blue"
+        variant="text"
+        @click="copySnackbar = false"
+      >
+        Close
+      </v-btn>
+    </template>
+  </v-snackbar>
 </template>
 
 <script lang="ts">
@@ -252,6 +281,8 @@ export default defineComponent({
       residueCleavagePercentage: 0 as number,
       sequenceObjects: [] as SequenceObject[],
       selectedFragTableRowIndex: undefined as number | undefined,
+      copySnackbar: false as boolean,
+      copySnackbarText: '' as string,
     }
   },
   computed: {
@@ -795,6 +826,27 @@ export default defineComponent({
           }
         }
       })
+    },
+    async copySequence(): Promise<void> {
+      try {
+        if (this.sequence.length === 0) {
+          return
+        }
+        
+        const sequenceToCopy = this.sequence.slice(this.sequence_start, this.sequence_end + 1).join('')
+        
+        if (!navigator.clipboard) {
+          throw new Error('Clipboard API not available')
+        }
+        
+        await navigator.clipboard.writeText(sequenceToCopy)
+        this.copySnackbarText = 'Sequence copied to clipboard!'
+        this.copySnackbar = true
+      } catch (error) {
+        this.copySnackbarText = 'Failed to copy sequence to clipboard'
+        this.copySnackbar = true
+        console.error('Copy failed:', error)
+      }
     },
   },
 })
