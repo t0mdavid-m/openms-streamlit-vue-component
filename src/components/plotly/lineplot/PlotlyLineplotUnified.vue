@@ -117,6 +117,11 @@ export default defineComponent({
       return this.selectionStore.selectedTag !== undefined
     },
 
+    isAnnotatedSpectraMode(): boolean {
+      // Annotated spectra modes use 'm/z' axis, deconvolved modes use 'Monoisotopic Mass'
+      return this.xAxisLabel === 'm/z'
+    },
+
     config(): typeof DEFAULT_CONFIG {
       return {
         ...DEFAULT_CONFIG,
@@ -654,6 +659,18 @@ export default defineComponent({
         const xValues = this.xValues
         if (xValues.length === 0) return [0, 1]
         
+        // Smart Zoom Range Logic with Priority Order:
+        // 1. Deconvolved peaks ON (regardless of annotation state): Show entire spectrum
+        // 2. Deconvolved peaks OFF + Selective highlighting: Fit to highlighted peaks
+        // 3. Both deconvolved and selective highlighting ON: Default to whole spectrum
+        
+        // Priority 1: If deconvolved peaks highlighting is active, show entire spectrum
+        if (this.deconvolvedPeaksHighlightMode) {
+          const minX = Math.min(...xValues)
+          const maxX = Math.max(...xValues)
+          return [minX * 0.98, maxX * 1.02]
+        }
+        
         if (!this.annotationsVisible && !this.manual) {
           const minX = Math.min(...xValues)
           const maxX = Math.max(...xValues)
@@ -667,6 +684,7 @@ export default defineComponent({
 
         const highlighted = this.highlightedValues
         
+        // Priority 2: Deconvolved peaks OFF + Selective highlighting: Fit to highlighted peaks
         // Skip iterative adjustment if no highlighted values
         if (highlighted.length === 0) {
           const minX = Math.min(...xValues)
@@ -1619,47 +1637,64 @@ export default defineComponent({
           return
         }
         
-        const plotInstance = await Plotly.newPlot(this.id, this.data, this.layout, {
-          modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'],
-          modeBarButtonsToAdd: [
-            {
-              title: this.annotationsVisible ? 'Hide Annotations' : 'Show Annotations',
-              name: 'toggleAnnotations',
-              icon: {
-                width: 1792,
-                height: 1792,
-                path: 'M1664 960q-152-236-381-353 61 104 61 225 0 185-131.5 316.5t-316.5 131.5-316.5-131.5-131.5-316.5q0-121 61-225-229 117-381 353 133 205 333.5 326.5t434.5 121.5 434.5-121.5 333.5-326.5zm-720-384q0-20-14-34t-34-14q-125 0-214.5 89.5t-89.5 214.5q0 20 14 34t34 14 34-14 14-34q0-86 61-147t147-61q20 0 34-14t14-34zm848 384q0 34-20 69-140 230-376.5 368.5t-499.5 138.5-499.5-139-376.5-368q-20-35-20-69t20-69q140-229 376.5-368t499.5-139 499.5 139 376.5 368q20 35 20 69z'
-              },
-              click: () => {
-                this.toggleAnnotations()
-              },
+        // Build modeBarButtonsToAdd array conditionally
+        const modeBarButtons = [
+          {
+            title: this.annotationsVisible ? 'Hide Annotations' : 'Show Annotations',
+            name: 'toggleAnnotations',
+            icon: {
+              width: 1792,
+              height: 1792,
+              path: 'M1664 960q-152-236-381-353 61 104 61 225 0 185-131.5 316.5t-316.5 131.5-316.5-131.5-131.5-316.5q0-121 61-225-229 117-381 353 133 205 333.5 326.5t434.5 121.5 434.5-121.5 333.5-326.5zm-720-384q0-20-14-34t-34-14q-125 0-214.5 89.5t-89.5 214.5q0 20 14 34t34 14 34-14 14-34q0-86 61-147t147-61q20 0 34-14t14-34zm848 384q0 34-20 69-140 230-376.5 368.5t-499.5 138.5-499.5-139-376.5-368q-20-35-20-69t20-69q140-229 376.5-368t499.5-139 499.5 139 376.5 368q20 35 20 69z'
             },
-            {
-              title: this.deconvolvedPeaksHighlightMode ? 'Hide Deconvolved Peaks' : 'Show Deconvolved Peaks',
-              name: 'toggleDeconvolvedPeaks',
-              icon: {
-                width: 1792,
-                height: 1792,
-                path: 'M448 1024h896v128h-896v-128zm0-256h896v128h-896v-128zm0-256h896v128h-896v-128zm0-256h896v128h-896v-128zm-448 768h384v128h-384v-128zm0-256h384v128h-384v-128zm0-256h384v128h-384v-128zm0-256h384v128h-384v-128z'
-              },
-              click: () => {
-                this.toggleDeconvolvedPeaksHighlight()
-              },
+            click: () => {
+              this.toggleAnnotations()
             },
-            {
-              title: 'Download as SVG',
-              name: 'toImageSvg',
-              icon: Plotly.Icons.camera,
-              click: (plotlyElement) => {
-                Plotly.downloadImage(plotlyElement, {
+          }
+        ]
+
+        // Only add deconvolved peaks button in annotated spectra modes
+        if (this.isAnnotatedSpectraMode) {
+          modeBarButtons.push({
+            title: this.deconvolvedPeaksHighlightMode ? 'Hide Deconvolved Peaks' : 'Show Deconvolved Peaks',
+            name: 'toggleDeconvolvedPeaks',
+            icon: {
+              width: 1792,
+              height: 1792,
+              path: 'M448 1024h896v128h-896v-128zm0-256h896v128h-896v-128zm0-256h896v128h-896v-128zm0-256h896v128h-896v-128zm-448 768h384v128h-384v-128zm0-256h384v128h-384v-128zm0-256h384v128h-384v-128zm0-256h384v128h-384v-128z'
+            },
+            click: () => {
+              this.toggleDeconvolvedPeaksHighlight()
+            },
+          })
+        }
+
+        modeBarButtons.push(
+          {
+            title: 'Download as SVG',
+            name: 'toImageSvg',
+            icon: {
+              width: 1792,
+              height: 1792,
+              path: 'M1152 1376v-160q0-14-9-23t-23-9h-96v-512q0-14-9-23t-23-9h-320q-14 0-23 9t-9 23v160q0 14 9 23t23 9h96v320h-96q-14 0-23 9t-9 23v160q0 14 9 23t23 9h320q14 0 23-9t9-23zm-128-896v-160q0-14-9-23t-23-9h-192q-14 0-23 9t-9 23v160q0 14 9 23t23 9h192q14 0 23-9t9-23zm640 416q0 209-103 385.5t-279.5 279.5-385.5 103-385.5-103-279.5-279.5-103-385.5 103-385.5 279.5-279.5 385.5-103 385.5 103 279.5 279.5 103 385.5z'
+            },
+            click: () => {
+              const element = document.getElementById(this.id)
+              if (element) {
+                Plotly.downloadImage(element, {
                   filename: 'FLASHViewer-lineplot',
                   height: 400,
                   width: 1200,
                   format: 'svg',
                 })
-              },
+              }
             },
-          ],
+          }
+        )
+
+        const plotInstance = await Plotly.newPlot(this.id, this.data, this.layout, {
+          modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'],
+          modeBarButtonsToAdd: modeBarButtons,
           scrollZoom: true
         })
         
