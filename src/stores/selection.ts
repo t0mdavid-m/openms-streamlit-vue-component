@@ -48,10 +48,7 @@ export const useSelectionStore = defineStore('selection', {
       this.scanIndex = rowIndex
     },
     updateSelectedMass(rowIndex?: number) {
-      console.log('🔍 [DEBUG] Selection store updateSelectedMass called with:', rowIndex)
-      console.log('🔍 [DEBUG] Previous mass index:', this.massIndex)
       this.massIndex = rowIndex
-      console.log('🔍 [DEBUG] New mass index set to:', this.massIndex)
     },
     updateSelectedProtein(rowIndex?: number) {
       this.proteinIndex = rowIndex

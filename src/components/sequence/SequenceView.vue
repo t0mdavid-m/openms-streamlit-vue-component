@@ -803,70 +803,53 @@ export default defineComponent({
       }
     },
     onFragmentTableRowSelected(rowIndex?: number) {
-      console.log('🔍 [DEBUG] Fragment table row selected:', rowIndex)
       if (rowIndex !== undefined && this.fragmentTableData[rowIndex]) {
         const observedMass = this.fragmentTableData[rowIndex].ObservedMass as number
-        console.log('🔍 [DEBUG] Fragment observed mass:', observedMass)
-        console.log('🔍 [DEBUG] Fragment data row:', this.fragmentTableData[rowIndex])
         this.updateMassTableFromFragmentMass(observedMass)
-      } else {
-        console.log('🔍 [DEBUG] Fragment selection failed - rowIndex undefined or no data')
       }
     },
     updateMassTableFromFragmentMass(observedMass: number) {
-      console.log('🔍 [DEBUG] updateMassTableFromFragmentMass called with:', observedMass)
-      
-      // Prevent circular updates by adding a flag
+      // Prevent circular updates
       if (this._updatingFromMass) {
-        console.log('🔍 [DEBUG] Skipping fragment-to-mass update to prevent circular calls')
         return
       }
       
       this._updatingFromFragment = true
       
-      // Try to get mass data from available sources - work independently of scan selection
+      // Get mass data from available sources - work independently of scan selection
       let massArray: number[] | undefined = undefined
       
       // First try to get mass data from selected scan if available
       const selectedScanIndex = this.selectionStore.selectedScanIndex
-      console.log('🔍 [DEBUG] Selected scan index:', selectedScanIndex)
       
       if (selectedScanIndex !== undefined) {
         const scanData = this.streamlitDataStore.allDataForDrawing.per_scan_data[selectedScanIndex]
-        console.log('🔍 [DEBUG] Scan data available:', !!scanData)
         if (scanData && scanData.MonoMass) {
           massArray = scanData.MonoMass as number[]
-          console.log('🔍 [DEBUG] Using scan-specific mass data, length:', massArray.length)
         }
       }
       
       // If scan-specific data is not available, try to get mass data from fallback sources
       if (!massArray) {
-        // Try alternative mass data sources that don't depend on scan selection
         const allDrawingData = this.streamlitDataStore.allDataForDrawing
         if (allDrawingData.per_scan_data?.length > 0) {
           // Fall back to first available scan data if mass table data is not available
           for (const scanData of allDrawingData.per_scan_data) {
             if (scanData && scanData.MonoMass) {
               massArray = scanData.MonoMass as number[]
-              console.log('🔍 [DEBUG] Using fallback scan data, length:', massArray.length)
               break
             }
           }
         }
       }
       
-      console.log('🔍 [DEBUG] Mass array length:', massArray?.length)
-      console.log('🔍 [DEBUG] First few mass values:', massArray?.slice(0, 5))
       if (!massArray || massArray.length === 0) {
-        console.log('🔍 [DEBUG] No mass data available - returning')
+        this._updatingFromFragment = false
         return
       }
 
       // Try exact match first
       let massIndex = massArray.findIndex((mass) => mass === observedMass)
-      console.log('🔍 [DEBUG] Mass search - looking for:', observedMass)
-      console.log('🔍 [DEBUG] Exact match index:', massIndex)
       
       // If no exact match, find the closest match within tolerance (floating point precision issue)
       if (massIndex < 0) {
@@ -877,33 +860,20 @@ export default defineComponent({
           diff: Math.abs(mass - observedMass)
         })).filter(item => item.diff < tolerance).sort((a, b) => a.diff - b.diff)
         
-        console.log('🔍 [DEBUG] Close matches (< 0.001 Da):', closeMatches)
-        
         if (closeMatches.length > 0) {
           massIndex = closeMatches[0].index
-          console.log('🔍 [DEBUG] Using closest match at index:', massIndex, 'with diff:', closeMatches[0].diff)
         }
       }
       
       if (massIndex >= 0) {
-        console.log('🔍 [DEBUG] Updating selected mass to index:', massIndex)
         this.selectionStore.updateSelectedMass(massIndex)
-      } else {
-        console.log('🔍 [DEBUG] No match found (exact or close) for mass:', observedMass)
-        console.log('🔍 [DEBUG] Available masses around this value:',
-          massArray.filter(mass => Math.abs(mass - observedMass) < 1.0)
-        )
       }
       
-      // Reset the flag
       this._updatingFromFragment = false
     },
     updateFragmentTableFromMassSelection(massIndex: number) {
-      console.log('🔍 [DEBUG] updateFragmentTableFromMassSelection called with index:', massIndex)
-      
       // Prevent circular updates
       if (this._updatingFromFragment) {
-        console.log('🔍 [DEBUG] Skipping mass-to-fragment update to prevent circular calls')
         return
       }
       
@@ -915,14 +885,11 @@ export default defineComponent({
       
       // Try to get mass data from available sources - same approach as updateMassTableFromFragmentMass
       const selectedScanIndex = this.selectionStore.selectedScanIndex
-      console.log('🔍 [DEBUG] Selected scan index:', selectedScanIndex)
       
       if (selectedScanIndex !== undefined) {
         const scanData = this.streamlitDataStore.allDataForDrawing.per_scan_data[selectedScanIndex]
-        console.log('🔍 [DEBUG] Scan data available:', !!scanData)
         if (scanData && scanData.MonoMass) {
           massArray = scanData.MonoMass as number[]
-          console.log('🔍 [DEBUG] Using scan-specific mass data, length:', massArray.length)
         }
       }
       
@@ -934,7 +901,6 @@ export default defineComponent({
           for (const scanData of allDrawingData.per_scan_data) {
             if (scanData && scanData.MonoMass) {
               massArray = scanData.MonoMass as number[]
-              console.log('🔍 [DEBUG] Using fallback scan data, length:', massArray.length)
               break
             }
           }
@@ -942,15 +908,14 @@ export default defineComponent({
       }
       
       if (!massArray || massIndex >= massArray.length || massIndex < 0) {
-        console.log('🔍 [DEBUG] Invalid mass index or no mass data available')
+        this._updatingFromMass = false
         return
       }
       
       selectedMass = massArray[massIndex]
-      console.log('🔍 [DEBUG] Selected mass value:', selectedMass)
       
       if (!selectedMass) {
-        console.log('🔍 [DEBUG] No mass value found at index:', massIndex)
+        this._updatingFromMass = false
         return
       }
       
@@ -964,7 +929,6 @@ export default defineComponent({
         
         if (observedMass !== undefined) {
           const massDiff = Math.abs(observedMass - selectedMass)
-          console.log(`🔍 [DEBUG] Fragment ${i}: ${observedMass}, diff: ${massDiff}`)
           
           if (massDiff < tolerance) {
             if (!bestMatch || massDiff < bestMatch.diff) {
@@ -975,19 +939,13 @@ export default defineComponent({
       }
       
       if (bestMatch) {
-        console.log('🔍 [DEBUG] Found matching fragment at index:', bestMatch.index, 'with diff:', bestMatch.diff)
-        // Prevent circular updates by checking if we're already updating from a fragment selection
         if (this.selectedFragTableRowIndex !== bestMatch.index) {
           this.selectedFragTableRowIndex = bestMatch.index
-          console.log('🔍 [DEBUG] Updated fragment table selection to index:', bestMatch.index)
         }
       } else {
-        console.log('🔍 [DEBUG] No matching fragment found for mass:', selectedMass)
-        // Clear fragment table selection if no match is found
         this.selectedFragTableRowIndex = undefined
       }
       
-      // Reset the flag
       this._updatingFromMass = false
     },
     updateTagPosition() {
