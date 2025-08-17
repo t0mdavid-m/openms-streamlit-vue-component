@@ -135,7 +135,7 @@ export default defineComponent({
         },
         scene: {
           xaxis: { title: 'Mass' },
-          yaxis: { title: 'Charge' },
+          yaxis: { title: 'Charge', dtick: 1, tick0: 0 },
           zaxis: { title: 'Intensity', range: [0, this.maximumIntensity] },
           camera: {
             // initial view of the plot: mass-intensity plane
