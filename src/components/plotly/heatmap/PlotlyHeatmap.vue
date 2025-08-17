@@ -226,25 +226,45 @@ export default defineComponent({
     this.cleanupResizeObserver()
   },
   methods: {
-    toggleColorbar() {
+    async toggleColorbar() {
+      console.log('toggleColorbar called - before:', {
+        colorbarVisible: this.colorbarVisible,
+        effectiveColorbarVisible: this.effectiveColorbarVisible,
+        userOverrideColorbar: this.userOverrideColorbar
+      })
       this.colorbarVisible = !this.colorbarVisible
       this.userOverrideColorbar = true // Mark that user has manually set preference
-      this.updatePlot()
+      console.log('toggleColorbar called - after:', {
+        colorbarVisible: this.colorbarVisible,
+        effectiveColorbarVisible: this.effectiveColorbarVisible,
+        userOverrideColorbar: this.userOverrideColorbar
+      })
+      await this.updatePlot()
     },
     async updatePlot() {
+      console.log('updatePlot called with effectiveColorbarVisible:', this.effectiveColorbarVisible)
       const plotElement = document.getElementById(this.id) as Plotly.PlotlyHTMLElement
       if (plotElement) {
-        // Update both colorbar visibility and layout margins
-        await Promise.all([
-          Plotly.restyle(plotElement, {
+        console.log('plotElement found, updating plot...')
+        try {
+          // Update colorbar visibility first
+          await Plotly.restyle(plotElement, {
             'marker.showscale': this.effectiveColorbarVisible
-          }, [0]),
-          Plotly.relayout(plotElement, {
+          }, [0])
+          console.log('restyle completed successfully')
+          
+          // Then update layout margins
+          await Plotly.relayout(plotElement, {
             margin: {
               r: this.effectiveColorbarVisible ? 120 : 20
             }
           })
-        ])
+          console.log('relayout completed successfully')
+        } catch (error) {
+          console.error('Error updating plot:', error)
+        }
+      } else {
+        console.error('plotElement not found with id:', this.id)
       }
     },
     setupResizeObserver() {
@@ -285,14 +305,18 @@ export default defineComponent({
       }
     },
     async graph() {
-      await Plotly.newPlot(this.id, this.data, this.layout, {
-        modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'],
+      await Plotly.newPlot(this.id, this.data, this.layout, this.getPlotConfig())
+      this.setupPlotEventHandlers()
+    },
+    getPlotConfig(): Partial<Plotly.Config> {
+      return {
+        modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'] as any,
         modeBarButtonsToAdd: [
           {
             title: 'Download as SVG',
             name: 'toImageSvg',
             icon: Plotly.Icons.camera,
-            click: (plotlyElement) => {
+            click: (plotlyElement: any) => {
               Plotly.downloadImage(plotlyElement, {
                 filename: 'FLASHViewer-heatmap',
                 height: 400,
@@ -302,20 +326,23 @@ export default defineComponent({
             },
           },
           {
-            title: this.colorbarVisible ? 'Hide Colorbar' : 'Show Colorbar',
+            title: 'Toggle Colorbar',
             name: 'toggleColorbar',
             icon: {
               'width': 1792,
               'height': 1792,
-              'path': 'M1792 896q0 106-40.5 199.5t-109.5 163.5-163.5 109.5-199.5 40.5-199.5-40.5-163.5-109.5-109.5-163.5-40.5-199.5 40.5-199.5 109.5-163.5 163.5-109.5 199.5-40.5 199.5 40.5 163.5 109.5 109.5 163.5 40.5 199.5zm-896-544v192q0 14 9 23t23 9h192q14 0 23-9t9-23v-192q0-14-9-23t-23-9h-192q-14 0-23 9t-9 23zm0 384v192q0 14 9 23t23 9h192q14 0 23-9t9-23v-192q0-14-9-23t-23-9h-192q-14 0-23 9t-9 23zm384-384v192q0 14 9 23t23 9h192q14 0 23-9t9-23v-192q0-14-9-23t-23-9h-192q-14 0-23 9t-9 23zm0 384v192q0 14 9 23t23 9h192q14 0 23-9t9-23v-192q0-14-9-23t-23-9h-192q-14 0-23 9t-9 23z',
+              'path': 'M1408 768v192q0 40-28 68t-68 28H480q-40 0-68-28t-28-68V768q0-40 28-68t68-28h832q40 0 68 28t28 68zm0-384v192q0 40-28 68t-68 28H480q-40 0-68-28t-28-68V384q0-40 28-68t68-28h832q40 0 68 28t28 68zm0-384v192q0 40-28 68t-68 28H480q-40 0-68-28t-28-68V0q0-40 28-68t68-28h832q40 0 68 28t28 68z',
               'transform': 'matrix(1 0 0 -1 0 1792)'
             },
             click: () => {
+              console.log('Colorbar toggle button clicked!')
               this.toggleColorbar()
             },
           },
         ],
-      })
+      }
+    },
+    setupPlotEventHandlers() {
       // Monitor zoom level
       const plotElement = document.getElementById(this.id) as Plotly.PlotlyHTMLElement
       if (plotElement) {
@@ -328,9 +355,9 @@ export default defineComponent({
             }
           }
           else if (
-            eventData['xaxis.range[0]'] !== undefined && 
-            eventData['xaxis.range[1]'] !== undefined && 
-            eventData['yaxis.range[0]'] !== undefined && 
+            eventData['xaxis.range[0]'] !== undefined &&
+            eventData['xaxis.range[1]'] !== undefined &&
+            eventData['yaxis.range[0]'] !== undefined &&
             eventData['yaxis.range[1]'] !== undefined
           ) {
             this.zoomRange = {
@@ -362,6 +389,13 @@ export default defineComponent({
             this.selectionStore.updateSelectedMass(mass_idx)
           }
         })
+      }
+    },
+    async updateModeBar() {
+      const plotElement = document.getElementById(this.id) as Plotly.PlotlyHTMLElement
+      if (plotElement) {
+        // Update the modebar with new configuration including updated button title
+        await Plotly.react(plotElement, this.data, this.layout, this.getPlotConfig())
       }
     },
   },
