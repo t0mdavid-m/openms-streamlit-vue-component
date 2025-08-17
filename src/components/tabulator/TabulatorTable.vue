@@ -279,6 +279,9 @@ export default defineComponent({
         } else {
           this.selectDefaultRow()
         }
+        
+        // Restore existing filter state after table is built
+        this.applyFilters()
       })
     },
     selectDefaultRow(): void {

@@ -24,8 +24,8 @@
             variant="text"
             icon="mdi-content-copy"
             size="large"
-            @click="copySequence"
             :disabled="sequence.length === 0"
+            @click="copySequence"
           >
             <v-icon>mdi-content-copy</v-icon>
             <v-tooltip activator="parent" location="bottom">
@@ -71,8 +71,8 @@
                       hide-details
                       density="comfortable"
                       :label="category.text"
-                      @click="toggleIonTypeSelected(ionIndex)"
                       :disabled="!showFragments"
+                      @click="toggleIonTypeSelected(ionIndex)"
                     >
                     </v-checkbox>
                   </div>
@@ -96,8 +96,8 @@
                     type="number"
                     hide-details="auto"
                     label="mass tolerance in ppm"
-                    @change="updateMassTolerance"
                     :disabled="!showFragments"
+                    @change="updateMassTolerance"
                   ></v-text-field>
                   <!-- TODO: add "required" -->
                 </v-list-item>
@@ -116,15 +116,15 @@
           </div>
           <ProteinTerminalCell v-if="aa_index === 0" protein-terminal="N-term" :truncated=n_truncation :index="-1" :disable-variable-modification-selection="disableVariableModifications" :determined="n_determined"/>
           <AminoAcidCell
+            v-if="showTruncations || ((sequence_start <= aa_index) && (sequence_end >= aa_index))"
             :index="aa_index"
             :sequence-object="aminoAcidObj"
             :fixed-modification="fixedModification(aminoAcidObj.aminoAcid)"
             :disable-variable-modification-selection="disableVariableModifications"
-            :showTags="showTags"
-            :showFragments="showFragments"
-            :showModifications="showModifications"
+            :show-tags="showTags"
+            :show-fragments="showFragments"
+            :show-modifications="showModifications"
             @selected="aminoAcidSelected"
-            v-if="showTruncations || ((sequence_start <= aa_index) && (sequence_end >= aa_index))"
           />
           <div
             v-if="(showTruncations && (aa_index % rowWidth === rowWidth - 1 && aa_index !== sequence.length - 1)) || (!showTruncations && ((aa_index - sequence_start) % rowWidth === rowWidth - 1) && (aa_index < sequence_end) && (aa_index > sequence_start))"
@@ -173,7 +173,7 @@
     location="bottom"
   >
     {{ copySnackbarText }}
-    <template v-slot:actions>
+    <template #actions>
       <v-btn
         color="blue"
         variant="text"

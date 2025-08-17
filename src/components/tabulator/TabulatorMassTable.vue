@@ -4,9 +4,9 @@
     :column-definitions="columnDefinitions"
     title="Mass Table"
     :index="index"
-    @row-selected="updateSelectedMass"
     :selected-row-index-from-listening="selectedMassTableRow"
     :default-row=0
+    @row-selected="updateSelectedMass"
   />
 </template>
 

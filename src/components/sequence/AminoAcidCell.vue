@@ -353,6 +353,18 @@ export default defineComponent({
       return this.sequenceObject.modMass
     }
   },
+  watch: {
+    selectedModification() {
+      if ((this.selectedModification !== undefined) && (modificationMassMap[this.selectedModification] !== undefined)) {
+        this.sequenceObject.modMass = parseFloat(modificationMassMap[this.selectedModification].toFixed(2)).toLocaleString('en-US', { signDisplay: 'always' })
+      }
+    },
+    showTags() {
+      if (!this.showTags) {
+        this.selectionStore.updateSelectedAA(undefined)
+      }
+    },
+  },
   methods: {
     toggleMenuOpen(): void {
       if (this.disableVariableModificationSelection) {
@@ -392,18 +404,6 @@ export default defineComponent({
     updateCustomModification() {
       this.variableModData.updateVariableModifications(this.index, parseFloat(this.customModMass))
       this.toggleMenuOpen()
-    },
-  },
-  watch: {
-    selectedModification() {
-      if ((this.selectedModification !== undefined) && (modificationMassMap[this.selectedModification] !== undefined)) {
-        this.sequenceObject.modMass = parseFloat(modificationMassMap[this.selectedModification].toFixed(2)).toLocaleString('en-US', { signDisplay: 'always' })
-      }
-    },
-    showTags() {
-      if (!this.showTags) {
-        this.selectionStore.updateSelectedAA(undefined)
-      }
     },
   },
 })

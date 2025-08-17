@@ -1,15 +1,18 @@
 <template>
-  <div class="d-flex justify-center align-center rounded-lg" :class="proteinTerminalCellClasses"
+  <div
+class="d-flex justify-center align-center rounded-lg" :class="proteinTerminalCellClasses"
     :style="proteinTerminalCellStyles" @click.stop @contextmenu.prevent="toggleMenuOpen">
     <div :class="['terminal-text', { truncated: truncated }]">
       {{ proteinTerminalText }}
     </div>
     <div v-if="!determined" class="undetermined">??</div>
-    <v-menu activator="parent" v-model="menuOpen" location="end" :open-on-click="false" :close-on-content-click="false"
+    <v-menu
+v-model="menuOpen" activator="parent" location="end" :open-on-click="false" :close-on-content-click="false"
       width="200px">
       <v-list>
         <v-list-item>
-          <v-select v-model="selectedModification" clearable label="Modification" density="compact"
+          <v-select
+v-model="selectedModification" clearable label="Modification" density="compact"
             :items="modificationsForSelect" @update:modelValue="updateSelectedModification"
             @click:clear="selectedModification = undefined">
           </v-select>
