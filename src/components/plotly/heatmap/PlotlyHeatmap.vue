@@ -30,12 +30,27 @@ export default defineComponent({
   },
   data() {
     return {
-      zoomRange: undefined as HeatmapData | undefined
+      zoomRange: undefined as HeatmapData | undefined,
+      colorbarVisible: true,
+      userOverrideColorbar: false, // Track if user has manually set preference
+      plotWidth: 800,
+      resizeObserver: null as ResizeObserver | null
     }
   },
   computed: {
     id(): string {
       return `graph-${this.index}`
+    },
+    isNarrowPlot(): boolean {
+      return this.plotWidth < 600
+    },
+    effectiveColorbarVisible(): boolean {
+      // If user has manually overridden, respect their choice regardless of plot width
+      if (this.userOverrideColorbar) {
+        return this.colorbarVisible
+      }
+      // Otherwise, auto-hide when narrow but show when wide
+      return this.isNarrowPlot ? false : this.colorbarVisible
     },
     renderData(): RenderData | null {
       return this.streamlitDataStore.renderData
@@ -139,7 +154,7 @@ export default defineComponent({
           marker: {
             color: this.markerColorValues.map(v => v > 0 ? Math.log10(v) : 0),
             colorscale: 'Portland',
-            showscale: true,
+            showscale: this.effectiveColorbarVisible,
             colorbar: {
               title: 'Intensity',
               tickvals: tickValues.map(v => Math.log10(v)),
@@ -171,6 +186,13 @@ export default defineComponent({
           color: this.theme?.textColor,
           family: this.theme?.font,
         },
+        // Ensure plot uses full available space when colorbar is hidden
+        margin: {
+          l: 60,
+          r: this.effectiveColorbarVisible ? 120 : 20,
+          t: 60,
+          b: 60
+        }
       }
     },
   },
@@ -198,8 +220,70 @@ export default defineComponent({
   },
   mounted() {
     this.graph()
+    this.setupResizeObserver()
+  },
+  beforeUnmount() {
+    this.cleanupResizeObserver()
   },
   methods: {
+    toggleColorbar() {
+      this.colorbarVisible = !this.colorbarVisible
+      this.userOverrideColorbar = true // Mark that user has manually set preference
+      this.updatePlot()
+    },
+    async updatePlot() {
+      const plotElement = document.getElementById(this.id) as Plotly.PlotlyHTMLElement
+      if (plotElement) {
+        // Update both colorbar visibility and layout margins
+        await Promise.all([
+          Plotly.restyle(plotElement, {
+            'marker.showscale': this.effectiveColorbarVisible
+          }, [0]),
+          Plotly.relayout(plotElement, {
+            margin: {
+              r: this.effectiveColorbarVisible ? 120 : 20
+            }
+          })
+        ])
+      }
+    },
+    setupResizeObserver() {
+      const plotElement = document.getElementById(this.id)
+      if (plotElement && window.ResizeObserver) {
+        this.resizeObserver = new ResizeObserver((entries) => {
+          for (const entry of entries) {
+            const newWidth = entry.contentRect.width
+            if (Math.abs(newWidth - this.plotWidth) > 10) { // Avoid too frequent updates
+              const wasNarrow = this.isNarrowPlot
+              this.plotWidth = newWidth
+              const isNowNarrow = this.isNarrowPlot
+              
+              // Handle transitions between narrow and wide
+              if (wasNarrow !== isNowNarrow) {
+                if (!this.userOverrideColorbar) {
+                  // Only auto-adjust if user hasn't manually overridden
+                  if (isNowNarrow) {
+                    // Becoming narrow: hide colorbar by default
+                    this.colorbarVisible = false
+                  } else {
+                    // Becoming wide: show colorbar by default
+                    this.colorbarVisible = true
+                  }
+                }
+                this.updatePlot()
+              }
+            }
+          }
+        })
+        this.resizeObserver.observe(plotElement)
+      }
+    },
+    cleanupResizeObserver() {
+      if (this.resizeObserver) {
+        this.resizeObserver.disconnect()
+        this.resizeObserver = null
+      }
+    },
     async graph() {
       await Plotly.newPlot(this.id, this.data, this.layout, {
         modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'],
@@ -215,6 +299,19 @@ export default defineComponent({
                 width: 1200,
                 format: 'svg',
               })
+            },
+          },
+          {
+            title: this.colorbarVisible ? 'Hide Colorbar' : 'Show Colorbar',
+            name: 'toggleColorbar',
+            icon: {
+              'width': 1792,
+              'height': 1792,
+              'path': 'M1792 896q0 106-40.5 199.5t-109.5 163.5-163.5 109.5-199.5 40.5-199.5-40.5-163.5-109.5-109.5-163.5-40.5-199.5 40.5-199.5 109.5-163.5 163.5-109.5 199.5-40.5 199.5 40.5 163.5 109.5 109.5 163.5 40.5 199.5zm-896-544v192q0 14 9 23t23 9h192q14 0 23-9t9-23v-192q0-14-9-23t-23-9h-192q-14 0-23 9t-9 23zm0 384v192q0 14 9 23t23 9h192q14 0 23-9t9-23v-192q0-14-9-23t-23-9h-192q-14 0-23 9t-9 23zm384-384v192q0 14 9 23t23 9h192q14 0 23-9t9-23v-192q0-14-9-23t-23-9h-192q-14 0-23 9t-9 23zm0 384v192q0 14 9 23t23 9h192q14 0 23-9t9-23v-192q0-14-9-23t-23-9h-192q-14 0-23 9t-9 23z',
+              'transform': 'matrix(1 0 0 -1 0 1792)'
+            },
+            click: () => {
+              this.toggleColorbar()
             },
           },
         ],
