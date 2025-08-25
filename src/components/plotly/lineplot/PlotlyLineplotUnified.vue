@@ -317,52 +317,9 @@ export default defineComponent({
       }
     },
     
-    minCharge(): number {
-      try {
-        if (this.selectedScan === undefined) return -10
-        
-        const scanData = this.streamlitDataStore.allDataForDrawing?.per_scan_data
-        if (!scanData || this.selectedScan >= scanData.length) return -10
-        
-        const data = scanData[this.selectedScan]
-        const chargeData = data?.['MinCharges'] as number[]
-        
-        if (!Array.isArray(chargeData) || chargeData.length === 0) return -10
-        
-        return Math.min(...chargeData)
-      } catch (error) {
-        this.handleError(error as Error, 'minCharge-computation')
-        return -10
-      }
-    },
-    
-    maxCharge(): number {
-      try {
-        if (this.selectedScan === undefined) return -10
-        
-        const scanData = this.streamlitDataStore.allDataForDrawing?.per_scan_data
-        if (!scanData || this.selectedScan >= scanData.length) return -10
-        
-        const data = scanData[this.selectedScan]
-        const chargeData = data?.['MinCharges'] as number[]
-        
-        if (!Array.isArray(chargeData) || chargeData.length === 0) return -10
-        
-        return Math.max(...chargeData)
-      } catch (error) {
-        this.handleError(error as Error, 'maxCharge-computation')
-        return -10
-      }
-    },
-    
     showBackButton(): boolean {
       return this.isTnTMode &&
              (this.currentTitle === 'Augmented Annotated Spectrum')
-    },
-    
-    shouldHighlightMassIndex(): boolean {
-      return this.currentTitle === 'Deconvolved Spectrum' &&
-             this.selectionStore.selectedMassIndex !== undefined
     },
 
     highlightedValues(): HighlightData[] {
@@ -1445,66 +1402,6 @@ export default defineComponent({
       }
     },
 
-    // Utility methods for coordinate conversion and overlap detection
-    dataToScreenX(dataX: number): number {
-      try {
-        const xRange = this.xRange
-        if (xRange.length !== 2 || xRange[1] <= xRange[0]) return 0
-        
-        // Approximate plot area width (assuming standard Plotly margins)
-        const plotWidth = 800 // Approximate plot area width
-        const margin = 80 // Approximate left margin
-        
-        return margin + ((dataX - xRange[0]) / (xRange[1] - xRange[0])) * plotWidth
-      } catch (error) {
-        this.handleError(error as Error, 'dataToScreenX')
-        return 0
-      }
-    },
-
-    dataToScreenY(dataY: number): number {
-      try {
-        const yRange = this.yRange
-        if (yRange.length !== 2 || yRange[1] <= yRange[0]) return 0
-        
-        // Approximate plot area height (assuming standard Plotly margins)
-        const plotHeight = 300 // Approximate plot area height
-        const margin = 50 // Approximate top margin
-        
-        // Note: screen Y coordinates are inverted (0 at top)
-        return margin + plotHeight - ((dataY - yRange[0]) / (yRange[1] - yRange[0])) * plotHeight
-      } catch (error) {
-        this.handleError(error as Error, 'dataToScreenY')
-        return 0
-      }
-    },
-
-    dataToScreenWidth(dataWidth: number): number {
-      try {
-        const xRange = this.xRange
-        if (xRange.length !== 2 || xRange[1] <= xRange[0]) return 0
-        
-        const plotWidth = 800
-        return (dataWidth / (xRange[1] - xRange[0])) * plotWidth
-      } catch (error) {
-        this.handleError(error as Error, 'dataToScreenWidth')
-        return 0
-      }
-    },
-
-    dataToScreenHeight(dataHeight: number): number {
-      try {
-        const yRange = this.yRange
-        if (yRange.length !== 2 || yRange[1] <= yRange[0]) return 0
-        
-        const plotHeight = 300
-        return (dataHeight / (yRange[1] - yRange[0])) * plotHeight
-      } catch (error) {
-        this.handleError(error as Error, 'dataToScreenHeight')
-        return 0
-      }
-    },
-
     // Helper method for overlap detection with custom x-range (used by both current and test ranges)
     testBoxesOverlapForRange(box1: { x: number; y: number; width: number; height: number },
                             box2: { x: number; y: number; width: number; height: number },
@@ -1530,101 +1427,6 @@ export default defineComponent({
       } catch (error) {
         this.handleError(error as Error, 'testBoxesOverlapForRange')
         return false
-      }
-    },
-
-    // Optimized overlap detection using data coordinates (eliminates screen coordinate conversion)
-    dataBoxesOverlap(box1: { x: number; y: number; width: number; height: number },
-                     box2: { x: number; y: number; width: number; height: number }): boolean {
-      try {
-        // Use the helper with current xRange
-        return this.testBoxesOverlapForRange(box1, box2, this.xRange)
-      } catch (error) {
-        this.handleError(error as Error, 'dataBoxesOverlap')
-        return false
-      }
-    },
-
-    // Legacy method kept for compatibility, but now calls the optimized version
-    boxesOverlap(box1: { screenX: number; screenY: number; screenWidth: number; screenHeight: number },
-                 box2: { screenX: number; screenY: number; screenWidth: number; screenHeight: number }): boolean {
-      try {
-        // Convert screen coordinates back to data coordinates for the optimized method
-        const dataBox1 = {
-          x: this.screenToDataX(box1.screenX),
-          y: this.screenToDataY(box1.screenY),
-          width: this.screenToDataWidth(box1.screenWidth),
-          height: this.screenToDataHeight(box1.screenHeight)
-        }
-        
-        const dataBox2 = {
-          x: this.screenToDataX(box2.screenX),
-          y: this.screenToDataY(box2.screenY),
-          width: this.screenToDataWidth(box2.screenWidth),
-          height: this.screenToDataHeight(box2.screenHeight)
-        }
-        
-        return this.dataBoxesOverlap(dataBox1, dataBox2)
-      } catch (error) {
-        this.handleError(error as Error, 'boxesOverlap')
-        return false
-      }
-    },
-
-    // Additional utility methods for screen-to-data conversion (for legacy compatibility)
-    screenToDataX(screenX: number): number {
-      try {
-        const xRange = this.xRange
-        if (xRange.length !== 2 || xRange[1] <= xRange[0]) return 0
-        
-        const plotWidth = 800
-        const margin = 80
-        
-        return xRange[0] + ((screenX - margin) / plotWidth) * (xRange[1] - xRange[0])
-      } catch (error) {
-        this.handleError(error as Error, 'screenToDataX')
-        return 0
-      }
-    },
-
-    screenToDataY(screenY: number): number {
-      try {
-        const yRange = this.yRange
-        if (yRange.length !== 2 || yRange[1] <= yRange[0]) return 0
-        
-        const plotHeight = 300
-        const margin = 50
-        
-        return yRange[0] + ((plotHeight - (screenY - margin)) / plotHeight) * (yRange[1] - yRange[0])
-      } catch (error) {
-        this.handleError(error as Error, 'screenToDataY')
-        return 0
-      }
-    },
-
-    screenToDataWidth(screenWidth: number): number {
-      try {
-        const xRange = this.xRange
-        if (xRange.length !== 2 || xRange[1] <= xRange[0]) return 0
-        
-        const plotWidth = 800
-        return (screenWidth / plotWidth) * (xRange[1] - xRange[0])
-      } catch (error) {
-        this.handleError(error as Error, 'screenToDataWidth')
-        return 0
-      }
-    },
-
-    screenToDataHeight(screenHeight: number): number {
-      try {
-        const yRange = this.yRange
-        if (yRange.length !== 2 || yRange[1] <= yRange[0]) return 0
-        
-        const plotHeight = 300
-        return (screenHeight / plotHeight) * (yRange[1] - yRange[0])
-      } catch (error) {
-        this.handleError(error as Error, 'screenToDataHeight')
-        return 0
       }
     },
 
