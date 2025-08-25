@@ -4,7 +4,6 @@
     :column-definitions="columnDefinitions"
     title="Scan Table"
     :index="index"
-    table-layout-param="fitColumns"
     :selected-row-index-from-listening="selectedRow"
     :default-row=0
     @row-selected="updateSelectedScan"
