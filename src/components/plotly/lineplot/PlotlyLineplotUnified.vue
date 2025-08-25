@@ -555,7 +555,17 @@ export default defineComponent({
     minAnnotationWidth(): number {
       return this.config.minAnnotationWidth
     },
-
+    actualPlotWidth(): number {
+        // Try to get width from DOM element first to avoid circular dependency
+        const element = document.getElementById(this.id)
+        if (element) {
+          const rect = element.getBoundingClientRect()
+          if (rect.width > 0) {
+            return rect.width
+          }
+        }
+        return -1
+    },
     // Shared coordinate calculation utilities
     getAnnotationPositioning(): {
       ymax: number;
@@ -578,9 +588,8 @@ export default defineComponent({
       const ypos = ymax * 1.25
       const ypos_high = ymax * 1.32
       
-      // Apply minimum width constraint to prevent backgrounds from becoming too narrow
-      const calculatedScaling = (xRange[1] - xRange[0]) / this.xPosScalingFactor
-      const xpos_scaling = Math.max(calculatedScaling, this.minAnnotationWidth)
+      // Base scaling on the actual plot width
+      const xpos_scaling = this.computeXposScalingFactor(xRange[1] - xRange[0])
 
       return {
         ymax,
@@ -1157,8 +1166,19 @@ export default defineComponent({
       }
       baseLayout.xaxis!.range = this.xRange
       baseLayout.yaxis!.range = this.yRange
-      baseLayout.shapes = this.annotationData.shapes
-      baseLayout.annotations = this.annotationData.annotations
+      
+      // Add null checks for annotationData to prevent TypeError
+      if (this.annotationData && this.annotationData.shapes) {
+        baseLayout.shapes = this.annotationData.shapes
+      } else {
+        baseLayout.shapes = []
+      }
+      
+      if (this.annotationData && this.annotationData.annotations) {
+        baseLayout.annotations = this.annotationData.annotations
+      } else {
+        baseLayout.annotations = []
+      }
       
       return baseLayout
     },
@@ -1226,7 +1246,13 @@ export default defineComponent({
   },
   
   methods: {
-
+    computeXposScalingFactor(xRange : number) {
+      const actualWidth = this.actualPlotWidth
+      if (actualWidth < 0) {
+        return 0
+      }
+      return (1200 / actualWidth) * xRange / this.xPosScalingFactor
+    },
     // Helper method to compute annotation boxes for any given xRange and yRange
     computeAnnotationBoxes(xRange: number[], yRange: number[]): Array<{
       x: number;
@@ -1249,9 +1275,8 @@ export default defineComponent({
         const ypos_low = ymax * 1.18
         const ypos_high = ymax * 1.32
         
-        // Apply minimum width constraint to prevent backgrounds from becoming too narrow
-        const calculatedScaling = (xRange[1] - xRange[0]) / this.xPosScalingFactor
-        const xpos_scaling = Math.max(calculatedScaling, this.minAnnotationWidth)
+        // Base scaling on the actual plot width
+        const xpos_scaling = this.computeXposScalingFactor(xRange[1] - xRange[0])
 
         const boxes: Array<{
           x: number;
