@@ -32,6 +32,18 @@
               Copy sequence to clipboard
             </v-tooltip>
           </v-btn>
+          <v-btn
+            variant="text"
+            :icon="showRegexHighlight ? 'mdi-marker-check' : 'mdi-marker'"
+            size="large"
+            :disabled="sequence.length === 0"
+            @click="toggleRegexHighlight"
+          >
+            <v-icon>{{ showRegexHighlight ? 'mdi-marker-check' : 'mdi-marker' }}</v-icon>
+            <v-tooltip activator="parent" location="bottom">
+              {{ showRegexHighlight ? 'Hide regex highlighting' : 'Show regex highlighting' }}
+            </v-tooltip>
+          </v-btn>
           <v-btn id="settings-button" variant="text" icon="mdi-cog" size="large"></v-btn>
           <v-menu :close-on-content-click="false" activator="#settings-button" location="bottom">
             <v-card min-width="300">
@@ -118,6 +130,36 @@
           </v-menu>
         </div>
       </div>
+      <!-- Regex highlighting input -->
+      <div v-if="showRegexHighlight" class="pb-4 px-4">
+        <v-card variant="outlined" class="pa-3">
+          <v-row align="center">
+            <v-col cols="12" md="8">
+              <v-text-field
+                v-model="regexPattern"
+                label="Regex pattern for highlighting"
+                placeholder="e.g., A+, [KR], M.*L"
+                :error-messages="regexError"
+                hide-details="auto"
+                density="compact"
+                @input="onRegexInput"
+              >
+                <template #prepend-inner>
+                  <v-icon>mdi-regex</v-icon>
+                </template>
+              </v-text-field>
+            </v-col>
+            <v-col cols="12" md="4">
+              <div v-if="regexHighlightedIndices.size > 0" class="text-caption text-medium-emphasis">
+                {{ regexHighlightedIndices.size }} cells highlighted
+              </div>
+              <div v-else-if="regexPattern && !regexError" class="text-caption text-medium-emphasis">
+                No matches found
+              </div>
+            </v-col>
+          </v-row>
+        </v-card>
+      </div>
       <div class="pb-4 px-2" :class="gridClasses" style="width: 100%; max-width: 100%">
         <template v-for="(aminoAcidObj, aa_index) in sequenceObjects" :key="aa_index">
           <div
@@ -137,6 +179,7 @@
             :show-fragments="showFragments"
             :show-modifications="showModifications"
             :font-size="fontSize"
+            :is-regex-highlighted="regexHighlightedIndices.has(aa_index)"
             @selected="aminoAcidSelected"
           />
           <div
@@ -263,19 +306,19 @@ export default defineComponent({
         { text: 'Modifications', selected: true },
       ] as { text: string; selected: boolean }[],
       fragmentTableColumnDefinitions: [
-        { 
+        {
           title: 'Name', field: 'Name',
             headerTooltip: 'The name of the fragment ion, represented in Biemann notation.'
         },
-        { 
+        {
           title: 'Ion type', field: 'IonType',
           headerTooltip: 'The type of fragment ion identified in the spectrum.'
         },
-        { 
+        {
           title: 'Ion number', field: 'IonNumber', sorter: 'number',
           headerTooltip: 'The position of the fragment ion within the sequence.'
         },
-        { 
+        {
           title: 'Theoretical mass', field: 'TheoreticalMass', sorter: 'number',
           headerTooltip: 'The expected mass of the fragment ion.'
         },
@@ -283,11 +326,11 @@ export default defineComponent({
           title: 'Observed mass', field: 'ObservedMass', formatter: toFixedFormatter(), sorter: 'number',
           headerTooltip: 'The mass of the fragment ion as observed in the spectrum.'
         },
-        { 
+        {
           title: 'Mass difference (Da)', field: 'MassDiffDa', sorter: 'number',
           headerTooltip: 'The difference between the observed and theoretical masses of the fragment ion, in Daltons.'
         },
-        { 
+        {
           title: 'Mass difference (ppm)', field: 'MassDiffPpm', sorter: 'number',
           headerTooltip: 'The difference between the observed and theoretical masses of the fragment ion, in parts per million (ppm).'
         },
@@ -301,6 +344,10 @@ export default defineComponent({
       copySnackbarText: '' as string,
       _updatingFromMass: false as boolean,
       _updatingFromFragment: false as boolean,
+      showRegexHighlight: false as boolean,
+      regexPattern: '' as string,
+      regexError: '' as string,
+      regexHighlightedIndices: new Set<number>(),
     }
   },
   computed: {
@@ -1038,6 +1085,43 @@ export default defineComponent({
         this.copySnackbarText = 'Failed to copy sequence to clipboard'
         this.copySnackbar = true
         console.error('Copy failed:', error)
+      }
+    },
+    toggleRegexHighlight(): void {
+      this.showRegexHighlight = !this.showRegexHighlight
+      if (!this.showRegexHighlight) {
+        this.regexPattern = ''
+        this.regexError = ''
+        this.regexHighlightedIndices.clear()
+      }
+    },
+    onRegexInput(): void {
+      this.regexError = ''
+      this.regexHighlightedIndices.clear()
+      
+      if (!this.regexPattern) {
+        return
+      }
+      
+      try {
+        const regex = new RegExp(this.regexPattern, 'gi')
+        const sequenceString = this.sequence.join('')
+        
+        let match
+        while ((match = regex.exec(sequenceString)) !== null) {
+          // Highlight all characters in the match
+          for (let i = match.index; i < match.index + match[0].length; i++) {
+            this.regexHighlightedIndices.add(i)
+          }
+          
+          // Prevent infinite loop for zero-length matches
+          if (match[0].length === 0) {
+            break
+          }
+        }
+      } catch (error) {
+        this.regexError = 'Invalid regex pattern'
+        console.warn('Regex error:', error)
       }
     },
   },

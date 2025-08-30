@@ -2,7 +2,7 @@
   <div
    :id="id"
    class="d-flex justify-center align-center rounded-lg"
-   :class="[aminoAcidCellClass, { highlighted: isHighlighted }, { truncated: isTruncated }]"
+   :class="[aminoAcidCellClass, { highlighted: isHighlighted }, { 'regex-highlighted': isRegexHighlighted }, { truncated: isTruncated }]"
    :style="aminoAcidCellStyles"
    @click="selectCell"
    @contextmenu.prevent="toggleMenuOpen"
@@ -176,6 +176,10 @@ export default defineComponent({
     fontSize: {
       type: Number,
       default: 12,
+    },
+    isRegexHighlighted: {
+      type: Boolean,
+      default: false,
     },
   },
   emits: ['selected'],
@@ -428,6 +432,21 @@ export default defineComponent({
   color: #000000; /* Black text for highlighted state */
   outline: 3px solid #29335C; /* Thicker border for highlighted state */
   font-weight: bold;
+}
+
+.sequence-amino-acid.regex-highlighted {
+  /* Style for regex highlighting */
+  background-color: #E3F2FD !important; /* Light blue background for regex highlighting */
+  color: #1565C0 !important; /* Dark blue text for regex highlighting */
+  outline: 2px solid #1976D2 !important; /* Blue border for regex highlighting */
+  font-weight: bold;
+}
+
+/* When both highlighted and regex-highlighted, prioritize normal highlighting */
+.sequence-amino-acid.highlighted.regex-highlighted {
+  background-color: #F3A712 !important;
+  color: #000000 !important;
+  outline: 3px solid #29335C !important;
 }
 
 .sequence-amino-acid-truncated, .sequence-amino-acid.truncated .aa-text {
