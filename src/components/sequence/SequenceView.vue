@@ -49,6 +49,18 @@
                   ></v-slider>
                 </v-list-item>
                 <v-list-item>
+                  <v-list-item-title>Font Size</v-list-item-title>
+                  <v-slider
+                    v-model="fontSize"
+                    :ticks="fontSizeTickLabels"
+                    :min="8"
+                    :max="16"
+                    step="2"
+                    show-ticks="always"
+                    tick-size="4"
+                  ></v-slider>
+                </v-list-item>
+                <v-list-item>
                   <v-list-item-title>Visibility</v-list-item-title>
                   <div class="d-flex justify-space-evenly">
                     <v-checkbox
@@ -114,7 +126,7 @@
           >
           {{ showTruncations ? aa_index + 1 : aa_index - sequence_start + 1 }}
           </div>
-          <ProteinTerminalCell v-if="aa_index === 0" protein-terminal="N-term" :truncated=n_truncation :index="-1" :disable-variable-modification-selection="disableVariableModifications" :determined="n_determined"/>
+          <ProteinTerminalCell v-if="aa_index === 0" protein-terminal="N-term" :truncated=n_truncation :index="-1" :disable-variable-modification-selection="disableVariableModifications" :determined="n_determined" :font-size="fontSize"/>
           <AminoAcidCell
             v-if="showTruncations || ((sequence_start <= aa_index) && (sequence_end >= aa_index))"
             :index="aa_index"
@@ -124,6 +136,7 @@
             :show-tags="showTags"
             :show-fragments="showFragments"
             :show-modifications="showModifications"
+            :font-size="fontSize"
             @selected="aminoAcidSelected"
           />
           <div
@@ -138,6 +151,7 @@
             :index="sequence.length"
             :disable-variable-modification-selection="disableVariableModifications"
             :determined="c_determined"
+            :font-size="fontSize"
           />
           </template>
       </div>
@@ -227,6 +241,7 @@ export default defineComponent({
   data() {
     return {
       rowWidth: 35 as number,
+      fontSize: 12 as number,
       massData: [] as string[],
       massTitle: "" as string,
       ionTypes: [
@@ -404,6 +419,15 @@ export default defineComponent({
         40: '40',
       }
     },
+    fontSizeTickLabels(): Record<number, string> {
+      return {
+        8: '8',
+        10: '10',
+        12: '12',
+        14: '14',
+        16: '16',
+      }
+    },
     gridClasses(): Record<string, boolean> {
       return {
         'sequence-grid': true,
@@ -480,6 +504,14 @@ export default defineComponent({
     },
   },
   watch: {
+    fontSize: {
+      handler(newFontSize, oldFontSize) {
+        console.log('Font size changed:', { oldFontSize, newFontSize })
+        // Force reactivity update by triggering component re-render
+        this.$forceUpdate()
+      },
+      immediate: false
+    },
     selectedScanIndex() {
       this.preparePrecursorInfo()
       this.initializeSequenceObjects()

@@ -64,6 +64,10 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    fontSize: {
+      type: Number,
+      default: 12,
+    },
   },
   setup() {
     const streamlitData = useStreamlitDataStore()
@@ -100,6 +104,7 @@ export default defineComponent({
         '--protein-terminal-cell-color': this.theme?.textColor ?? '#fff',
         '--protein-terminal-cell-hover-color': '#fff',
         '--protein-terminal-cell-hover-bg-color': this.theme?.secondaryBackgroundColor ?? '#000',
+        '--amino-acid-font-size': `${this.fontSize}px`,
       }
     },
     proteinTerminalCellClasses(): Record<string, boolean> {
@@ -163,8 +168,9 @@ export default defineComponent({
 
 .terminal-text {
   font-weight: 1000;
+  font-size: var(--amino-acid-font-size, 12px);
   &.truncated {
-    color: rgba(128, 128, 128, 0.4); 
+    color: rgba(128, 128, 128, 0.4);
     outline: rgba(128, 128, 128, 0.4);
   }
 }

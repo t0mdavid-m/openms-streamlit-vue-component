@@ -173,6 +173,10 @@ export default defineComponent({
       type: Boolean,
       default: true,
     },
+    fontSize: {
+      type: Number,
+      default: 12,
+    },
   },
   emits: ['selected'],
   setup() {
@@ -276,6 +280,7 @@ export default defineComponent({
           '--amino-acid-cell-bg-color': this.theme?.secondaryBackgroundColor ?? '#000',
           '--amino-acid-cell-hover-color': this.theme?.textColor ?? '#fff',
           '--amino-acid-cell-hover-bg-color': this.theme?.backgroundColor ?? '#000',
+          '--amino-acid-font-size': `${this.fontSize}px`,
           position: 'relative',
         }
       }
@@ -292,6 +297,7 @@ export default defineComponent({
         '--amino-acid-cell-bg-color': `rgba(228, 87, 46, ${alpha})`,
         '--amino-acid-cell-hover-color': this.theme?.textColor ?? '#fff',
         '--amino-acid-cell-hover-bg-color': this.theme?.backgroundColor ?? '#000',
+        '--amino-acid-font-size': `${this.fontSize}px`,
         position: 'relative',
       }
     },
@@ -500,6 +506,7 @@ export default defineComponent({
 
 .aa-text {
   position: absolute;
+  font-size: var(--amino-acid-font-size, 12px);
 }
 
 .tag-marker {
