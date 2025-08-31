@@ -212,6 +212,7 @@
           :column-definitions="fragmentTableColumnDefinitions"
           :index="index"
           :selected-row-index-from-listening="selectedFragTableRowIndex"
+          :go-to-fields="['Name']"
           table-layout-param="fitColumns"
           @row-selected="onFragmentTableRowSelected"
         >

@@ -7,6 +7,7 @@
     :selected-row-index-from-listening="selectedRow"
     :default-row=0
     :initial-sort="initialSort"
+    :go-to-fields="['Scan', 'accession']"
     @row-selected="updateSelectedProtein"
   />
 </template>

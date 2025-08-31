@@ -6,6 +6,7 @@
     :index="index"
     :default-row=0
     :initial-sort="initialSort"
+    :go-to-fields="['Scan', 'StartPos', 'EndPos', 'TagSequence']"
     @row-selected="updateSelectedTag"
   />
 </template>
