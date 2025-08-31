@@ -64,7 +64,7 @@
           v-model="goToInputValue"
           @keyup.enter="performGoTo"
           :placeholder="getGoToPlaceholder()"
-          style="width: 100px; font-size: 12px; padding: 4px 8px; border: 1px solid #ccc; border-radius: 3px; height: 24px; box-sizing: border-box;"
+          style="width: 200px; font-size: 12px; padding: 4px 8px; border: 1px solid #ccc; border-radius: 3px; height: 24px; box-sizing: border-box;"
         />
         
         <!-- Go button -->
@@ -1415,34 +1415,26 @@ export default defineComponent({
     },
 
     /**
-     * Get user-friendly label for field
+     * Get user-friendly label for field using dynamic logic
      * @param field - Field name
      * @returns Display label
      */
     getGoToFieldLabel(field: string): string {
-      const labelMap: Record<string, string> = {
-        'id': 'Index',
-        'Scan': 'Scan Number',
-        'StartPos': 'Start Position',
-        'EndPos': 'End Position',
-        'Score': 'Score'
-      };
-      return labelMap[field] || field;
+      // First try to get title from column definitions
+      const column = this.columnDefinitions.find(col => col.field === field);
+      if (column?.title) {
+        return column.title;
+      }
+      return 'field'
     },
 
     /**
-     * Get placeholder text for current field
+     * Get placeholder text for current field using dynamic logic
      * @returns Placeholder text
      */
     getGoToPlaceholder(): string {
-      const placeholderMap: Record<string, string> = {
-        'id': 'Enter index...',
-        'Scan': 'Enter scan...',
-        'StartPos': 'Enter position...',
-        'EndPos': 'Enter position...',
-        'Score': 'Enter score...'
-      };
-      return placeholderMap[this.selectedGoToField] || 'Enter value...';
+      const fieldLabel = this.getGoToFieldLabel(this.selectedGoToField);
+      return `Enter ${fieldLabel.toLowerCase()}...`;
     },
 
   },
