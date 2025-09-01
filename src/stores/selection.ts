@@ -30,6 +30,7 @@ export const useSelectionStore = defineStore('selection', {
     heatmap_deconv2: undefined as HeatmapData | undefined,
     heatmap_raw: undefined as HeatmapData | undefined,
     heatmap_raw2: undefined as HeatmapData | undefined,
+    sequenceOut: undefined as string | undefined,
   }),
   getters: {
     selectedScanIndex: (state): number | undefined => state.scanIndex,
@@ -42,6 +43,7 @@ export const useSelectionStore = defineStore('selection', {
     selectedDeconvHeatmap: (state): HeatmapData | undefined => state.heatmap_deconv,
     selectedRawHeatmap: (state): HeatmapData | undefined => state.heatmap_raw,
     selectedRawMS2Heatmap: (state): HeatmapData | undefined => state.heatmap_raw2,
+    selectedSequenceOut: (state): string | undefined => state.sequenceOut,
   },
   actions: {
     updateSelectedScan(rowIndex: number) {
@@ -73,6 +75,9 @@ export const useSelectionStore = defineStore('selection', {
     },
     updateDeconvMS2HeatmapSelection(selection: HeatmapData) {
       this.heatmap_deconv2 = selection
+    },
+    updateSequenceOut(sequence?: string) {
+      this.sequenceOut = sequence
     },
   },
 })

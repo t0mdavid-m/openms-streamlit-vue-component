@@ -33,13 +33,25 @@
             </v-tooltip>
           </v-btn>
           <v-btn
+            v-if="shouldShowSequenceChangeButton"
             variant="text"
-            :icon="showRegexHighlight ? 'mdi-marker-check' : 'mdi-marker'"
+            icon="mdi-dna"
+            size="large"
+            @click="openSequenceDialog"
+          >
+            <v-icon>mdi-dna</v-icon>
+            <v-tooltip activator="parent" location="bottom">
+              Change sequence
+            </v-tooltip>
+          </v-btn>
+          <v-btn
+            variant="text"
+            icon="mdi-magnify"
             size="large"
             :disabled="sequence.length === 0"
             @click="toggleRegexHighlight"
           >
-            <v-icon>{{ showRegexHighlight ? 'mdi-marker-check' : 'mdi-marker' }}</v-icon>
+            <v-icon>mdi-magnify</v-icon>
             <v-tooltip activator="parent" location="bottom">
               {{ showRegexHighlight ? 'Hide regex highlighting' : 'Show regex highlighting' }}
             </v-tooltip>
@@ -241,6 +253,48 @@
       </v-btn>
     </template>
   </v-snackbar>
+
+  <!-- Sequence Input Dialog -->
+  <v-dialog v-model="sequenceDialog" max-width="600" persistent>
+    <v-card>
+      <v-card-title class="text-h6">
+        Enter Custom Sequence
+      </v-card-title>
+      <v-card-text>
+        <v-textarea
+          v-model="customSequenceInput"
+          label="Protein Sequence"
+          placeholder="Enter amino acid sequence (e.g., MKFLVNVALVF...)"
+          :error-messages="sequenceInputError"
+          rows="6"
+          auto-grow
+          counter
+          hint="Enter single-letter amino acid codes only"
+          persistent-hint
+        >
+          <template #prepend-inner>
+            <v-icon>mdi-dna</v-icon>
+          </template>
+        </v-textarea>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn
+          variant="text"
+          @click="closeSequenceDialog"
+        >
+          Cancel
+        </v-btn>
+        <v-btn
+          color="primary"
+          variant="elevated"
+          @click="submitCustomSequence"
+        >
+          Apply Sequence
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script lang="ts">
@@ -349,6 +403,10 @@ export default defineComponent({
       regexPattern: '' as string,
       regexError: '' as string,
       regexHighlightedIndices: new Set<number>(),
+      // Sequence change dialog properties
+      sequenceDialog: false as boolean,
+      customSequenceInput: '' as string,
+      sequenceInputError: '' as string,
     }
   },
   computed: {
@@ -549,6 +607,10 @@ export default defineComponent({
         return true
       }
       return false
+    },
+    // Sequence change button computed properties
+    shouldShowSequenceChangeButton(): boolean {
+      return !this.displayTnT
     },
   },
   watch: {
@@ -1124,6 +1186,26 @@ export default defineComponent({
         this.regexError = 'Invalid regex pattern'
         console.warn('Regex error:', error)
       }
+    },
+    // Sequence change dialog methods
+    openSequenceDialog(): void {
+      this.customSequenceInput = ''
+      this.sequenceInputError = ''
+      this.sequenceDialog = true
+    },
+    closeSequenceDialog(): void {
+      this.sequenceDialog = false
+      this.customSequenceInput = ''
+      this.sequenceInputError = ''
+    },
+    submitCustomSequence(): void {
+      // Update selection store with custom sequence
+      this.selectionStore.updateSequenceOut(this.customSequenceInput.toUpperCase())
+      
+      // Close dialog
+      this.sequenceDialog = false
+      this.customSequenceInput = ''
+      this.sequenceInputError = ''
     },
   },
 })
