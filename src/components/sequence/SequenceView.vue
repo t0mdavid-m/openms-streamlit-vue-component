@@ -32,6 +32,30 @@
               Copy sequence to clipboard
             </v-tooltip>
           </v-btn>
+          <v-btn
+            v-if="shouldShowSequenceChangeButton"
+            variant="text"
+            icon="mdi-dna"
+            size="large"
+            @click="openSequenceDialog"
+          >
+            <v-icon>mdi-dna</v-icon>
+            <v-tooltip activator="parent" location="bottom">
+              Change sequence
+            </v-tooltip>
+          </v-btn>
+          <v-btn
+            variant="text"
+            icon="mdi-magnify"
+            size="large"
+            :disabled="sequence.length === 0"
+            @click="toggleRegexHighlight"
+          >
+            <v-icon>mdi-magnify</v-icon>
+            <v-tooltip activator="parent" location="bottom">
+              {{ showRegexHighlight ? 'Hide regex highlighting' : 'Show regex highlighting' }}
+            </v-tooltip>
+          </v-btn>
           <v-btn id="settings-button" variant="text" icon="mdi-cog" size="large"></v-btn>
           <v-menu :close-on-content-click="false" activator="#settings-button" location="bottom">
             <v-card min-width="300">
@@ -44,6 +68,18 @@
                     :min="20"
                     :max="40"
                     step="5"
+                    show-ticks="always"
+                    tick-size="4"
+                  ></v-slider>
+                </v-list-item>
+                <v-list-item>
+                  <v-list-item-title>Font Size</v-list-item-title>
+                  <v-slider
+                    v-model="fontSize"
+                    :ticks="fontSizeTickLabels"
+                    :min="8"
+                    :max="16"
+                    step="2"
                     show-ticks="always"
                     tick-size="4"
                   ></v-slider>
@@ -106,6 +142,36 @@
           </v-menu>
         </div>
       </div>
+      <!-- Regex highlighting input -->
+      <div v-if="showRegexHighlight" class="pb-4 px-4">
+        <v-card variant="outlined" class="pa-3">
+          <v-row align="center">
+            <v-col cols="12" md="8">
+              <v-text-field
+                v-model="regexPattern"
+                label="Regex pattern for highlighting"
+                placeholder="e.g., A+, [KR], M.*L"
+                :error-messages="regexError"
+                hide-details="auto"
+                density="compact"
+                @input="onRegexInput"
+              >
+                <template #prepend-inner>
+                  <v-icon>mdi-regex</v-icon>
+                </template>
+              </v-text-field>
+            </v-col>
+            <v-col cols="12" md="4">
+              <div v-if="regexHighlightedIndices.size > 0" class="text-caption text-medium-emphasis">
+                {{ regexHighlightedIndices.size }} cells highlighted
+              </div>
+              <div v-else-if="regexPattern && !regexError" class="text-caption text-medium-emphasis">
+                No matches found
+              </div>
+            </v-col>
+          </v-row>
+        </v-card>
+      </div>
       <div class="pb-4 px-2" :class="gridClasses" style="width: 100%; max-width: 100%">
         <template v-for="(aminoAcidObj, aa_index) in sequenceObjects" :key="aa_index">
           <div
@@ -114,7 +180,7 @@
           >
           {{ showTruncations ? aa_index + 1 : aa_index - sequence_start + 1 }}
           </div>
-          <ProteinTerminalCell v-if="aa_index === 0" protein-terminal="N-term" :truncated=n_truncation :index="-1" :disable-variable-modification-selection="disableVariableModifications" :determined="n_determined"/>
+          <ProteinTerminalCell v-if="aa_index === 0" protein-terminal="N-term" :truncated=n_truncation :index="-1" :disable-variable-modification-selection="disableVariableModifications" :determined="n_determined" :font-size="fontSize"/>
           <AminoAcidCell
             v-if="showTruncations || ((sequence_start <= aa_index) && (sequence_end >= aa_index))"
             :index="aa_index"
@@ -124,6 +190,8 @@
             :show-tags="showTags"
             :show-fragments="showFragments"
             :show-modifications="showModifications"
+            :font-size="fontSize"
+            :is-regex-highlighted="regexHighlightedIndices.has(aa_index)"
             @selected="aminoAcidSelected"
           />
           <div
@@ -138,6 +206,7 @@
             :index="sequence.length"
             :disable-variable-modification-selection="disableVariableModifications"
             :determined="c_determined"
+            :font-size="fontSize"
           />
           </template>
       </div>
@@ -155,6 +224,7 @@
           :column-definitions="fragmentTableColumnDefinitions"
           :index="index"
           :selected-row-index-from-listening="selectedFragTableRowIndex"
+          :go-to-fields="['Name']"
           table-layout-param="fitColumns"
           @row-selected="onFragmentTableRowSelected"
         >
@@ -183,6 +253,48 @@
       </v-btn>
     </template>
   </v-snackbar>
+
+  <!-- Sequence Input Dialog -->
+  <v-dialog v-model="sequenceDialog" max-width="600" persistent>
+    <v-card>
+      <v-card-title class="text-h6">
+        Enter Custom Sequence
+      </v-card-title>
+      <v-card-text>
+        <v-textarea
+          v-model="customSequenceInput"
+          label="Protein Sequence"
+          placeholder="Enter amino acid sequence (e.g., MKFLVNVALVF...)"
+          :error-messages="sequenceInputError"
+          rows="6"
+          auto-grow
+          counter
+          hint="Enter single-letter amino acid codes only"
+          persistent-hint
+        >
+          <template #prepend-inner>
+            <v-icon>mdi-dna</v-icon>
+          </template>
+        </v-textarea>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn
+          variant="text"
+          @click="closeSequenceDialog"
+        >
+          Cancel
+        </v-btn>
+        <v-btn
+          color="primary"
+          variant="elevated"
+          @click="submitCustomSequence"
+        >
+          Apply Sequence
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script lang="ts">
@@ -227,6 +339,7 @@ export default defineComponent({
   data() {
     return {
       rowWidth: 35 as number,
+      fontSize: 12 as number,
       massData: [] as string[],
       massTitle: "" as string,
       ionTypes: [
@@ -248,19 +361,19 @@ export default defineComponent({
         { text: 'Modifications', selected: true },
       ] as { text: string; selected: boolean }[],
       fragmentTableColumnDefinitions: [
-        { 
+        {
           title: 'Name', field: 'Name',
             headerTooltip: 'The name of the fragment ion, represented in Biemann notation.'
         },
-        { 
+        {
           title: 'Ion type', field: 'IonType',
           headerTooltip: 'The type of fragment ion identified in the spectrum.'
         },
-        { 
+        {
           title: 'Ion number', field: 'IonNumber', sorter: 'number',
           headerTooltip: 'The position of the fragment ion within the sequence.'
         },
-        { 
+        {
           title: 'Theoretical mass', field: 'TheoreticalMass', sorter: 'number',
           headerTooltip: 'The expected mass of the fragment ion.'
         },
@@ -268,11 +381,11 @@ export default defineComponent({
           title: 'Observed mass', field: 'ObservedMass', formatter: toFixedFormatter(), sorter: 'number',
           headerTooltip: 'The mass of the fragment ion as observed in the spectrum.'
         },
-        { 
+        {
           title: 'Mass difference (Da)', field: 'MassDiffDa', sorter: 'number',
           headerTooltip: 'The difference between the observed and theoretical masses of the fragment ion, in Daltons.'
         },
-        { 
+        {
           title: 'Mass difference (ppm)', field: 'MassDiffPpm', sorter: 'number',
           headerTooltip: 'The difference between the observed and theoretical masses of the fragment ion, in parts per million (ppm).'
         },
@@ -286,6 +399,14 @@ export default defineComponent({
       copySnackbarText: '' as string,
       _updatingFromMass: false as boolean,
       _updatingFromFragment: false as boolean,
+      showRegexHighlight: false as boolean,
+      regexPattern: '' as string,
+      regexError: '' as string,
+      regexHighlightedIndices: new Set<number>(),
+      // Sequence change dialog properties
+      sequenceDialog: false as boolean,
+      customSequenceInput: '' as string,
+      sequenceInputError: '' as string,
     }
   },
   computed: {
@@ -404,6 +525,15 @@ export default defineComponent({
         40: '40',
       }
     },
+    fontSizeTickLabels(): Record<number, string> {
+      return {
+        8: '8',
+        10: '10',
+        12: '12',
+        14: '14',
+        16: '16',
+      }
+    },
     gridClasses(): Record<string, boolean> {
       return {
         'sequence-grid': true,
@@ -478,8 +608,20 @@ export default defineComponent({
       }
       return false
     },
+    // Sequence change button computed properties
+    shouldShowSequenceChangeButton(): boolean {
+      return !this.displayTnT
+    },
   },
   watch: {
+    fontSize: {
+      handler(newFontSize, oldFontSize) {
+        console.log('Font size changed:', { oldFontSize, newFontSize })
+        // Force reactivity update by triggering component re-render
+        this.$forceUpdate()
+      },
+      immediate: false
+    },
     selectedScanIndex() {
       this.preparePrecursorInfo()
       this.initializeSequenceObjects()
@@ -1007,6 +1149,63 @@ export default defineComponent({
         this.copySnackbar = true
         console.error('Copy failed:', error)
       }
+    },
+    toggleRegexHighlight(): void {
+      this.showRegexHighlight = !this.showRegexHighlight
+      if (!this.showRegexHighlight) {
+        this.regexPattern = ''
+        this.regexError = ''
+        this.regexHighlightedIndices.clear()
+      }
+    },
+    onRegexInput(): void {
+      this.regexError = ''
+      this.regexHighlightedIndices.clear()
+      
+      if (!this.regexPattern) {
+        return
+      }
+      
+      try {
+        const regex = new RegExp(this.regexPattern, 'gi')
+        const sequenceString = this.sequence.join('')
+        
+        let match
+        while ((match = regex.exec(sequenceString)) !== null) {
+          // Highlight all characters in the match
+          for (let i = match.index; i < match.index + match[0].length; i++) {
+            this.regexHighlightedIndices.add(i)
+          }
+          
+          // Prevent infinite loop for zero-length matches
+          if (match[0].length === 0) {
+            break
+          }
+        }
+      } catch (error) {
+        this.regexError = 'Invalid regex pattern'
+        console.warn('Regex error:', error)
+      }
+    },
+    // Sequence change dialog methods
+    openSequenceDialog(): void {
+      this.customSequenceInput = ''
+      this.sequenceInputError = ''
+      this.sequenceDialog = true
+    },
+    closeSequenceDialog(): void {
+      this.sequenceDialog = false
+      this.customSequenceInput = ''
+      this.sequenceInputError = ''
+    },
+    submitCustomSequence(): void {
+      // Update selection store with custom sequence
+      this.selectionStore.updateSequenceOut(this.customSequenceInput.toUpperCase())
+      
+      // Close dialog
+      this.sequenceDialog = false
+      this.customSequenceInput = ''
+      this.sequenceInputError = ''
     },
   },
 })

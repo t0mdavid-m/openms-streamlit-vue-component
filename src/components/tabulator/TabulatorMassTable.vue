@@ -6,6 +6,7 @@
     :index="index"
     :selected-row-index-from-listening="selectedMassTableRow"
     :default-row=0
+    :go-to-fields="['id']"
     @row-selected="updateSelectedMass"
   />
 </template>

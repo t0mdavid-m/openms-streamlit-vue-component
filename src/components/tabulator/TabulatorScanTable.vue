@@ -6,6 +6,7 @@
     :index="index"
     :selected-row-index-from-listening="selectedRow"
     :default-row=0
+    :go-to-fields="['id', 'Scan']"
     @row-selected="updateSelectedScan"
   />
 </template>

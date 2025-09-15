@@ -7,6 +7,12 @@
             <v-btn
               variant="text"
               size="small"
+              icon="mdi-download"
+              @click="downloadTable"
+            />
+            <v-btn
+              variant="text"
+              size="small"
               icon="mdi-filter"
               @click="openFilterDialog"
             />
@@ -18,10 +24,12 @@
             </div>
           </div>
           <v-btn
+            v-if="goToFields && goToFields.length > 0"
             variant="text"
             size="small"
-            icon="mdi-download"
-            @click="downloadTable"
+            icon="mdi-arrow-right-bold"
+            @click="toggleGoTo"
+            color="default"
           />
           <slot name="start-title-row"></slot>
         </div>
@@ -35,7 +43,43 @@
         </div>
       </div>
     </div>
-    <div :id="id" :class="tableClasses" @click="onTableClick"></div>
+    <!-- Go To interface -->
+    <div v-if="goToFields && goToFields.length > 0 && showGoTo"
+         ref="goToInterface"
+         style="padding: 8px; margin-bottom: 8px; background-color: #f5f5f5; border-radius: 4px; border: 1px solid #e0e0e0; flex-shrink: 0; box-sizing: border-box;">
+      <div style="display: flex; gap: 8px; align-items: center; height: 32px;">
+        <span style="font-size: 14px; font-weight: 500; color: #333;">Go to:</span>
+        <!-- Field selector -->
+        <select
+          v-model="selectedGoToField"
+          style="font-size: 12px; padding: 4px 8px; border: 1px solid #ccc; border-radius: 3px; background: white; height: 24px; box-sizing: border-box;"
+        >
+          <option v-for="field in goToFields" :key="field" :value="field">
+            {{ getGoToFieldLabel(field) }}
+          </option>
+        </select>
+        
+        <!-- Value input -->
+        <input
+          v-model="goToInputValue"
+          @keyup.enter="performGoTo"
+          :placeholder="getGoToPlaceholder()"
+          style="width: 200px; font-size: 12px; padding: 4px 8px; border: 1px solid #ccc; border-radius: 3px; height: 24px; box-sizing: border-box;"
+        />
+        
+        <!-- Go button -->
+        <button
+          @click="performGoTo"
+          :disabled="!goToInputValue.trim()"
+          style="font-size: 12px; padding: 4px 12px; border: 1px solid #ccc; border-radius: 3px; cursor: pointer; height: 24px; box-sizing: border-box;"
+          :style="{ opacity: !goToInputValue.trim() ? 0.5 : 1, cursor: !goToInputValue.trim() ? 'not-allowed' : 'pointer' }"
+        >
+          Go
+        </button>
+      </div>
+    </div>
+
+    <div :id="id" :class="tableClasses" @click="onTableClick" style="flex: 1; min-height: 0;"></div>
     
   </div>
 </template>
@@ -89,6 +133,11 @@ export default defineComponent({
       required: false,
       default: () => undefined
     },
+    goToFields: {
+      type: Array as PropType<string[]>,
+      required: false,
+      default: () => undefined
+    },
   },
   emits: ['rowSelected'],
   setup() {
@@ -132,6 +181,10 @@ export default defineComponent({
       teleportBackdrop: null as HTMLElement | null,
       teleportContainer: null as HTMLElement | null,
       parentDocument: null as Document | null,
+      // Go-to related properties
+      showGoTo: false,
+      selectedGoToField: '',
+      goToInputValue: '',
     }
   },
   computed: {
@@ -246,17 +299,23 @@ export default defineComponent({
   mounted() {
     this.drawTable()
     this.initializeTeleport()
+    this.initializeGoTo()
   },
   beforeUnmount() {
     this.cleanupTeleport()
   },
   methods: {
     drawTable(): void {
+      // Calculate table height based on available space
+      const baseHeight = this.title ? 320 : 310;
+      const goToInterfaceHeight = this.showGoTo ? 58 : 0;
+      const tableMaxHeight = baseHeight - goToInterfaceHeight;
+      
       this.tabulator = new Tabulator(`#${this.id}`, {
         index: this.tableIndexField,
         data: this.preparedTableData,
         minHeight: 50,
-        maxHeight: this.title ? 320 : 310,
+        maxHeight: Math.max(tableMaxHeight, 50), // Ensure minimum height
         responsiveLayout : 'collapse',
         layout: this.tableLayoutParam,
         selectable: 1,
@@ -1291,6 +1350,92 @@ export default defineComponent({
       }
     },
 
+    // Go-to functionality methods
+    initializeGoTo(): void {
+      if (this.goToFields && this.goToFields.length > 0) {
+        this.selectedGoToField = this.goToFields[0]
+      }
+    },
+
+    toggleGoTo(): void {
+      this.showGoTo = !this.showGoTo
+      if (this.showGoTo && this.goToFields && this.goToFields.length > 0) {
+        this.selectedGoToField = this.goToFields[0]
+      }
+      // Redraw table with adjusted height when go-to interface is toggled
+      this.$nextTick(() => {
+        this.redrawTableWithNewHeight()
+      })
+    },
+
+    /**
+     * Redraw table with updated height calculation
+     */
+    redrawTableWithNewHeight(): void {
+      if (!this.tabulator) return
+      
+      // Calculate new table height
+      const baseHeight = this.title ? 320 : 310
+      const goToInterfaceHeight = this.showGoTo ? 58 : 0
+      
+      // Destroy current tabulator and recreate with new height
+      this.tabulator.destroy()
+      this.drawTable()
+    },
+    
+    /**
+     * Find row index by field value
+     * @param field - The field to search in
+     * @param value - The value to find
+     * @returns Row index or -1 if not found
+     */
+    findRowByValue(field: string, value: string): number {
+      // Convert input to appropriate type (number if possible, otherwise string)
+      const searchValue = isNaN(Number(value)) ? value : Number(value);
+      
+      return this.preparedTableData.findIndex(row => {
+        const fieldValue = row[field];
+        return fieldValue === searchValue;
+      });
+    },
+
+    /**
+     * Navigate to row by field value
+     */
+    performGoTo(): void {
+      if (!this.goToInputValue.trim()) return;
+      
+      const rowIndex = this.findRowByValue(this.selectedGoToField, this.goToInputValue.trim());
+      
+      if (rowIndex >= 0) {
+        // Use the existing onSelectedRowListener method for navigation
+        this.onSelectedRowListener(rowIndex);
+        this.goToInputValue = ''; // Clear input after successful navigation
+      }
+    },
+
+    /**
+     * Get user-friendly label for field using dynamic logic
+     * @param field - Field name
+     * @returns Display label
+     */
+    getGoToFieldLabel(field: string): string {
+      // First try to get title from column definitions
+      const column = this.columnDefinitions.find(col => col.field === field);
+      if (column?.title) {
+        return column.title;
+      }
+      return 'field'
+    },
+
+    /**
+     * Get placeholder text for current field using dynamic logic
+     * @returns Placeholder text
+     */
+    getGoToPlaceholder(): string {
+      const fieldLabel = this.getGoToFieldLabel(this.selectedGoToField);
+      return `Enter ${fieldLabel.toLowerCase()}...`;
+    },
 
   },
 })
@@ -1329,6 +1474,39 @@ export default defineComponent({
   line-height: 1;
   z-index: 10;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Fix go-to toggle button focus/active states to prevent purple flicker */
+.v-btn--variant-text:focus-visible,
+.v-btn--variant-text:focus,
+.v-btn--variant-text:active,
+.v-btn--variant-text.v-btn--active {
+  background-color: transparent !important;
+}
+
+.v-btn--variant-text:focus-visible::before,
+.v-btn--variant-text:focus::before,
+.v-btn--variant-text:active::before,
+.v-btn--variant-text.v-btn--active::before {
+  opacity: 0 !important;
+}
+
+/* Ensure smooth transitions without unwanted color changes */
+.v-btn--variant-text {
+  transition: color 0.2s ease, background-color 0.2s ease !important;
+}
+
+/* Override any purple/primary color bleeds on focus/active states */
+.v-btn--variant-text.v-btn--color-default:focus-visible,
+.v-btn--variant-text.v-btn--color-default:focus,
+.v-btn--variant-text.v-btn--color-default:active {
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)) !important;
+}
+
+.v-btn--variant-text.v-btn--color-primary:focus-visible,
+.v-btn--variant-text.v-btn--color-primary:focus,
+.v-btn--variant-text.v-btn--color-primary:active {
+  color: rgb(var(--v-theme-primary)) !important;
 }
 
 </style>

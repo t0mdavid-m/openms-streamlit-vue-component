@@ -2,7 +2,7 @@
   <div
    :id="id"
    class="d-flex justify-center align-center rounded-lg"
-   :class="[aminoAcidCellClass, { highlighted: isHighlighted }, { truncated: isTruncated }]"
+   :class="[aminoAcidCellClass, { highlighted: isHighlighted }, { 'regex-highlighted': isRegexHighlighted }, { truncated: isTruncated }]"
    :style="aminoAcidCellStyles"
    @click="selectCell"
    @contextmenu.prevent="toggleMenuOpen"
@@ -173,6 +173,14 @@ export default defineComponent({
       type: Boolean,
       default: true,
     },
+    fontSize: {
+      type: Number,
+      default: 12,
+    },
+    isRegexHighlighted: {
+      type: Boolean,
+      default: false,
+    },
   },
   emits: ['selected'],
   setup() {
@@ -276,6 +284,7 @@ export default defineComponent({
           '--amino-acid-cell-bg-color': this.theme?.secondaryBackgroundColor ?? '#000',
           '--amino-acid-cell-hover-color': this.theme?.textColor ?? '#fff',
           '--amino-acid-cell-hover-bg-color': this.theme?.backgroundColor ?? '#000',
+          '--amino-acid-font-size': `${this.fontSize}px`,
           position: 'relative',
         }
       }
@@ -292,6 +301,7 @@ export default defineComponent({
         '--amino-acid-cell-bg-color': `rgba(228, 87, 46, ${alpha})`,
         '--amino-acid-cell-hover-color': this.theme?.textColor ?? '#fff',
         '--amino-acid-cell-hover-bg-color': this.theme?.backgroundColor ?? '#000',
+        '--amino-acid-font-size': `${this.fontSize}px`,
         position: 'relative',
       }
     },
@@ -424,6 +434,21 @@ export default defineComponent({
   font-weight: bold;
 }
 
+.sequence-amino-acid.regex-highlighted {
+  /* Style for regex highlighting */
+  background-color: #E3F2FD !important; /* Light blue background for regex highlighting */
+  color: #1565C0 !important; /* Dark blue text for regex highlighting */
+  outline: 2px solid #1976D2 !important; /* Blue border for regex highlighting */
+  font-weight: bold;
+}
+
+/* When both highlighted and regex-highlighted, prioritize normal highlighting */
+.sequence-amino-acid.highlighted.regex-highlighted {
+  background-color: #F3A712 !important;
+  color: #000000 !important;
+  outline: 3px solid #29335C !important;
+}
+
 .sequence-amino-acid-truncated, .sequence-amino-acid.truncated .aa-text {
   color: rgba(128, 128, 128, 0.3);
   outline: rgba(128, 128, 128, 0.3);
@@ -500,6 +525,7 @@ export default defineComponent({
 
 .aa-text {
   position: absolute;
+  font-size: var(--amino-acid-font-size, 12px);
 }
 
 .tag-marker {
