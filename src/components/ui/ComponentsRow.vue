@@ -62,6 +62,12 @@
         :index="componentIndex(index)"
       />
       <!-- End of new block -->
+
+      <TICChromatogram
+        v-else-if="component.componentArgs.componentName === 'TICChromatogram'"
+        :args="component.componentArgs"
+        :index="componentIndex(index)"
+      />
     </div>
   </div>
 </template>
@@ -81,6 +87,7 @@ import FLASHQuantView from '@/components/flashQuant/FLASHQuantView.vue'
 import InternalFragmentMap from '@/components/sequence/InternalFragmentMap.vue'
 // Add this line to import FDR_plotly
 import FDRPlotly from '@/components/plotly/lineplot/FDR_plotly.vue'
+import TICChromatogram from '@/components/chromatogram/TICChromatogram.vue'
 
 
 export default defineComponent({
@@ -97,6 +104,7 @@ export default defineComponent({
     TabulatorTagTable,
     SequenceView,
     FDRPlotly, // Register the FDRPlotly
+    TICChromatogram,
   },
   props: {
     components: {
@@ -123,6 +131,7 @@ export default defineComponent({
         SequenceView: 'height-any',
         InternalFragmentMap: 'height-any',
         FDRPlotly: 'height-any', // Added FDRPlotly height mapping
+        TICChromatogram: 'height-any',
       } as Record<
         FlashViewerComponent['componentArgs']['componentName'],
         'height-1' | 'height-2' | 'height-any'
