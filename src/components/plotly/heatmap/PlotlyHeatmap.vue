@@ -11,6 +11,16 @@ import { useSelectionStore } from '@/stores/selection'
 import type { HeatmapData } from '@/stores/selection'
 import type { PlotlyHeatmapArguments } from './plotly-heatmap'
 
+interface FeatureDataPoint {
+  FeatureIndex: number
+  MonoisotopicMass: number
+  SumIntensity: number
+  RetentionTime: number
+  ScanNum: number
+  ScanIndex: number
+  MassIndex: number
+}
+
 export default defineComponent({
   name: 'PlotlyHeatmap',
   props: {
@@ -70,6 +80,56 @@ export default defineComponent({
           return this.streamlitDataStore.allDataForDrawing.deconv_heatmap_df
         default:
           return []
+      }
+    },
+    featureData(): FeatureDataPoint[] {
+      if (this.args.title !== 'Deconvolved MS1 Heatmap') {
+        return []
+      }
+      const data = this.streamlitDataStore.allDataForDrawing.feature_data
+      return (data as unknown as FeatureDataPoint[]) || []
+    },
+    featureBoundingBox(): { x0: number; x1: number; y0: number; y1: number } | null {
+      if (this.featureData.length === 0) {
+        return null
+      }
+      
+      // Calculate min/max for RetentionTime and MonoisotopicMass
+      const retentionTimes = this.featureData.map(d => d.RetentionTime)
+      const masses = this.featureData.map(d => d.MonoisotopicMass)
+      
+      const minRTFeature = Math.min(...retentionTimes)
+      const maxRTFeature = Math.max(...retentionTimes)
+      const minMassFeature = Math.min(...masses)
+      const maxMassFeature = Math.max(...masses)
+      const minRT = Math.min(...this.xValues)
+      const maxRT = Math.max(...this.xValues)
+      const minMass = Math.min(...this.yValues)
+      const maxMass = Math.max(...this.yValues)
+      
+      // Get current visible ranges (accounts for zoom level)
+      let visibleRtRange: number
+      let visibleMassRange: number
+      
+      if (this.xRange && this.yRange) {
+        // Use the current zoom level
+        visibleRtRange = this.xRange[1] - this.xRange[0]
+        visibleMassRange = this.yRange[1] - this.yRange[0]
+      } else {
+        // Fallback to data extent when no zoom is applied
+        visibleRtRange = maxRT - minRT
+        visibleMassRange = maxMass - minMass
+      }
+      
+      // Calculate zoom-relative margins
+      const rtMargin = visibleRtRange * 0.02
+      const massMargin = visibleMassRange * 0.02
+      
+      return {
+        x0: minRTFeature - rtMargin,
+        x1: maxRTFeature + rtMargin,
+        y0: minMassFeature - massMargin,
+        y1: maxMassFeature + massMargin
       }
     },
     yAxisLabel(): string {
@@ -169,7 +229,7 @@ export default defineComponent({
       ]
     },
     layout(): Partial<Plotly.Layout> {
-      return {
+      const baseLayout: Partial<Plotly.Layout> = {
         title: `<b>${this.args.title}</b>`,
         showlegend: this.args.showLegend,
         xaxis: {
@@ -194,6 +254,27 @@ export default defineComponent({
           b: 60
         }
       }
+
+      // Add feature bounding box if available
+      if (this.featureBoundingBox) {
+        baseLayout.shapes = [
+          {
+            type: 'rect',
+            x0: this.featureBoundingBox.x0,
+            x1: this.featureBoundingBox.x1,
+            y0: this.featureBoundingBox.y0,
+            y1: this.featureBoundingBox.y1,
+            line: {
+              color: 'black',
+              width: 2
+            },
+            fillcolor: 'rgba(0, 0, 0, 0)', // Transparent fill
+            layer: 'above'
+          }
+        ]
+      }
+
+      return baseLayout
     },
   },
   watch: {

@@ -16,6 +16,7 @@ export type DATAFRAMES =
   | 'protein_table'
   | 'tag_table'
   | 'settings'
+  | 'feature_data'
   //| 'ecdf_target'
   //| 'ecdf_decoy'
 // 🔴 REPLACED WITH:
@@ -43,6 +44,7 @@ export type StreamlitData = {
   protein_table?: ArrowTable
   tag_table?: ArrowTable
   settings?: any
+  feature_data?: ArrowTable
   //ecdf_target?: ArrowTable
   //ecdf_decoy?: ArrowTable
   density_target?: ArrowTable
