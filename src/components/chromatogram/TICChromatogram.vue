@@ -87,6 +87,15 @@ export default defineComponent({
       }
     },
     
+    yRange(): number[] {
+      try {
+        return this.computeYRange(this.currentXRange)
+      } catch (error) {
+        console.error('Error computing yRange:', error)
+        return [0, 1]
+      }
+    },
+    
     shouldShowDataPoints(): boolean {
       // Show individual points when zoomed in sufficiently
       if (!this.config.showDataPoints) return false
@@ -231,6 +240,7 @@ export default defineComponent({
           title: 'TIC Intensity',
           showgrid: true,
           gridcolor: this.theme?.secondaryBackgroundColor,
+          range: this.yRange,
           rangemode: 'nonnegative',
           showline: true,
           linecolor: 'grey',
@@ -263,7 +273,7 @@ export default defineComponent({
             xref: 'x',
             yref: 'y',
             text: `<b>Integrated Area: ${this.integrationValue.toExponential(2)}</b>`,
-            showarrow: false,
+            showarrow: true,
             yanchor: 'bottom',
             xanchor: 'center',
             bgcolor: 'rgba(255, 255, 255, 0.9)',
@@ -468,15 +478,67 @@ export default defineComponent({
       }
     },
     
+    computeYRange(xRange: number[] | undefined): number[] {
+      try {
+        const yValues = this.plotData.y
+        const xValues = this.plotData.x
+        
+        if (yValues.length === 0 || xValues.length === 0) {
+          return [0, 1]
+        }
+        
+        // When xRange is undefined (initial load), compute full range from all data
+        if (!xRange || xRange.length !== 2 || xRange[0] >= xRange[1]) {
+          const maxY = Math.max(...yValues)
+          return maxY === 0 ? [0, 1] : [0, maxY * 1.8]
+        }
+        
+        // Filter y-values within the current x-range
+        let max: number = 0
+        for (let i = 0; i < Math.min(xValues.length, yValues.length); i++) {
+          const xval = xValues[i]
+          const yval = yValues[i]
+          
+          if ((xval <= xRange[0]) || (xval >= xRange[1])) continue
+          if (yval > max) max = yval
+        }
+        
+        return max === 0 ? [0, 1] : [0, max * 1.8]
+      } catch (error) {
+        console.error('Error computing Y range:', error)
+        return [0, 1]
+      }
+    },
+    
     onRelayout(eventData: any): void {
       try {
-        // Track zoom changes to update datapoint visibility
         if (eventData['xaxis.range[0]'] !== undefined && eventData['xaxis.range[1]'] !== undefined) {
-          this.currentXRange = [eventData['xaxis.range[0]'], eventData['xaxis.range[1]']]
-          // Re-render to update datapoint visibility based on zoom
-          this.renderPlot()
+          const newXRange = [eventData['xaxis.range[0]'], eventData['xaxis.range[1]']]
+          
+          // Prevent negative x-range (lower bound)
+          const minX = this.plotData.x.length > 0 ? Math.min(...this.plotData.x) : 0
+          if (newXRange[0] < minX) {
+            newXRange[0] = minX
+          }
+          
+          // Prevent exceeding data range (upper bound)
+          const maxX = this.plotData.x.length > 0 ? Math.max(...this.plotData.x) : Infinity
+          if (newXRange[1] > maxX) {
+            newXRange[1] = maxX
+          }
+          
+          this.currentXRange = newXRange
+          
+          // Update only the y-axis range without full re-render
+          const newYRange = this.computeYRange(newXRange)
+          const element = document.getElementById(this.plotId)
+          if (element && newYRange.length === 2) {
+            Plotly.relayout(element, {
+              'xaxis.range': [newXRange[0], newXRange[1]] as [Plotly.Datum, Plotly.Datum],
+              'yaxis.range': [newYRange[0], newYRange[1]] as [Plotly.Datum, Plotly.Datum]
+            })
+          }
         } else if (eventData['xaxis.autorange']) {
-          // Reset zoom
           this.currentXRange = undefined
           this.renderPlot()
         }
