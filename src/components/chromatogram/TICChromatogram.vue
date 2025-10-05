@@ -35,7 +35,6 @@ export default defineComponent({
   },
   data() {
     return {
-      selectedRowIndex: undefined as number | undefined,
       plotInstance: undefined as any,
       currentXRange: undefined as number[] | undefined,
       msLevelFilter: 'all' as 'all' | 'ms1' | 'ms2', // MS level filter state
@@ -54,6 +53,10 @@ export default defineComponent({
     
     theme(): Theme | undefined {
       return this.streamlitDataStore.theme
+    },
+    
+    selectedScanIndex(): number | undefined {
+      return this.selectionStore.selectedScanIndex
     },
     
     ticData(): TICDataPoint[] {
@@ -196,27 +199,30 @@ export default defineComponent({
       }
       
       // Highlighted selected point
-      if (this.selectedRowIndex !== undefined && this.selectedRowIndex < this.filteredTicData.length) {
-        const selectedPoint = this.filteredTicData[this.selectedRowIndex]
-        traces.push({
-          x: [selectedPoint.rt],
-          y: [selectedPoint.tic],
-          mode: 'markers',
-          type: 'scatter',
-          name: 'Selected Point',
-          marker: {
-            color: this.styling.selectedPointColor,
-            size: 10,
-            symbol: 'circle-open',
-            line: {
-              width: 3,
-              color: this.styling.selectedPointColor
-            }
-          },
-          hovertemplate: 'Selected<br>Scan: %{customdata}<br>RT: %{x:.2f}s<br>TIC: %{y:.0f}<extra></extra>',
-          customdata: [selectedPoint.scan_idx],
-          showlegend: false
-        })
+      if (this.selectedScanIndex !== undefined) {
+        const arrayIndex = this.getArrayIndexForScanIdx(this.selectedScanIndex)
+        if (arrayIndex !== undefined && arrayIndex < this.filteredTicData.length) {
+          const selectedPoint = this.filteredTicData[arrayIndex]
+          traces.push({
+            x: [selectedPoint.rt],
+            y: [selectedPoint.tic],
+            mode: 'markers',
+            type: 'scatter',
+            name: 'Selected Point',
+            marker: {
+              color: this.styling.selectedPointColor,
+              size: 10,
+              symbol: 'circle-open',
+              line: {
+                width: 3,
+                color: this.styling.selectedPointColor
+              }
+            },
+            hovertemplate: 'Selected<br>Scan: %{customdata}<br>RT: %{x:.2f}s<br>TIC: %{y:.0f}<extra></extra>',
+            customdata: [selectedPoint.scan_idx],
+            showlegend: false
+          })
+        }
       }
       
       return traces
@@ -295,6 +301,20 @@ export default defineComponent({
     }
   },
   watch: {
+    selectedScanIndex() {
+      if (this.plotInstance) {
+        // Preserve current x-range when external selection changes
+        const preservedXRange = this.currentXRange ? [...this.currentXRange] : undefined
+        this.renderPlot()
+        
+        // Restore x-range after render if it was set
+        if (preservedXRange) {
+          this.$nextTick(() => {
+            this.updateRangesFromXCoordinates(preservedXRange)
+          })
+        }
+      }
+    },
     ticData: {
       handler() {
         this.renderPlot()
@@ -525,25 +545,26 @@ export default defineComponent({
     
     onPlotClick(eventData: any): void {
       try {
+        if (this.integrationMode) {
+          // During integration mode, prevent scan selection to avoid conflicts
+          return
+        }
+        
         if (eventData.points && eventData.points.length > 0) {
           const point = eventData.points[0]
           const pointIndex = point.pointIndex
           
           if (pointIndex !== undefined && pointIndex < this.filteredTicData.length) {
-            this.selectedRowIndex = pointIndex
+            const dataPoint = this.filteredTicData[pointIndex]
+            const scanIdx = dataPoint.scan_idx
             
-            // Preserve current x-range when selecting a datapoint
-            const preservedXRange = this.currentXRange ? [...this.currentXRange] : undefined
+            // Update store instead of local state
+            this.selectionStore.updateSelectedScan(scanIdx)
             
-            // Re-render to show highlighted point
-            this.renderPlot()
+            // Clear mass selection when scan selection changes
+            this.selectionStore.updateSelectedMass(undefined)
             
-            // Restore x-range after render if it was set
-            if (preservedXRange) {
-              this.$nextTick(() => {
-                this.updateRangesFromXCoordinates(preservedXRange)
-              })
-            }
+            // Note: Re-render will happen automatically via watcher
           }
         }
       } catch (error) {
@@ -712,6 +733,14 @@ export default defineComponent({
       this.integrationValue = area
     },
     
+    /**
+     * Get array index for a given scan_idx in filtered data
+     */
+    getArrayIndexForScanIdx(scanIdx: number | undefined): number | undefined {
+      if (scanIdx === undefined) return undefined
+      const index = this.filteredTicData.findIndex(point => point.scan_idx === scanIdx)
+      return index >= 0 ? index : undefined
+    }
   }
 })
 </script>
