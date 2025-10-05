@@ -1465,7 +1465,7 @@ export default defineComponent({
         }
         
         // Build modeBarButtonsToAdd array conditionally
-        const modeBarButtons = [
+        const modeBarButtons : any[] = [
           {
             title: this.annotationsVisible ? 'Hide Annotations' : 'Show Annotations',
             name: 'toggleAnnotations',
@@ -1501,9 +1501,10 @@ export default defineComponent({
             title: 'Download as SVG',
             name: 'toImageSvg',
             icon: {
-              width: 1792,
-              height: 1792,
-              path: 'M1152 1376v-160q0-14-9-23t-23-9h-96v-512q0-14-9-23t-23-9h-320q-14 0-23 9t-9 23v160q0 14 9 23t23 9h96v320h-96q-14 0-23 9t-9 23v160q0 14 9 23t23 9h320q14 0 23-9t9-23zm-128-896v-160q0-14-9-23t-23-9h-192q-14 0-23 9t-9 23v160q0 14 9 23t23 9h192q14 0 23-9t9-23zm640 416q0 209-103 385.5t-279.5 279.5-385.5 103-385.5-103-279.5-279.5-103-385.5 103-385.5 279.5-279.5 385.5-103 385.5 103 279.5 279.5 103 385.5z'
+              width: 1000,
+              height: 1000,
+              path: 'm518 386q0 8-5 13t-13 5q-37 0-63-27t-26-63q0-8 5-13t13-5 12 5 5 13q0 23 16 38t38 16q8 0 13 5t5 13z m125-73q0-59-42-101t-101-42-101 42-42 101 42 101 101 42 101-42 42-101z m-572-320h858v71h-858v-71z m643 320q0 89-62 152t-152 62-151-62-63-152 63-151 151-63 152 63 62 151z m-571 358h214v72h-214v-72z m-72-107h858v143h-462l-36-71h-360v-72z m929 143v-714q0-30-21-51t-50-21h-858q-29 0-50 21t-21 51v714q0 30 21 51t50 21h858q29 0 50-21t21-51z',
+              transform: 'matrix(1 0 0 -1 0 850)'            
             },
             click: () => {
               const element = document.getElementById(this.id)
