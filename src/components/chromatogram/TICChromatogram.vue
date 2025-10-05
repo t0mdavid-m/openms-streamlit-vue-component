@@ -97,18 +97,21 @@ export default defineComponent({
     },
     
     shouldShowDataPoints(): boolean {
-      // Show individual points when zoomed in sufficiently
-      if (!this.config.showDataPoints) return false
+      // If explicitly disabled in config, never show data points
+      if (this.config.showDataPoints === false) return false
+      
+      const threshold = this.config.dataPointThreshold || 50
       
       // Calculate visible point count based on current zoom
       if (this.currentXRange) {
         const [xMin, xMax] = this.currentXRange
         const visiblePoints = this.plotData.x.filter(x => x >= xMin && x <= xMax)
-        return visiblePoints.length <= (this.config.dataPointThreshold || 100)
+        // Automatically show data points when 50 or fewer are visible
+        return visiblePoints.length <= threshold
       }
       
       // If no zoom, use total point count
-      return this.plotData.x.length <= (this.config.dataPointThreshold || 100)
+      return this.plotData.x.length <= threshold
     },
     
     config() {
@@ -308,6 +311,21 @@ export default defineComponent({
         this.$nextTick(() => {
           this.updateRangesFromXCoordinates(preservedXRange)
         })
+      }
+    },
+    shouldShowDataPoints(newVal, oldVal) {
+      // Re-render when datapoint visibility changes due to zoom/pan
+      if (newVal !== oldVal) {
+        // Preserve current x-range when updating datapoint visibility
+        const preservedXRange = this.currentXRange ? [...this.currentXRange] : undefined
+        this.renderPlot()
+        
+        // Restore x-range after render if it was set
+        if (preservedXRange) {
+          this.$nextTick(() => {
+            this.updateRangesFromXCoordinates(preservedXRange)
+          })
+        }
       }
     },
     integrationMode() {

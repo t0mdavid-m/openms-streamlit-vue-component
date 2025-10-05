@@ -35,7 +35,7 @@ export interface TICDataPoint {
 export const DEFAULT_TIC_CONFIG = {
   enableZoom: true,
   showDataPoints: true,
-  dataPointThreshold: 100,
+  dataPointThreshold: 50,
   smoothCurve: true
 }
 
