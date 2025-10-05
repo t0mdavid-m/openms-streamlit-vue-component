@@ -301,18 +301,34 @@ export default defineComponent({
     }
   },
   watch: {
-    selectedScanIndex() {
-      if (this.plotInstance) {
-        // Preserve current x-range when external selection changes
-        const preservedXRange = this.currentXRange ? [...this.currentXRange] : undefined
-        this.renderPlot()
+    selectedScanIndex(newVal: number | undefined) {
+      if (newVal === undefined) return
+      
+      // Check if scan is in current filtered data
+      let arrayIndex = this.getArrayIndexForScanIdx(newVal)
+      console.log(arrayIndex)
+      
+      // If not found and filter is active, reset filter
+      if (arrayIndex === undefined && this.msLevelFilter !== 'all') {
+        this.msLevelFilter = 'all'
+        // After filter reset, check again
+        arrayIndex = this.getArrayIndexForScanIdx(newVal)
+      }
+      
+      // Check if scan is in zoom range
+      if (this.currentXRange && arrayIndex !== undefined) {
+        const selectedPoint = this.filteredTicData[arrayIndex]
+        const [minRT, maxRT] = this.currentXRange
         
-        // Restore x-range after render if it was set
-        if (preservedXRange) {
-          this.$nextTick(() => {
-            this.updateRangesFromXCoordinates(preservedXRange)
-          })
+        if (selectedPoint.rt < minRT || selectedPoint.rt > maxRT) {
+          // Scan is outside zoom range, reset zoom
+          this.currentXRange = undefined
         }
+      }
+      
+      // Render with updated state
+      if (this.plotInstance) {
+        this.renderPlot()
       }
     },
     ticData: {
