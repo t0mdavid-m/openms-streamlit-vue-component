@@ -44,6 +44,7 @@ export default defineComponent({
       integrationEnd: undefined as number | undefined,
       isSelecting: false,
       integrationValue: undefined as number | undefined,
+      isInternalSelection: false // Track if selection originated from this component
     }
   },
   computed: {
@@ -244,6 +245,7 @@ export default defineComponent({
           showline: true,
           linecolor: 'grey',
           linewidth: 1,
+          range: this.currentXRange ? [this.currentXRange[0], this.currentXRange[1]] as [Plotly.Datum, Plotly.Datum] : undefined,
         },
         yaxis: {
           title: 'TIC Intensity',
@@ -306,7 +308,6 @@ export default defineComponent({
       
       // Check if scan is in current filtered data
       let arrayIndex = this.getArrayIndexForScanIdx(newVal)
-      console.log(arrayIndex)
       
       // If not found and filter is active, reset filter
       if (arrayIndex === undefined && this.msLevelFilter !== 'all') {
@@ -574,11 +575,19 @@ export default defineComponent({
             const dataPoint = this.filteredTicData[pointIndex]
             const scanIdx = dataPoint.scan_idx
             
-            // Update store instead of local state
-            this.selectionStore.updateSelectedScan(scanIdx)
+            // Set flag BEFORE updating store
+            this.isInternalSelection = true
             
             // Clear mass selection when scan selection changes
             this.selectionStore.updateSelectedMass(undefined)
+            
+            // Update store instead of local state
+            this.selectionStore.updateSelectedScan(scanIdx)
+            
+            // Reset flag after a brief delay (allow watcher to check it)
+            this.$nextTick(() => {
+              this.isInternalSelection = false
+            })
             
             // Note: Re-render will happen automatically via watcher
           }
