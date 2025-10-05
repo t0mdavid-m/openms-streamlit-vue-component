@@ -299,17 +299,61 @@ export default defineComponent({
       deep: true
     },
     msLevelFilter() {
+      // Preserve current x-range when toggling MS level filter
+      const preservedXRange = this.currentXRange ? [...this.currentXRange] : undefined
       this.renderPlot()
+      
+      // Restore x-range after render if it was set
+      if (preservedXRange) {
+        this.$nextTick(() => {
+          this.updateRangesFromXCoordinates(preservedXRange)
+        })
+      }
     },
     integrationMode() {
+      // Preserve current x-range when toggling integration mode
+      const preservedXRange = this.currentXRange ? [...this.currentXRange] : undefined
       this.renderPlot()
+      
+      // Restore x-range after render if it was set
+      if (preservedXRange) {
+        this.$nextTick(() => {
+          this.updateRangesFromXCoordinates(preservedXRange)
+        })
+      }
     },
     integrationStart() {
-      this.renderPlot()
+      // Only render if we have both start and end (active integration)
+      // This prevents re-renders when clearing integration
+      if (this.integrationStart !== undefined && this.integrationEnd !== undefined) {
+        // Preserve current x-range when displaying integration
+        const preservedXRange = this.currentXRange ? [...this.currentXRange] : undefined
+        this.renderPlot()
+        
+        // Restore x-range after render if it was set
+        if (preservedXRange) {
+          this.$nextTick(() => {
+            this.updateRangesFromXCoordinates(preservedXRange)
+          })
+        }
+      }
     },
     integrationEnd() {
-      this.renderPlot()
-    }
+      // Only render if we have both start and end (active integration)
+      // This prevents re-renders when clearing integration
+      if (this.integrationStart !== undefined && this.integrationEnd !== undefined) {
+        // Preserve current x-range when displaying integration
+        const preservedXRange = this.currentXRange ? [...this.currentXRange] : undefined
+        this.renderPlot()
+        
+        // Restore x-range after render if it was set
+        if (preservedXRange) {
+          this.$nextTick(() => {
+            this.updateRangesFromXCoordinates(preservedXRange)
+          })
+        }
+      }
+    },
   },
   mounted() {
     this.renderPlot()
@@ -510,34 +554,48 @@ export default defineComponent({
       }
     },
     
+    updateRangesFromXCoordinates(xRange: number[]): void {
+      try {
+        if (!xRange || xRange.length !== 2) {
+          console.warn('TICChromatogram: Invalid x-range provided')
+          return
+        }
+        
+        const newXRange = [...xRange]
+        
+        // Prevent negative x-range (lower bound)
+        const minX = this.plotData.x.length > 0 ? Math.min(...this.plotData.x) : 0
+        if (newXRange[0] < minX) {
+          newXRange[0] = minX
+        }
+        
+        // Prevent exceeding data range (upper bound)
+        const maxX = this.plotData.x.length > 0 ? Math.max(...this.plotData.x) : Infinity
+        if (newXRange[1] > maxX) {
+          newXRange[1] = maxX
+        }
+        
+        this.currentXRange = newXRange
+        
+        // Update only the y-axis range without full re-render
+        const newYRange = this.computeYRange(newXRange)
+        const element = document.getElementById(this.plotId)
+        if (element && newYRange.length === 2) {
+          Plotly.relayout(element, {
+            'xaxis.range': [newXRange[0], newXRange[1]] as [Plotly.Datum, Plotly.Datum],
+            'yaxis.range': [newYRange[0], newYRange[1]] as [Plotly.Datum, Plotly.Datum]
+          })
+        }
+      } catch (error) {
+        console.error('TICChromatogram: Error updating ranges from x-coordinates:', error)
+      }
+    },
+    
     onRelayout(eventData: any): void {
       try {
         if (eventData['xaxis.range[0]'] !== undefined && eventData['xaxis.range[1]'] !== undefined) {
           const newXRange = [eventData['xaxis.range[0]'], eventData['xaxis.range[1]']]
-          
-          // Prevent negative x-range (lower bound)
-          const minX = this.plotData.x.length > 0 ? Math.min(...this.plotData.x) : 0
-          if (newXRange[0] < minX) {
-            newXRange[0] = minX
-          }
-          
-          // Prevent exceeding data range (upper bound)
-          const maxX = this.plotData.x.length > 0 ? Math.max(...this.plotData.x) : Infinity
-          if (newXRange[1] > maxX) {
-            newXRange[1] = maxX
-          }
-          
-          this.currentXRange = newXRange
-          
-          // Update only the y-axis range without full re-render
-          const newYRange = this.computeYRange(newXRange)
-          const element = document.getElementById(this.plotId)
-          if (element && newYRange.length === 2) {
-            Plotly.relayout(element, {
-              'xaxis.range': [newXRange[0], newXRange[1]] as [Plotly.Datum, Plotly.Datum],
-              'yaxis.range': [newYRange[0], newYRange[1]] as [Plotly.Datum, Plotly.Datum]
-            })
-          }
+          this.updateRangesFromXCoordinates(newXRange)
         } else if (eventData['xaxis.autorange']) {
           this.currentXRange = undefined
           this.renderPlot()
@@ -548,6 +606,9 @@ export default defineComponent({
     },
     
     setMsLevelFilter(filter: 'all' | 'ms1' | 'ms2'): void {
+      if (filter !== 'ms1' && this.integrationMode) {
+        this.toggleIntegrationMode()
+      }
       this.msLevelFilter = filter
     },
     
@@ -567,7 +628,6 @@ export default defineComponent({
       this.integrationEnd = undefined
       this.integrationValue = undefined
       this.isSelecting = false
-      this.renderPlot()
     },
     
     onSelected(eventData: any): void {
