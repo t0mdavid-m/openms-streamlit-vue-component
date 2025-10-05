@@ -531,8 +531,19 @@ export default defineComponent({
           
           if (pointIndex !== undefined && pointIndex < this.filteredTicData.length) {
             this.selectedRowIndex = pointIndex
+            
+            // Preserve current x-range when selecting a datapoint
+            const preservedXRange = this.currentXRange ? [...this.currentXRange] : undefined
+            
             // Re-render to show highlighted point
             this.renderPlot()
+            
+            // Restore x-range after render if it was set
+            if (preservedXRange) {
+              this.$nextTick(() => {
+                this.updateRangesFromXCoordinates(preservedXRange)
+              })
+            }
           }
         }
       } catch (error) {
