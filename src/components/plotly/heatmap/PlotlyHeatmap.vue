@@ -44,6 +44,7 @@ export default defineComponent({
       colorbarVisible: true,
       userOverrideColorbar: false, // Track if user has manually set preference
       plotWidth: 800,
+      plotHeight: 600,
       resizeObserver: null as ResizeObserver | null
     }
   },
@@ -121,15 +122,32 @@ export default defineComponent({
         visibleMassRange = maxMass - minMass
       }
       
-      // Calculate zoom-relative margins
-      const rtMargin = visibleRtRange * 0.02
-      const massMargin = visibleMassRange * 0.02
+      // Calculate plot dimensions accounting for margins
+      const effectivePlotWidth = this.plotWidth - (this.effectiveColorbarVisible ? 180 : 80)
+      const effectivePlotHeight = this.plotHeight - 120
       
+      // Calculate aspect ratio to determine pixel-to-data ratios for each axis
+      const rtPerPixel = visibleRtRange / effectivePlotWidth
+      const massPerPixel = visibleMassRange / effectivePlotHeight
+      
+      // Use a fixed "pixel" margin
+      const pixelMargin = 7.5
+      const rtMargin = rtPerPixel * pixelMargin
+      const massMargin = massPerPixel * pixelMargin
+      
+      const centerRT = (minRTFeature + maxRTFeature) / 2
+      const centerMass = (minMassFeature + maxMassFeature) / 2
+      
+      // Calculate half-widths to encompass all feature points
+      const halfRTSpan = (maxRTFeature - minRTFeature) / 2
+      const halfMassSpan = (maxMassFeature - minMassFeature) / 2
+      
+      // Apply symmetric margins around the center to ensure the datapoint is centered
       return {
-        x0: minRTFeature - rtMargin,
-        x1: maxRTFeature + rtMargin,
-        y0: minMassFeature - massMargin,
-        y1: maxMassFeature + massMargin
+        x0: centerRT - halfRTSpan - rtMargin,
+        x1: centerRT + halfRTSpan + rtMargin,
+        y0: centerMass - halfMassSpan - massMargin,
+        y1: centerMass + halfMassSpan + massMargin
       }
     },
     yAxisLabel(): string {
@@ -338,9 +356,14 @@ export default defineComponent({
         this.resizeObserver = new ResizeObserver((entries) => {
           for (const entry of entries) {
             const newWidth = entry.contentRect.width
-            if (Math.abs(newWidth - this.plotWidth) > 10) { // Avoid too frequent updates
+            const newHeight = entry.contentRect.height
+            const widthChanged = Math.abs(newWidth - this.plotWidth) > 10
+            const heightChanged = Math.abs(newHeight - this.plotHeight) > 10
+            
+            if (widthChanged || heightChanged) { // Avoid too frequent updates
               const wasNarrow = this.isNarrowPlot
               this.plotWidth = newWidth
+              this.plotHeight = newHeight
               const isNowNarrow = this.isNarrowPlot
               
               // Handle transitions between narrow and wide

@@ -7,12 +7,13 @@
     :selected-row-index-from-listening="selectedMassTableRow"
     :default-row=0
     :go-to-fields="['id']"
+    :initial-sort="[{ column: 'QScore', dir: 'desc' }]"
     @row-selected="updateSelectedMass"
   />
 </template>
 
 <script lang="ts">
-import { defineComponent, type PropType } from 'vue'
+import { defineComponent, type PropType, nextTick } from 'vue'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
 import type { TabulatorTableArguments } from './tabulator-table'
 import { useSelectionStore } from '@/stores/selection'
@@ -43,11 +44,15 @@ export default defineComponent({
   data() {
     return {
       columnDefinitions: [
-        { 
+        {
           title: 'Index', field: 'id', sorter: 'number',
           headerTooltip: 'The sequential index of the mass entry in the dataset.'
         },
-        { 
+        {
+          title: 'Feature Index', field: 'FeatureIndex', sorter: 'number',
+          headerTooltip: 'Index of the feature in the feature list'
+        },
+        {
           title: 'Monoisotopic mass', field: 'MonoMass', formatter: toFixedFormatter(), sorter: 'number',
           headerTooltip: 'The monoisotopic mass of the detected ion in Daltons.'
         },
@@ -80,8 +85,9 @@ export default defineComponent({
           title: 'SNR', field: 'SNR', formatter: toFixedFormatter(), sorter: 'number',
           headerTooltip: 'The signal-to-noise ratio for the detected mass.'
         },
-        { 
+        {
           title: 'QScore', field: 'QScore', formatter: toFixedFormatter(), sorter: 'number',
+          headerSort: true,
           headerTooltip: 'The quality score indicating the confidence of the mass detection (higher is better).'
         },
       ] as ColumnDefinition[],
@@ -96,7 +102,6 @@ export default defineComponent({
     },
     selectedMassTableRow(): number | undefined {
       const massIndex = this.selectionStore.selectedMassIndex
-      console.log('🔍 [DEBUG] Mass Table selectedMassTableRow computed:', massIndex)
       return massIndex
     },
     tableData(): Record<string, unknown>[] {
@@ -136,9 +141,26 @@ export default defineComponent({
       return tableData
     },
   },
+  watch: {
+    tableData: {
+      handler() {
+        // When table data updates (e.g., new scan selected), automatically select row with highest QScore
+        if (this.tableData.length > 0) {
+          nextTick(() => {
+            // Find the row with the maximum QScore value
+            const maxQScoreRow = this.tableData.reduce((max, row) =>
+              (row.QScore as number) > (max.QScore as number) ? row : max
+            , this.tableData[0])
+            const maxQScoreId = maxQScoreRow.id as number
+            this.updateSelectedMass(maxQScoreId)
+          })
+        }
+      },
+      immediate: false,
+    },
+  },
   methods: {
     updateSelectedMass(selectedRow?: number) {
-      console.log('🔍 [DEBUG] Mass Table updateSelectedMass called with:', selectedRow)
       if (selectedRow !== undefined) {
         this.selectionStore.updateSelectedMass(selectedRow)
       }
