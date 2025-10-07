@@ -147,12 +147,15 @@ export default defineComponent({
         // When table data updates (e.g., new scan selected), automatically select row with highest QScore
         if (this.tableData.length > 0) {
           nextTick(() => {
-            // Find the row with the maximum QScore value
-            const maxQScoreRow = this.tableData.reduce((max, row) =>
-              (row.QScore as number) > (max.QScore as number) ? row : max
-            , this.tableData[0])
-            const maxQScoreId = maxQScoreRow.id as number
-            this.updateSelectedMass(maxQScoreId)
+            if (this.selectionStore.selectedMassIndex === undefined) {
+              // Find the row with the maximum QScore value
+              const maxQScoreRow = this.tableData.reduce((max, row) =>
+                (row.QScore as number) > (max.QScore as number) ? row : max
+              , this.tableData[0])
+              const maxQScoreId = maxQScoreRow.id as number
+              this.updateSelectedMass(maxQScoreId)
+            }
+
           })
         }
       },

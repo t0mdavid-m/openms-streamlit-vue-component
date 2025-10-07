@@ -88,7 +88,7 @@ export default defineComponent({
         // (i.e., this method was called by the table's row selection event)
         if (selectedRow !== this.selectionStore.selectedScanIndex) {
           // If this came from the table click, clear mass selection
-          this.selectionStore.updateSelectedMass(0)
+          this.selectionStore.updateSelectedMass(undefined)
         }
         this.selectionStore.updateSelectedScan(selectedRow)
       }

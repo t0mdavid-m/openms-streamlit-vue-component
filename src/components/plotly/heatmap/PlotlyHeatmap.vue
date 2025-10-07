@@ -310,6 +310,7 @@ export default defineComponent({
           break
         case 'Deconvolved MS1 Heatmap':
           this.selectionStore.updateDeconvHeatmapSelection(this.zoomRange)
+          this.graph()
           break
         case 'Deconvolved MS2 Heatmap':
           this.selectionStore.updateDeconvMS2HeatmapSelection(this.zoomRange)
