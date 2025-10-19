@@ -255,8 +255,12 @@ export default defineComponent({
           range: this.xRange,
         },
         yaxis: {
-          title: this.yAxisLabel,
+          title: {
+            text: this.yAxisLabel,
+            standoff: 15
+          },
           range: this.yRange,
+          tickformat: '.2e'
         },
         paper_bgcolor: this.theme?.backgroundColor,
         plot_bgcolor: this.theme?.secondaryBackgroundColor,
@@ -265,8 +269,9 @@ export default defineComponent({
           family: this.theme?.font,
         },
         // Ensure plot uses full available space when colorbar is hidden
+        // Increased left margin to accommodate scientific notation on y-axis
         margin: {
-          l: 60,
+          l: 110,
           r: this.effectiveColorbarVisible ? 120 : 20,
           t: 60,
           b: 60

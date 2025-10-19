@@ -256,6 +256,7 @@ export default defineComponent({
           showline: true,
           linecolor: 'grey',
           linewidth: 1,
+          tickformat: '.2e',
         },
         paper_bgcolor: this.theme?.backgroundColor,
         plot_bgcolor: this.theme?.backgroundColor,
