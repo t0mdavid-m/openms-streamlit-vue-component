@@ -49,6 +49,13 @@ export default defineComponent({
           headerTooltip: 'The sequential index of the mass entry in the dataset.'
         },
         {
+          title: 'In Feature', field: 'InFeature', sorter: 'string',
+          formatter: 'tickCross',
+          formatterParams: { allowEmpty: false, allowTruthy: true },
+          hozAlign: 'center',
+          headerTooltip: 'Whether this mass is part of a detected feature.'
+        },
+        {
           title: 'Feature Index', field: 'FeatureIndex', sorter: 'number',
           headerTooltip: 'Index of the feature in the feature list (-1 if not part of a feature).'
         },
@@ -135,9 +142,11 @@ export default defineComponent({
         })
       })
 
-      // Add back id to the new rows
+      // Add back id to the new rows and compute InFeature
       tableData.forEach((entry, index) => {
         entry['id'] = index
+        // InFeature is true if FeatureIndex exists and is >= 0
+        entry['InFeature'] = entry['FeatureIndex'] !== undefined && entry['FeatureIndex'] !== null && (entry['FeatureIndex'] as number) >= 0
       })
 
       return tableData
