@@ -15,6 +15,7 @@ export type DATAFRAMES =
   | 'quant_data'
   | 'protein_table'
   | 'tag_table'
+  | 'feature_table'
   | 'settings'
   | 'feature_data'
   //| 'ecdf_target'
@@ -43,6 +44,7 @@ export type StreamlitData = {
   quant_data?: ArrowTable
   protein_table?: ArrowTable
   tag_table?: ArrowTable
+  feature_table?: ArrowTable
   settings?: any
   feature_data?: ArrowTable
   //ecdf_target?: ArrowTable

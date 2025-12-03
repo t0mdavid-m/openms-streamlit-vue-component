@@ -20,6 +20,7 @@ export const useSelectionStore = defineStore('selection', {
   state: () => ({
     scanIndex: undefined as number | undefined,
     massIndex: undefined as number | undefined,
+    featureIndex: undefined as number | undefined,
     proteinIndex: undefined as number | undefined,
     tagIndex: undefined as number | undefined,
     AApos: undefined as number | undefined,
@@ -35,6 +36,7 @@ export const useSelectionStore = defineStore('selection', {
   getters: {
     selectedScanIndex: (state): number | undefined => state.scanIndex,
     selectedMassIndex: (state): number | undefined => state.massIndex,
+    selectedFeatureIndex: (state): number | undefined => state.featureIndex,
     selectedProteinIndex: (state): number | undefined => state.proteinIndex,
     selectedTagIndex: (state): number | undefined => state.tagIndex,
     selectedAApos: (state): number | undefined => state.AApos,
@@ -51,6 +53,9 @@ export const useSelectionStore = defineStore('selection', {
     },
     updateSelectedMass(rowIndex?: number) {
       this.massIndex = rowIndex
+    },
+    updateSelectedFeature(featureIndex?: number) {
+      this.featureIndex = featureIndex
     },
     updateSelectedProtein(rowIndex?: number) {
       this.proteinIndex = rowIndex

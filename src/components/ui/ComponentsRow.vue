@@ -30,6 +30,11 @@
         :args="component.componentArgs"
         :index="componentIndex(index)"
       />
+      <TabulatorFeatureTable
+        v-else-if="component.componentArgs.componentName === 'TabulatorFeatureTable'"
+        :args="component.componentArgs"
+        :index="componentIndex(index)"
+      />
       <PlotlyLineplotUnified
         v-else-if="component.componentArgs.componentName === 'PlotlyLineplot'"
         :args="component.componentArgs"
@@ -80,6 +85,7 @@ import Plotly3Dplot from '@/components/plotly/3Dplot/Plotly3Dplot.vue'
 import TabulatorMassTable from '@/components/tabulator/TabulatorMassTable.vue'
 import TabulatorProteinTable from '@/components/tabulator/TabulatorProteinTable.vue'
 import TabulatorTagTable from '@/components/tabulator/TabulatorTagTable.vue'
+import TabulatorFeatureTable from '@/components/tabulator/TabulatorFeatureTable.vue'
 import SequenceView from '@/components/sequence/SequenceView.vue'
 import { defineComponent, type PropType } from 'vue'
 import type { FlashViewerComponent } from '@/types/grid-layout'
@@ -102,6 +108,7 @@ export default defineComponent({
     TabulatorMassTable,
     TabulatorProteinTable,
     TabulatorTagTable,
+    TabulatorFeatureTable,
     SequenceView,
     FDRPlotly, // Register the FDRPlotly
     TICChromatogram,
@@ -123,6 +130,7 @@ export default defineComponent({
         TabulatorMassTable: 'height-any',
         TabulatorProteinTable: 'height-any',
         TabulatorTagTable: 'height-any',
+        TabulatorFeatureTable: 'height-any',
         PlotlyLineplot: 'height-any',
         PlotlyLineplotTagger: 'height-any',
         PlotlyLineplotUnified: 'height-any',

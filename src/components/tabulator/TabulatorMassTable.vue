@@ -50,7 +50,7 @@ export default defineComponent({
         },
         {
           title: 'Feature Index', field: 'FeatureIndex', sorter: 'number',
-          headerTooltip: 'Index of the feature in the feature list'
+          headerTooltip: 'Index of the feature in the feature list (-1 if not part of a feature).'
         },
         {
           title: 'Monoisotopic mass', field: 'MonoMass', formatter: toFixedFormatter(), sorter: 'number',
@@ -136,7 +136,9 @@ export default defineComponent({
       })
 
       // Add back id to the new rows
-      tableData.map((entry, index) => (entry['id'] = index))
+      tableData.forEach((entry, index) => {
+        entry['id'] = index
+      })
 
       return tableData
     },
@@ -166,6 +168,15 @@ export default defineComponent({
     updateSelectedMass(selectedRow?: number) {
       if (selectedRow !== undefined) {
         this.selectionStore.updateSelectedMass(selectedRow)
+
+        // Also update feature selection based on the FeatureIndex of the selected mass
+        const row = this.tableData[selectedRow]
+        if (row && row.FeatureIndex !== undefined && row.FeatureIndex !== -1) {
+          this.selectionStore.updateSelectedFeature(row.FeatureIndex as number)
+        } else {
+          // Clear feature selection if mass has no associated feature
+          this.selectionStore.updateSelectedFeature(undefined)
+        }
       }
     },
   },
