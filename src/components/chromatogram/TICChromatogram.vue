@@ -37,7 +37,7 @@ export default defineComponent({
     return {
       plotInstance: undefined as any,
       currentXRange: undefined as number[] | undefined,
-      msLevelFilter: 'all' as 'all' | 'ms1' | 'ms2', // MS level filter state
+      msLevelFilter: 'ms1' as 'all' | 'ms1' | 'ms2', // MS level filter state - default to MS1 only
       // Integration mode state
       integrationMode: false,
       integrationStart: undefined as number | undefined,
