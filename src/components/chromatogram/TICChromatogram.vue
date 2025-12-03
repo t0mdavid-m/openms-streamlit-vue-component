@@ -688,33 +688,45 @@ export default defineComponent({
     
     onPlotClick(eventData: any): void {
       try {
-        if (this.integrationMode) {
-          // During integration mode, prevent scan selection to avoid conflicts
-          return
-        }
-        
         if (eventData.points && eventData.points.length > 0) {
           const point = eventData.points[0]
+
+          // Check if the click was on the feature trace
+          if (point.data && point.data.name === 'Selected Feature' && this.selectedFeatureData) {
+            // Automatically integrate the feature bounds
+            this.integrationStart = this.selectedFeatureData.rtStart
+            this.integrationEnd = this.selectedFeatureData.rtEnd
+            this.setMsLevelFilter('ms1')
+            this.integrationMode = true
+            this.calculateIntegration()
+            return
+          }
+
+          if (this.integrationMode) {
+            // During integration mode, prevent scan selection to avoid conflicts
+            return
+          }
+
           const pointIndex = point.pointIndex
-          
+
           if (pointIndex !== undefined && pointIndex < this.filteredTicData.length) {
             const dataPoint = this.filteredTicData[pointIndex]
             const scanIdx = dataPoint.scan_idx
-            
+
             // Set flag BEFORE updating store
             this.isInternalSelection = true
-            
+
             // Clear mass selection when scan selection changes
             this.selectionStore.updateSelectedMass(undefined)
-            
+
             // Update store instead of local state
             this.selectionStore.updateSelectedScan(scanIdx)
-            
+
             // Reset flag after a brief delay (allow watcher to check it)
             this.$nextTick(() => {
               this.isInternalSelection = false
             })
-            
+
             // Note: Re-render will happen automatically via watcher
           }
         }
