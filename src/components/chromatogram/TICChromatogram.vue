@@ -44,6 +44,7 @@ export default defineComponent({
       integrationEnd: undefined as number | undefined,
       isSelecting: false,
       integrationValue: undefined as number | undefined,
+      featureIntegrationValue: undefined as number | undefined, // Integration value for feature trace
       isInternalSelection: false, // Track if selection originated from this component
       showFeatureTrace: true // Toggle to show/hide feature trace on the chromatogram
     }
@@ -368,14 +369,20 @@ export default defineComponent({
         const centerRT = (startRT + endRT) / 2
         const filtered = this.filteredTicData.filter(p => p.rt >= startRT && p.rt <= endRT);
         const maxTIC = Math.max(...filtered.map(p => p.tic));
-        
+
+        // Build annotation text with TIC and optionally feature trace
+        let annotationText = `<b>TIC Area: ${this.integrationValue.toExponential(2)}</b>`
+        if (this.featureIntegrationValue !== undefined) {
+          annotationText += `<br><b>Feature Area: ${this.featureIntegrationValue.toExponential(2)}</b>`
+        }
+
         if (maxTIC !== null) {
           layout.annotations = [{
             x: centerRT,
             y: maxTIC * 1.1,
             xref: 'x',
             yref: 'y',
-            text: `<b>Integrated Area: ${this.integrationValue.toExponential(2)}</b>`,
+            text: annotationText,
             showarrow: true,
             yanchor: 'bottom',
             xanchor: 'center',
@@ -835,6 +842,7 @@ export default defineComponent({
       this.integrationStart = undefined
       this.integrationEnd = undefined
       this.integrationValue = undefined
+      this.featureIntegrationValue = undefined
       this.isSelecting = false
     },
     
@@ -860,35 +868,58 @@ export default defineComponent({
     calculateIntegration(): void {
       if (this.integrationStart === undefined || this.integrationEnd === undefined) {
         this.integrationValue = undefined
+        this.featureIntegrationValue = undefined
         return
       }
-      
+
       const startRT = Math.min(this.integrationStart, this.integrationEnd)
       const endRT = Math.max(this.integrationStart, this.integrationEnd)
-      
-      // Filter data points within the selected range
+
+      // Filter TIC data points within the selected range
       const pointsInRange = this.filteredTicData.filter(d => d.rt >= startRT && d.rt <= endRT)
-      
+
       if (pointsInRange.length < 2) {
         this.integrationValue = 0
+        this.featureIntegrationValue = undefined
         return
       }
-      
+
       // Sort by retention time (should already be sorted, but ensure it)
       pointsInRange.sort((a, b) => a.rt - b.rt)
-      
-      // Trapezoidal integration
-      let area  = 0
+
+      // Trapezoidal integration for TIC
+      let area = 0
       for (let i = 0; i < pointsInRange.length - 1; i++) {
         const x1 = pointsInRange[i].rt
         const y1 = pointsInRange[i].tic
         const x2 = pointsInRange[i + 1].rt
         const y2 = pointsInRange[i + 1].tic
-        
+
         area += (y1 + y2) * (x2 - x1) / 2
       }
-      
+
       this.integrationValue = area
+
+      // Calculate feature trace integration if visible and data available
+      this.featureIntegrationValue = undefined
+      if (this.showFeatureTrace && this.selectedFeatureTraceData) {
+        const featurePoints = this.featureDfsData
+          .filter(d => d.FeatureIndex === this.selectedFeatureIndex && d.RetentionTime >= startRT && d.RetentionTime <= endRT)
+          .sort((a, b) => a.RetentionTime - b.RetentionTime)
+
+        if (featurePoints.length >= 2) {
+          let featureArea = 0
+          for (let i = 0; i < featurePoints.length - 1; i++) {
+            const x1 = featurePoints[i].RetentionTime
+            const y1 = featurePoints[i].SumIntensity
+            const x2 = featurePoints[i + 1].RetentionTime
+            const y2 = featurePoints[i + 1].SumIntensity
+
+            featureArea += (y1 + y2) * (x2 - x1) / 2
+          }
+          this.featureIntegrationValue = featureArea
+        }
+      }
     },
     
     /**
