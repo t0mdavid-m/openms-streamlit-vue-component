@@ -59,6 +59,79 @@ export default defineComponent({
     selectedScanIndex(): number | undefined {
       return this.selectionStore.selectedScanIndex
     },
+
+    selectedFeatureIndex(): number | undefined {
+      return this.selectionStore.selectedFeatureIndex
+    },
+
+    featureTableData(): Record<string, unknown>[] {
+      const featureTable = this.streamlitDataStore.allDataForDrawing.feature_table
+      if (!featureTable) return []
+
+      // Convert to array of objects if needed
+      if (Array.isArray(featureTable)) {
+        return featureTable
+      }
+
+      // Handle column-oriented data format
+      const columns = Object.keys(featureTable)
+      if (columns.length === 0) return []
+
+      const numRows = (featureTable as any)[columns[0]]?.length || 0
+      const rows: Record<string, unknown>[] = []
+
+      for (let i = 0; i < numRows; i++) {
+        const row: Record<string, unknown> = {}
+        for (const col of columns) {
+          row[col] = (featureTable as any)[col][i]
+        }
+        rows.push(row)
+      }
+
+      return rows
+    },
+
+    selectedFeatureData(): { rtStart: number, rtEnd: number } | undefined {
+      if (this.selectedFeatureIndex === undefined) return undefined
+
+      const feature = this.featureTableData.find(
+        f => f.FeatureIndex === this.selectedFeatureIndex
+      )
+
+      if (!feature || feature.RTStart === undefined || feature.RTEnd === undefined) {
+        return undefined
+      }
+
+      return {
+        rtStart: feature.RTStart as number,
+        rtEnd: feature.RTEnd as number
+      }
+    },
+
+    featureDfsData(): Array<{ FeatureIndex: number, RetentionTime: number, SumIntensity: number }> {
+      const allData = this.streamlitDataStore.allDataForDrawing as any
+      const data = allData?.feature_dfs
+      if (!data || !Array.isArray(data)) {
+        return []
+      }
+      return data
+    },
+
+    selectedFeatureTraceData(): { x: number[], y: number[] } | undefined {
+      if (this.selectedFeatureIndex === undefined) return undefined
+
+      // Filter feature_dfs for the selected feature and sort by RT
+      const featurePoints = this.featureDfsData
+        .filter(d => d.FeatureIndex === this.selectedFeatureIndex)
+        .sort((a, b) => a.RetentionTime - b.RetentionTime)
+
+      if (featurePoints.length === 0) return undefined
+
+      return {
+        x: featurePoints.map(d => d.RetentionTime),
+        y: featurePoints.map(d => d.SumIntensity)
+      }
+    },
     
     ticData(): TICDataPoint[] {
       try {
@@ -151,7 +224,24 @@ export default defineComponent({
         hovertemplate: 'RT: %{x:.2f}s<br>TIC: %{y:.0f}<extra></extra>',
         showlegend: false
       })
-      
+
+      // Selected feature trace (red line with actual feature intensity)
+      if (this.selectedFeatureTraceData) {
+        traces.push({
+          x: this.selectedFeatureTraceData.x,
+          y: this.selectedFeatureTraceData.y,
+          mode: 'lines',
+          type: 'scatter',
+          name: 'Selected Feature',
+          line: {
+            color: 'red',
+            width: 3
+          },
+          showlegend: false,
+          hovertemplate: 'Feature<br>RT: %{x:.2f}s<br>Intensity: %{y:.0f}<extra></extra>'
+        })
+      }
+
       // Shaded integration area - add before individual points so it's behind them
       if (this.integrationStart !== undefined && this.integrationEnd !== undefined) {
         const startRT = Math.min(this.integrationStart, this.integrationEnd)
@@ -248,7 +338,7 @@ export default defineComponent({
           range: this.currentXRange ? [this.currentXRange[0], this.currentXRange[1]] as [Plotly.Datum, Plotly.Datum] : undefined,
         },
         yaxis: {
-          title: 'TIC Intensity',
+          title: 'Intensity',
           showgrid: true,
           gridcolor: this.theme?.secondaryBackgroundColor,
           range: this.yRange,
@@ -338,6 +428,17 @@ export default defineComponent({
         this.renderPlot()
       },
       deep: true
+    },
+    selectedFeatureIndex() {
+      // Re-render when feature selection changes to show/hide red highlight
+      const preservedXRange = this.currentXRange ? [...this.currentXRange] : undefined
+      this.renderPlot()
+
+      if (preservedXRange) {
+        this.$nextTick(() => {
+          this.updateRangesFromXCoordinates(preservedXRange)
+        })
+      }
     },
     msLevelFilter() {
       // Preserve current x-range when toggling MS level filter
