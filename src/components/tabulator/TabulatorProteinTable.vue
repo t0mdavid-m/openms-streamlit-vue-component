@@ -9,7 +9,22 @@
     :initial-sort="initialSort"
     :go-to-fields="['Scan', 'accession']"
     @row-selected="updateSelectedProtein"
-  />
+  >
+    <template #end-title-row>
+      <v-checkbox
+        v-model="bestPerScanOnly"
+        density="compact"
+        hide-details
+        color="primary"
+        class="best-per-scan-checkbox align-self-center"
+        title="Show only the highest-scoring proteoform hit for each spectrum (scan)"
+      >
+        <template #label>
+          <span class="best-per-scan-label">Best hit per spectrum</span>
+        </template>
+      </v-checkbox>
+    </template>
+  </TabulatorTable>
 </template>
 
 <script lang="ts">
@@ -43,6 +58,9 @@ export default defineComponent({
   },
   data() {
     return {
+      // When enabled, the table only shows the highest-scoring proteoform hit
+      // per spectrum (scan). On by default.
+      bestPerScanOnly: true,
       columnDefinitions: [
         { 
           title: 'Scan No.', field: 'Scan', sorter: 'number',  
@@ -107,7 +125,20 @@ export default defineComponent({
     tableData(): Record<string, unknown>[] {
       const rows = this.streamlitDataStore.dataForDrawing.protein_table
       rows.forEach((row) => (row['id'] = row['index']))
-      return rows
+      if (!this.bestPerScanOnly) {
+        return rows
+      }
+      // Collapse to the highest-scoring proteoform hit per spectrum (scan).
+      // Ties keep the first hit encountered, so the result is deterministic.
+      const bestByScan = new Map<unknown, Record<string, unknown>>()
+      for (const row of rows) {
+        const scan = row['Scan']
+        const best = bestByScan.get(scan)
+        if (best === undefined || (row['Score'] as number) > (best['Score'] as number)) {
+          bestByScan.set(scan, row)
+        }
+      }
+      return Array.from(bestByScan.values())
     },
   },
   methods: {
@@ -155,3 +186,14 @@ export default defineComponent({
 },
 )
 </script>
+
+<style scoped>
+.best-per-scan-checkbox {
+  flex: none;
+}
+
+.best-per-scan-label {
+  font-size: 13px;
+  white-space: nowrap;
+}
+</style>
