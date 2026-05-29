@@ -33,14 +33,20 @@ export const useStreamlitDataStore = defineStore('streamlit-data', {
     updateRenderData(newData: RenderData) {
       const selectionStore = useSelectionStore()
       selectionStore.$patch(state => {
-        if (newData.args.selection_store.id !== state.id) {
-        for (const key in state) {
-          (state as any)[key] = undefined
+        const incoming = newData.args.selection_store as Record<string, unknown>
+        if (incoming.id !== state.id) {
+          for (const key in state) {
+            (state as any)[key] = undefined
+          }
         }
-      }
-        Object.assign(state, newData.args.selection_store)
+        // Python echoes cleared selections as `null` (App.vue sends null for
+        // undefined so the clear survives JSON round-tripping). Convert back to
+        // `undefined` so the rest of the app keeps its `=== undefined` semantics
+        // and cleared fields overwrite stale local values in every iframe.
+        for (const key in incoming) {
+          (state as any)[key] = incoming[key] === null ? undefined : incoming[key]
+        }
       })
-      console.log(newData.args.selection_store.id)
 
       if (this.hash === newData.args.hash) {
         return

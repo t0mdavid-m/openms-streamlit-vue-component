@@ -35,7 +35,18 @@ export default defineComponent({
     watch(
       selectionStore.$state,
       (newState) => {
-        Streamlit.setComponentValue(toRaw(newState))
+        // Streamlit serializes the component value as JSON, which silently drops
+        // keys whose value is `undefined`. A *cleared* selection (set back to
+        // undefined) would therefore never reach Python, so the StateTracker keeps
+        // echoing the stale value and the clear is lost (e.g. deselecting an amino
+        // acid, or switching proteoform). Send `null` for undefined fields so the
+        // cleared value round-trips; streamlit-data converts it back to undefined.
+        const raw = toRaw(newState) as unknown as Record<string, unknown>
+        const payload: Record<string, unknown> = {}
+        for (const key in raw) {
+          payload[key] = raw[key] === undefined ? null : raw[key]
+        }
+        Streamlit.setComponentValue(payload)
       },
       { deep: true, immediate: true }
     )

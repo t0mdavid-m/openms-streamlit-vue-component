@@ -197,44 +197,36 @@ export default defineComponent({
       return Number.isNaN(n) ? Number.NEGATIVE_INFINITY : n
     },
     updateSelectedProtein(selectedRow?: number) {
-      if (selectedRow !== undefined) {
-        this.selectionStore.updateSelectedProtein(selectedRow)
-        
-        // Add diagnostic logging for debugging
-        const proteinTable = this.streamlitDataStore.dataForDrawing.protein_table
-        console.log('[DEBUG] updateSelectedProtein called:')
-        console.log('  selectedRow (from getIndex()):', selectedRow)
-        console.log('  protein_table length:', proteinTable?.length)
-        
-        // Validate protein table exists
-        if (!proteinTable || !Array.isArray(proteinTable) || proteinTable.length === 0) {
-          console.error('[ERROR] protein_table is not available or empty')
-          return
-        }
-        
-        // FIX: Find protein by index field instead of using selectedRow as array index
-        // selectedRow is actually the ProteoformIndex (ID), not array position
-        const selectedProtein = proteinTable.find(protein =>
-          protein && (protein.index === selectedRow || protein.id === selectedRow)
-        )
-        
-        if (!selectedProtein) {
-          console.error('[ERROR] Could not find protein with index/id:', selectedRow)
-          console.error('  Available protein indices:', proteinTable.map(p => p?.index || p?.id).slice(0, 10))
-          return
-        }
-        
-        console.log('  Found protein:', selectedProtein)
-        const scan_number = selectedProtein['Scan']
-        console.log('  scan_number found:', scan_number)
-        
-        if ((scan_number !== undefined) && (typeof scan_number == 'number')) {
-          const scan_id = this.streamlitDataStore.allDataForDrawing.per_scan_data.findIndex((data) => data['Scan'] === scan_number)
-          this.selectionStore.updateSelectedScan(scan_id)
-        }
-        this.selectionStore.updateSelectedTag(undefined)
-        this.selectionStore.updateTagData(undefined)
-        this.selectionStore.updateSelectedAA(undefined)
+      if (selectedRow === undefined) {
+        return
+      }
+      this.selectionStore.updateSelectedProtein(selectedRow)
+
+      // Clear residue/tag selection up front so switching proteoform always
+      // resets them -- even if the scan lookup below bails out early. (These
+      // clears propagate to the other components via the null-bridge in App.vue.)
+      this.selectionStore.updateSelectedTag(undefined)
+      this.selectionStore.updateTagData(undefined)
+      this.selectionStore.updateSelectedAA(undefined)
+
+      const proteinTable = this.streamlitDataStore.dataForDrawing.protein_table
+      if (!proteinTable || !Array.isArray(proteinTable) || proteinTable.length === 0) {
+        return
+      }
+
+      // selectedRow is the ProteoformIndex (ID), not the array position, so look
+      // the proteoform up by its index/id field rather than indexing directly.
+      const selectedProtein = proteinTable.find(protein =>
+        protein && (protein.index === selectedRow || protein.id === selectedRow)
+      )
+      if (!selectedProtein) {
+        return
+      }
+
+      const scan_number = selectedProtein['Scan']
+      if ((scan_number !== undefined) && (typeof scan_number == 'number')) {
+        const scan_id = this.streamlitDataStore.allDataForDrawing.per_scan_data.findIndex((data) => data['Scan'] === scan_number)
+        this.selectionStore.updateSelectedScan(scan_id)
       }
     },
   },
