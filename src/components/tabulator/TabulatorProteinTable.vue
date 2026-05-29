@@ -9,7 +9,17 @@
     :initial-sort="initialSort"
     :go-to-fields="['Scan', 'accession']"
     @row-selected="updateSelectedProtein"
-  />
+  >
+    <template #end-title-row>
+      <v-checkbox
+        v-model="bestPerSpectrumOnly"
+        label="Best per spectrum"
+        hide-details
+        density="compact"
+        color="primary"
+      />
+    </template>
+  </TabulatorTable>
 </template>
 
 <script lang="ts">
@@ -43,6 +53,9 @@ export default defineComponent({
   },
   data() {
     return {
+      // Show only the best (highest-Score) proteoform hit per spectrum by
+      // default; users can switch this off to see every hit.
+      bestPerSpectrumOnly: true,
       columnDefinitions: [
         { 
           title: 'Scan No.', field: 'Scan', sorter: 'number',  
@@ -106,11 +119,83 @@ export default defineComponent({
     },
     tableData(): Record<string, unknown>[] {
       const rows = this.streamlitDataStore.dataForDrawing.protein_table
-      rows.forEach((row) => (row['id'] = row['index']))
-      return rows
+      if (!rows) {
+        return []
+      }
+      // Map to fresh row objects (never mutate the store array) so every
+      // recompute yields a new reference -- this keeps the store's full list
+      // intact for selection lookups and reliably triggers the base table's
+      // `watch tableData -> drawTable` when the toggle flips.
+      const rowsWithId = rows.map((row) => ({ ...row, id: row['index'] }))
+      return this.bestPerSpectrumOnly
+        ? this.filterBestPerSpectrum(rowsWithId)
+        : rowsWithId
+    },
+  },
+  watch: {
+    // When the toggle changes and the currently selected proteoform is no
+    // longer visible (its hit was filtered out), reselect the surviving best
+    // hit of the same scan so the table highlight and the Python-synced side
+    // panels (sequence view, tag table, spectrum) stay consistent.
+    bestPerSpectrumOnly() {
+      this.$nextTick(() => {
+        const selected = this.selectionStore.selectedProteinIndex
+        if (selected === undefined) {
+          return
+        }
+        const stillVisible = this.tableData.some(
+          (row) => row['index'] === selected || row['id'] === selected
+        )
+        if (stillVisible) {
+          return
+        }
+        const current = this.streamlitDataStore.dataForDrawing.protein_table?.find(
+          (row) => row['index'] === selected || row['id'] === selected
+        )
+        const scan = current?.['Scan']
+        const replacement = this.tableData.find((row) => row['Scan'] === scan)
+        if (replacement === undefined) {
+          return
+        }
+        const replacementIndex = replacement['index']
+        if (typeof replacementIndex === 'number') {
+          this.updateSelectedProtein(replacementIndex)
+        }
+      })
     },
   },
   methods: {
+    /**
+     * Collapse the rows to the highest-Score proteoform hit per spectrum
+     * (Scan). Rows without a numeric Scan are passed through unchanged so they
+     * are never grouped together; ties keep the first-seen row.
+     */
+    filterBestPerSpectrum(
+      rows: Record<string, unknown>[]
+    ): Record<string, unknown>[] {
+      const bestByScan = new Map<number, Record<string, unknown>>()
+      const passthrough: Record<string, unknown>[] = []
+      for (const row of rows) {
+        const scan = row['Scan']
+        if (typeof scan !== 'number' || Number.isNaN(scan)) {
+          passthrough.push(row)
+          continue
+        }
+        const existing = bestByScan.get(scan)
+        if (
+          existing === undefined ||
+          this.toScore(row['Score']) > this.toScore(existing['Score'])
+        ) {
+          bestByScan.set(scan, row)
+        }
+      }
+      return [...bestByScan.values(), ...passthrough]
+    },
+    /** Coerce an unknown Score to a comparable number; NaN/missing -> -Infinity. */
+    toScore(value: unknown): number {
+      const n = typeof value === 'number' ? value : Number(value)
+      return Number.isNaN(n) ? Number.NEGATIVE_INFINITY : n
+    },
     updateSelectedProtein(selectedRow?: number) {
       if (selectedRow !== undefined) {
         this.selectionStore.updateSelectedProtein(selectedRow)
