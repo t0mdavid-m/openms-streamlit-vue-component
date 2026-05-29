@@ -234,6 +234,7 @@ export default defineComponent({
         }
         this.selectionStore.updateSelectedTag(undefined)
         this.selectionStore.updateTagData(undefined)
+        this.selectionStore.updateSelectedAA(undefined)
       }
     },
   },
