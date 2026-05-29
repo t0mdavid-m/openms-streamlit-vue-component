@@ -160,6 +160,18 @@ export default defineComponent({
     selectedAA(): number | undefined {
       return this.isTnTMode ? this.selectionStore.selectedTag?.selectedAA : undefined
     },
+
+    // A tag's fragment masses arrive in descending order, so the rendered tag
+    // letters use a reversed index (sequence.length - 1 - i). Reverse the
+    // selected within-tag index into that same space so the highlight lands on
+    // the residue the user selected instead of its mirror position.
+    reversedSelectedAA(): number | undefined {
+      const tag = this.selectionStore.selectedTag
+      if (tag === undefined) {
+        return undefined
+      }
+      return (tag.sequence.length - 1) - tag.selectedAA
+    },
     
     currentTitle(): string {
       return this.localTitle || this.args.title
@@ -514,8 +526,8 @@ export default defineComponent({
         
         if (
           (posHighlight) &&
-          ((this.selectionStore.selectedTag?.selectedAA == Math.floor(i / 3)) ||
-          (this.selectionStore.selectedTag?.selectedAA == Math.floor(i / 3) - 1))
+          ((this.reversedSelectedAA == Math.floor(i / 3)) ||
+          (this.reversedSelectedAA == Math.floor(i / 3) - 1))
         ){
           selected_x.push(x_val)
           selected_y.push(y_val)
@@ -897,7 +909,7 @@ export default defineComponent({
 
         // Mass Buttons + Sequence Arrows with overlap detection
         let arrowAnnotations: Partial<Plotly.Annotations>[] = []
-        const selectedAA = this.selectionStore.selectedTag?.selectedAA
+        const reversedSelectedAA = this.reversedSelectedAA
         const annotationBoxes = this.annotationBoxData
         const visibleMassBoxes = annotationBoxes.filter(box => box.type === 'mass' && box.visible)
         
@@ -916,7 +928,7 @@ export default defineComponent({
             let fillcolor = this.styling.annotationColors.massButton
             let family = 'sans-serif'
             
-            if ((selectedAA === i) || (selectedAA === i - 1)) {
+            if ((reversedSelectedAA === i) || (reversedSelectedAA === i - 1)) {
                 fillcolor = this.styling.annotationColors.selectedMassButton
                 family = 'Arial Black, Arial Bold, Arial, sans-serif'
             }
@@ -983,7 +995,7 @@ export default defineComponent({
             let fillcolor = this.styling.annotationColors.sequenceArrow
             let family = 'sans-serif'
             
-            if (selectedAA === i) {
+            if (reversedSelectedAA === i) {
                 fillcolor = this.styling.annotationColors.selectedSequenceArrow
                 family = 'Arial Black, Arial Bold, Arial, sans-serif'
             }
