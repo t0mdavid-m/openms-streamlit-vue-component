@@ -201,6 +201,17 @@ export default defineComponent({
       }
       return []
     },
+    // A tag's fragment masses arrive in descending order, so the rendered tag
+    // letters use a reversed index (sequence.length - 1 - i). Reverse the
+    // selected within-tag index into that same space so the highlight lands on
+    // the residue the user selected instead of its mirror position.
+    reversedSelectedAA(): number | undefined {
+      const tag = this.selectionStore.selectedTag
+      if (tag === undefined) {
+        return undefined
+      }
+      return (tag.sequence.length - 1) - tag.selectedAA
+    },
     highlightedValues(): highlightData[] {
 
       const positions = this.highlightedMassPos
@@ -246,8 +257,8 @@ export default defineComponent({
         const posHighlight = this.highlightedPos(x_val)
         if (
           (posHighlight !== undefined) &&
-          ((this.selectionStore.selectedTag?.selectedAA == posHighlight) || 
-          (this.selectionStore.selectedTag?.selectedAA == posHighlight-1))
+          ((this.reversedSelectedAA == posHighlight) ||
+          (this.reversedSelectedAA == posHighlight-1))
         ){
           selected_x.push(x_val)
           selected_y.push(y_val)
@@ -384,8 +395,8 @@ export default defineComponent({
         let fillcolor = '#E4572E'
         let family = 'sans-serif'
         if (
-          (this.selectionStore.selectedTag?.selectedAA == i) || 
-          (this.selectionStore.selectedTag?.selectedAA == i-1)) {
+          (this.reversedSelectedAA == i) ||
+          (this.reversedSelectedAA == i-1)) {
             fillcolor = "#F3A712"
             family = 'Arial Black, Arial Bold, Arial, sans-serif'
         }
@@ -439,7 +450,7 @@ export default defineComponent({
 
         let fillcolor = '#E4572E'
         let family = 'sans-serif'
-        if ((this.selectionStore.selectedTag?.selectedAA == i)) {
+        if ((this.reversedSelectedAA == i)) {
             fillcolor = "#F3A712"
             family = 'Arial Black, Arial Bold, Arial, sans-serif'
         }
