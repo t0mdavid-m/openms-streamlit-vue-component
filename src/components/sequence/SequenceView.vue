@@ -614,37 +614,37 @@ export default defineComponent({
     },
   },
   watch: {
-    fontSize: {
-      handler(newFontSize, oldFontSize) {
-        console.log('Font size changed:', { oldFontSize, newFontSize })
-        // Force reactivity update by triggering component re-render
-        this.$forceUpdate()
+    // ADDED — freeze fix. A FLASHDeconv scan change replaces only the (always
+    // single-row) per_scan_data array reference; selectedScanIndex is pinned at 0
+    // (length === 1) and `sequence` is constant (key 0), so this is the only
+    // observable change and the only path to recompute ion markers. updateRenderData
+    // replaces dataForDrawing wholesale on a hash change, so a shallow path-watch
+    // fires reliably (no deep needed); render.py hashes the filtered data before
+    // attaching selection_store, so pure mass/AA/tag highlights leave the hash
+    // unchanged and do not over-fire. Mirrors PlotlyLineplotUnified.vue.
+    'streamlitDataStore.allDataForDrawing.per_scan_data': {
+      handler() {
+        this.recomputeFragments()
       },
-      immediate: false
     },
-    selectedScanIndex() {
-      this.preparePrecursorInfo()
-      this.initializeSequenceObjects()
-      this.prepareFragmentTable()
-      this.prepareAmbigiousModifications()
-    },
+    // KEPT — sole trigger for FLASHDeconv custom-sequence entry; also uniquely clears
+    // the stale AA selection and re-pulls settings. Primary FLASHTnT protein-switch
+    // trigger (sequence_data is re-keyed by proteinIndex).
     sequence() {
       this.selectionStore.updateSelectedAA(undefined)
-      this.preparePrecursorInfo()
-      this.initializeSequenceObjects()
-      this.prepareFragmentTable()
-      this.prepareAmbigiousModifications()
+      this.recomputeFragments()
       this.updateSettings()
     },
+    // KEPT — FLASHTnT tag overlay; also clears tag marks when a protein switch resets
+    // tagData to undefined.
     selectedTag() {
       this.updateTagPosition()
     },
+    // KEPT — re-match fragments on a tolerance change (local state, no round-trip).
     fragmentMassTolerance() {
-      this.preparePrecursorInfo()
-      this.initializeSequenceObjects()
-      this.prepareFragmentTable()
-      this.prepareAmbigiousModifications()
+      this.recomputeFragments()
     },
+    // KEPT — ion-type a/b/c/x/y/z toggles (both tools). deep required (nested .selected).
     ionTypes: {
       handler() {
         this.initializeSequenceObjects()
@@ -653,6 +653,7 @@ export default defineComponent({
       },
       deep: true,
     },
+    // KEPT — extra fragment-type toggles (both tools). deep required (nested key).
     ionTypesExtra: {
       handler() {
         this.initializeSequenceObjects()
@@ -661,13 +662,11 @@ export default defineComponent({
       },
       deep: true,
     },
+    // KEPT — FLASHDeconv variable modifications (local store; inert in FLASHTnT).
     variableModifications() {
-      this.preparePrecursorInfo()
-      this.initializeSequenceObjects()
-      this.prepareFragmentTable()
-      this.prepareAmbigiousModifications()
+      this.recomputeFragments()
     },
-    // Watch for changes in mass table selection
+    // KEPT — mass-table selection -> highlight the matching fragment row (loop-guarded).
     'selectionStore.selectedMassIndex': {
       handler(newMassIndex: number | null) {
         if (newMassIndex !== null) {
@@ -676,15 +675,28 @@ export default defineComponent({
       },
       immediate: false
     }
+    // DROPPED: selectedScanIndex — dead in both tools (computed pinned at 0 by the
+    //          length === 1 short-circuit); it was the freeze, not a fix. Its only
+    //          undefined->0 first-selection transition is now covered by the
+    //          per_scan_data empty->1-row reference change.
+    // DROPPED: fontSize — debug console.log + redundant $forceUpdate(); fontSize is
+    //          already reactive via v-model and the :font-size prop -> CSS var.
   },
   mounted() {
     this.selectionStore.updateSelectedAA(undefined)
-    this.initializeSequenceObjects()
-    this.preparePrecursorInfo()
-    this.prepareFragmentTable()
-    this.prepareAmbigiousModifications()
+    this.recomputeFragments()
   },
   methods: {
+    // Full recompute of the sequence view: precursor info, per-residue objects,
+    // fragment-ion matching, and ambiguous-modification marks. Shared by the
+    // per_scan_data / sequence / fragmentMassTolerance / variableModifications
+    // watchers and mounted() so the prepare* order stays consistent.
+    recomputeFragments(): void {
+      this.preparePrecursorInfo()
+      this.initializeSequenceObjects()
+      this.prepareFragmentTable()
+      this.prepareAmbigiousModifications()
+    },
     getFragmentMasses(iontype: string): number[][] {
       let key = this.selectedSequence;
       if (key === undefined) {
