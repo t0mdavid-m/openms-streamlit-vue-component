@@ -5,7 +5,7 @@ import type { RenderData, Theme } from 'streamlit-component-lib'
 import { ArrowTable } from 'streamlit-component-lib'
 import type { InternalFragmentData, InternalFragmentDataDictionary } from '@/types/internal-fragment-data'
 import { Vector } from 'apache-arrow';
-import { useSelectionStore } from '@/stores/selection'
+import { useSelectionStore, selectionPayload } from '@/stores/selection'
 import { toRaw } from 'vue'
 
 export const useStreamlitDataStore = defineStore('streamlit-data', {
@@ -14,6 +14,9 @@ export const useStreamlitDataStore = defineStore('streamlit-data', {
     dataForDrawing: {} as Record<DATAFRAMES, Record<string, unknown>[]>,
     dataset: '' as String,
     hash: '' as String,
+    // JSON of the selection state as it was right after the last copy from Python.
+    // App.vue uses it to recognise (and not echo back) state that Python sent.
+    lastSelectionFromPython: '' as string,
   }),
   getters: {
     args: (state): StreamlitData => state.renderData?.args,
@@ -47,6 +50,13 @@ export const useStreamlitDataStore = defineStore('streamlit-data', {
           (state as any)[key] = incoming[key] === null ? undefined : incoming[key]
         }
       })
+      // Remember what Python sent so the selection watcher in App.vue does not send
+      // it straight back. Every echo is a full Streamlit rerun, and with several grid
+      // cells per page those reruns overlap and crash the server
+      // (FLASHApp docs/white-screen-root-cause.md).
+      this.lastSelectionFromPython = JSON.stringify(
+        selectionPayload(toRaw(selectionStore.$state) as unknown as Record<string, unknown>)
+      )
 
       if (this.hash === newData.args.hash) {
         return

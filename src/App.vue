@@ -18,7 +18,7 @@
 <script lang="ts">
 import { defineComponent, watch, toRaw } from 'vue'
 import { useStreamlitDataStore } from './stores/streamlit-data'
-import { useSelectionStore } from '@/stores/selection'
+import { useSelectionStore, selectionPayload } from '@/stores/selection'
 import { Streamlit, type RenderData } from 'streamlit-component-lib'
 import type { FlashViewerComponent } from './types/grid-layout'
 import ComponentsLayout from './components/ui/ComponentsLayout.vue'
@@ -31,7 +31,8 @@ export default defineComponent({
   setup() {
     const streamlitDataStore = useStreamlitDataStore()
     const selectionStore = useSelectionStore()
-    
+    let lastSent = ''
+
     watch(
       selectionStore.$state,
       (newState) => {
@@ -41,14 +42,19 @@ export default defineComponent({
         // echoing the stale value and the clear is lost (e.g. deselecting an amino
         // acid, or switching proteoform). Send `null` for undefined fields so the
         // cleared value round-trips; streamlit-data converts it back to undefined.
-        const raw = toRaw(newState) as unknown as Record<string, unknown>
-        const payload: Record<string, unknown> = {}
-        for (const key in raw) {
-          payload[key] = raw[key] === undefined ? null : raw[key]
-        }
+        const payload = selectionPayload(toRaw(newState) as unknown as Record<string, unknown>)
+        const json = JSON.stringify(payload)
+        // Only genuine user interaction may reach Python. State that was just copied
+        // in from Python (updateRenderData) is an echo: sending it back makes
+        // Streamlit rerun the whole page once per grid cell per render, and those
+        // overlapping reruns crashed the server (FLASHApp
+        // docs/white-screen-root-cause.md). The same payload is also never sent twice.
+        if (json === streamlitDataStore.lastSelectionFromPython) return
+        if (json === lastSent) return
+        lastSent = json
         Streamlit.setComponentValue(payload)
       },
-      { deep: true, immediate: true }
+      { deep: true }
     )
     return { streamlitDataStore, selectionStore }
   },

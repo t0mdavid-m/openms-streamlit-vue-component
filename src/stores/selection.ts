@@ -12,8 +12,21 @@ export type TagData = {
 
 // Stores selection data for heatmaps
 export type HeatmapData = {
-  xRange: number[], 
+  xRange: number[],
   yRange: number[]
+}
+
+/**
+ * Serialise a selection state the way it is sent to Python. Streamlit's JSON
+ * serialisation silently drops `undefined` values, so cleared fields are sent
+ * as `null` (streamlit-data converts them back to `undefined` when they return).
+ */
+export function selectionPayload(state: Record<string, unknown>): Record<string, unknown> {
+  const payload: Record<string, unknown> = {}
+  for (const key in state) {
+    payload[key] = state[key] === undefined ? null : state[key]
+  }
+  return payload
 }
 
 export const useSelectionStore = defineStore('selection', {
