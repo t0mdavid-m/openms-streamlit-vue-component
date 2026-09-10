@@ -52,6 +52,9 @@ export default defineComponent({
       
       // UI state
       isInitialized: false as Boolean,
+      // Set once a spectrum has been drawn; an empty render afterwards replaces it
+      // with the placeholder instead of leaving the stale plot on screen.
+      hasDrawn: false as boolean,
       
       // Annotation toggle state
       annotationsVisible: true as Boolean,
@@ -1475,6 +1478,7 @@ export default defineComponent({
           console.warn(`PlotlyLineplotUnified: DOM element with id '${this.id}' not found, skipping render`)
           return
         }
+        this.hasDrawn = true
         
         // Build modeBarButtonsToAdd array conditionally
         const modeBarButtons = [
@@ -1568,20 +1572,26 @@ export default defineComponent({
     },
     
     resetManualState(): void {
+      // Local view state only. The shared mass selection belongs to the cell that
+      // changed the scan (Scan Table, Protein Table, heatmap); clearing it here on
+      // every data change reached Python as an extra round trip and disagreed with
+      // the Mass Table's highlighted row.
       try {
         this.manual = false
         this.manual_xRange = undefined
         if (this.localTitle === 'Augmented Annotated Spectrum') {
           this.localTitle = 'Augmented Deconvolved Spectrum'
         }
-        this.selectionStore.updateSelectedMass(undefined)
       } catch (error) {
         this.handleError(error as Error, 'resetManualState')
       }
     },
-    
+
     backButton(): void {
       this.resetManualState()
+      // A user action: clearing the mass selection here is intended and is shared
+      // with the other cells through Python.
+      this.selectionStore.updateSelectedMass(undefined)
       this.safeGraph()
     },
     
@@ -1749,6 +1759,12 @@ export default defineComponent({
       try {
         // Check data readiness first
         if (!this.isDataReady) {
+          // The data went away (e.g. the experiment changed and nothing is selected
+          // yet): show the placeholder instead of the previous spectrum. Before the
+          // first draw there is nothing to replace.
+          if (this.hasDrawn) {
+            await this.renderFallback()
+          }
           return
         }
         

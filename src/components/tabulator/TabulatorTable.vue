@@ -79,14 +79,14 @@
       </div>
     </div>
 
-    <div :id="id" :class="tableClasses" @click="onTableClick" style="flex: 1; min-height: 0;"></div>
+    <div :id="id" :class="tableClasses" style="flex: 1; min-height: 0;"></div>
     
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, type PropType } from 'vue'
-import { TabulatorFull as Tabulator, type ColumnDefinition, type Options, type Sorter } from 'tabulator-tables'
+import { defineComponent, markRaw, type PropType } from 'vue'
+import { TabulatorFull as Tabulator, type ColumnDefinition, type Options, type RowComponent, type Sorter } from 'tabulator-tables'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
 
 export default defineComponent({
@@ -280,9 +280,7 @@ export default defineComponent({
       this.drawTable()
     },
     selectedRowIndexFromListening(newVal: number | undefined) {
-      console.log('🔍 [DEBUG] TabulatorTable selectedRowIndexFromListening watcher triggered:', newVal)
       if (newVal !== undefined) {
-        console.log('🔍 [DEBUG] TabulatorTable calling onSelectedRowListener with:', newVal)
         this.onSelectedRowListener(newVal)
       }
     },
@@ -303,6 +301,8 @@ export default defineComponent({
   },
   beforeUnmount() {
     this.cleanupTeleport()
+    this.tabulator?.destroy()
+    this.tabulator = undefined
   },
   methods: {
     drawTable(): void {
@@ -311,14 +311,25 @@ export default defineComponent({
       const goToInterfaceHeight = this.showGoTo ? 58 : 0;
       const tableMaxHeight = baseHeight - goToInterfaceHeight;
       
-      this.tabulator = new Tabulator(`#${this.id}`, {
+      // Every data change creates a new table. Destroy the previous instance first:
+      // it would otherwise stay registered with its resize/intersection observers
+      // alive. Tabulator also defers building the table (setTimeout) without checking
+      // whether it was destroyed meanwhile, so callbacks compare their instance with
+      // the current one and ignore superseded tables.
+      this.tabulator?.destroy()
+      // @types/tabulator-tables (5.4) predates the selectableRows option of Tabulator 5.5+.
+      const options: Options & { selectableRows?: boolean | number | 'highlight' } = {
         index: this.tableIndexField,
         data: this.preparedTableData,
         minHeight: 50,
         maxHeight: Math.max(tableMaxHeight, 50), // Ensure minimum height
         responsiveLayout : 'collapse',
         layout: this.tableLayoutParam,
-        selectable: 1,
+        // 'highlight': rows are highlighted on hover and selected through the API only.
+        // Tabulator's own click handling (selectable: 1) toggled the clicked row, so a
+        // click on the already highlighted row deselected it and nothing was emitted;
+        // the rowClick handler below always leaves exactly the clicked row selected.
+        selectableRows: 'highlight',
         columnDefaults: {
           title: '',
           hozAlign: 'right',
@@ -330,15 +341,27 @@ export default defineComponent({
           return col
         }),
         initialSort: this.initialSort
+      }
+      // markRaw: Vue would otherwise wrap the instance in a reactive proxy, so the
+      // identity checks below would compare the raw instance with its proxy (and
+      // every Tabulator call would go through the proxy).
+      const table = markRaw(new Tabulator(`#${this.id}`, options))
+      this.tabulator = table
+      table.on('rowClick', (_event: UIEvent, row: RowComponent) => {
+        if (table !== this.tabulator) return
+        table.deselectRow()
+        row.select()
+        this.onTableClick()
       })
-      this.tabulator.on('tableBuilt', () => {
+      table.on('tableBuilt', () => {
+        if (table !== this.tabulator) return
         // First check if we have a selected row from listening
         if (this.selectedRowIndexFromListening !== undefined) {
           this.onSelectedRowListener(this.selectedRowIndexFromListening)
         } else {
           this.selectDefaultRow()
         }
-        
+
         // Restore existing filter state after table is built
         this.applyFilters()
       })
@@ -364,19 +387,22 @@ export default defineComponent({
     },
     onTableClick(): void {
       const selectedRow = this.tabulator?.getSelectedRows()[0]?.getIndex()
-      console.log('🔍 [DEBUG] TabulatorTable onTableClick - selected row:', selectedRow)
       if (selectedRow !== undefined) {
-        console.log('🔍 [DEBUG] TabulatorTable emitting rowSelected event with:', selectedRow)
         this.$emit('rowSelected', selectedRow)
       }
     },
     onSelectedRowListener(row: number): void {
-      console.log('🔍 [DEBUG] TabulatorTable onSelectedRowListener called with row:', row)
-      console.log('🔍 [DEBUG] TabulatorTable tabulator instance available:', !!this.tabulator)
-      this.tabulator?.scrollToRow(row, 'top', false)
-      this.tabulator?.deselectRow()
-      this.tabulator?.selectRow([row])
-      console.log('🔍 [DEBUG] TabulatorTable calling onTableClick after selection')
+      const table = this.tabulator
+      if (!table) return
+      // Already selected, typically the user's own click echoed back through the
+      // store: nothing to do (no scroll jump, no second emit).
+      if (table.getSelectedRows()[0]?.getIndex() === row) return
+      // Not in this table (yet), e.g. the selection arrived before the data or the
+      // row is filtered out; tableBuilt applies it once the table is rebuilt.
+      if (!table.getRows('active').some((r) => r.getIndex() === row)) return
+      table.scrollToRow(row, 'top', false)
+      table.deselectRow()
+      table.selectRow([row])
       this.onTableClick()
     },
     downloadTable(): void {
@@ -1373,13 +1399,8 @@ export default defineComponent({
      */
     redrawTableWithNewHeight(): void {
       if (!this.tabulator) return
-      
-      // Calculate new table height
-      const baseHeight = this.title ? 320 : 310
-      const goToInterfaceHeight = this.showGoTo ? 58 : 0
-      
-      // Destroy current tabulator and recreate with new height
-      this.tabulator.destroy()
+      // drawTable() destroys the current instance and recreates it with the height
+      // that matches the go-to interface state.
       this.drawTable()
     },
     

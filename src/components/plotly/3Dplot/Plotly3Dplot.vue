@@ -153,6 +153,12 @@ export default defineComponent({
     selectedMassRow() {
       this.graph()
     },
+    // New signals for an unchanged selection (another cell picked a scan and Python
+    // sent its precursor signals) must redraw as well; the selection watchers alone
+    // only fire when the selected indices change.
+    'streamlitDataStore.allDataForDrawing.per_scan_data'() {
+      this.graph()
+    },
   },
   mounted() {
     this.graph()
