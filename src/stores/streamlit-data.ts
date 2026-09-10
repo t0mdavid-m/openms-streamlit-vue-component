@@ -35,8 +35,13 @@ export const useStreamlitDataStore = defineStore('streamlit-data', {
   actions: {
     updateRenderData(newData: RenderData) {
       const selectionStore = useSelectionStore()
+      const incoming = newData.args.selection_store as Record<string, unknown>
+      // A new StateTracker id means a new experiment. Its tables must be rebuilt (and
+      // their default row re-selected) even when the cell's data hashes the same as the
+      // previous experiment's (a re-run of the same input): otherwise nothing is ever
+      // selected and every cell that depends on the selection stays empty.
+      const trackerChanged = incoming.id !== selectionStore.id
       selectionStore.$patch(state => {
-        const incoming = newData.args.selection_store as Record<string, unknown>
         if (incoming.id !== state.id) {
           for (const key in state) {
             (state as any)[key] = undefined
@@ -58,7 +63,7 @@ export const useStreamlitDataStore = defineStore('streamlit-data', {
         selectionPayload(toRaw(selectionStore.$state) as unknown as Record<string, unknown>)
       )
 
-      if (this.hash === newData.args.hash) {
+      if (this.hash === newData.args.hash && !trackerChanged) {
         return
       }
       this.hash = newData.args.hash  

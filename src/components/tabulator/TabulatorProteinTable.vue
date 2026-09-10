@@ -208,6 +208,9 @@ export default defineComponent({
       this.selectionStore.updateSelectedTag(undefined)
       this.selectionStore.updateTagData(undefined)
       this.selectionStore.updateSelectedAA(undefined)
+      // A new proteoform means a new scan: start from its first mass, like the Scan
+      // Table does. (The spectra no longer clear the mass selection themselves.)
+      this.selectionStore.updateSelectedMass(0)
 
       const proteinTable = this.streamlitDataStore.dataForDrawing.protein_table
       if (!proteinTable || !Array.isArray(proteinTable) || proteinTable.length === 0) {

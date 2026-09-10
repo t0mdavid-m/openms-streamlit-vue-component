@@ -371,6 +371,11 @@ export default defineComponent({
           ) {
             this.selectionStore.updateSelectedMass(mass_idx)
           }
+          else if (scan_idx !== undefined) {
+            // The scan changed without a mass (raw heatmaps): start from the scan's
+            // first mass, like the Scan Table does.
+            this.selectionStore.updateSelectedMass(0)
+          }
         })
       }
     },
