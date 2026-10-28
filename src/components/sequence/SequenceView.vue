@@ -1072,7 +1072,7 @@ export default defineComponent({
       this.residueCleavagePercentage = this.calculateCleavagePercentage
       this.fragmentTableData = rows
       this.fragmentTableTitle = this.hasInternalFragments
-        ? `Matched fragments (# ${terminalCount} terminal, ${internalCount} internal envelopes)`
+        ? `Matched fragments (# ${terminalCount} terminal, ${internalCount} internal fragments)`
         : `Matched fragments (# ${terminalCount})`
     },
     inSelectedInternalSpan(aaIndex: number): boolean {
