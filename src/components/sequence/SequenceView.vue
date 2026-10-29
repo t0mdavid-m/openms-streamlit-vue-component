@@ -16,6 +16,13 @@
           </template>
         </template>
       </div>
+      <div v-if="annotationSummaryItems.length > 0" class="d-flex flex-wrap justify-space-evenly text-body-2 mt-1">
+        <span class="font-weight-bold">FLASHAnnotator</span>
+        <template v-for="(item, s_index) in annotationSummaryItems" :key="`s${s_index}`">
+          <v-divider :vertical="true"></v-divider>
+          <span>{{ item }}</span>
+        </template>
+      </div>
       <div class="d-flex justify-end px-4 mb-4">
         <div>
           <SvgScreenshot element-id="sequence-part" />
@@ -192,6 +199,9 @@
             :show-modifications="showModifications"
             :font-size="fontSize"
             :is-regex-highlighted="regexHighlightedIndices.has(aa_index)"
+            :show-internal="showInternal"
+            :max-internal-depth="maxInternalDepth"
+            :in-internal-span="inSelectedInternalSpan(aa_index)"
             @selected="aminoAcidSelected"
           />
           <div
@@ -210,6 +220,17 @@
           />
           </template>
       </div>
+      <InternalFragmentTrack
+        v-if="showInternal"
+        :sequence="sequence"
+        :range-start="showTruncations ? 0 : sequence_start"
+        :range-end="showTruncations ? sequence.length - 1 : sequence_end"
+        :fragments="annotatedFragments ?? []"
+        :selected-fragment="selectedFragment"
+        :highlight-residue="selectedResidue"
+        :theme="theme"
+        @select="onInternalFragmentSelected"
+      />
     </div>
     <div v-if="(maxCoverage > 0) && showTags" class="scale-container" title="Sequence Tag Coverage">
       <div class="scale-text"> {{ maxCoverage + "x" }}</div>
@@ -220,8 +241,9 @@
     <div id="sequence-view-table">
       <template v-if="(fragmentTableTitle !== '') && showFragments">
         <TabulatorTable
+          :key="usesAnnotator ? 'annotator' : 'matched'"
           :table-data="fragmentTableData"
-          :column-definitions="fragmentTableColumnDefinitions"
+          :column-definitions="usesAnnotator ? annotatorTableColumnDefinitions : fragmentTableColumnDefinitions"
           :index="index"
           :selected-row-index-from-listening="selectedFragTableRowIndex"
           :go-to-fields="['Name']"
@@ -312,6 +334,8 @@ import type { SequenceData } from '@/types/sequence-data'
 import type { SequenceObject } from '@/types/sequence-object'
 import SvgScreenshot from '../ui/SvgScreenshot.vue'
 import SequenceViewInformation from '@/components/sequence/SequenceViewInformation.vue'
+import InternalFragmentTrack from '@/components/sequence/InternalFragmentTrack.vue'
+import type { AnnotatedFragment, AnnotationSummary } from '@/types/sequence-data'
 import { extraFragmentTypeObject, type ExtraFragmentType } from '@/components/sequence/modification'
 import { toFixedFormatter } from '@/components/tabulator/tabulator-formatters'
 
@@ -323,6 +347,7 @@ export default defineComponent({
     AminoAcidCell,
     ProteinTerminalCell,
     SvgScreenshot,
+    InternalFragmentTrack,
   },
   props: {
     index: {
@@ -390,7 +415,50 @@ export default defineComponent({
           headerTooltip: 'The difference between the observed and theoretical masses of the fragment ion, in parts per million (ppm).'
         },
       ] as ColumnDefinition[],
+      // Fragment table of FLASHAnnotator's envelopes (one row per envelope)
+      annotatorTableColumnDefinitions: [
+        {
+          title: 'Name', field: 'Name',
+          headerTooltip: 'Terminal fragments in Biemann notation; internal fragments as type[first-last residue of the proteoform].'
+        },
+        {
+          title: 'Ion type', field: 'IonType',
+          headerTooltip: 'Terminal ion type, or N-end/C-end type of an internal fragment.'
+        },
+        {
+          title: 'Charge', field: 'Charge', sorter: 'number',
+          headerTooltip: 'Charge of the matched isotope envelope.'
+        },
+        {
+          title: 'Theoretical mass', field: 'TheoreticalMass', sorter: 'number',
+          headerTooltip: 'Monoisotopic neutral mass of the fragment.'
+        },
+        {
+          title: 'm/z', field: 'Mz', sorter: 'number',
+          headerTooltip: 'Theoretical m/z of the most abundant isotope peak.'
+        },
+        {
+          title: 'Mass difference (ppm)', field: 'MassDiffPpm', sorter: 'number',
+          headerTooltip: 'Error of the most abundant peak after calibration.'
+        },
+        {
+          title: 'Cosine', field: 'Cosine', sorter: 'number',
+          headerTooltip: 'Cosine similarity of the observed and theoretical isotope envelopes.'
+        },
+        {
+          title: 'Peaks', field: 'Peaks',
+          headerTooltip: 'Matched / predicted isotope peaks.'
+        },
+        {
+          title: 'Intensity', field: 'Intensity', sorter: 'number', formatter: toFixedFormatter(0),
+          headerTooltip: 'Summed intensity of the matched peaks.'
+        },
+      ] as ColumnDefinition[],
       fragmentTableData: [] as Record<string, unknown>[],
+      // FLASHAnnotator fragment behind each fragmentTableData row
+      fragmentTableSource: [] as AnnotatedFragment[],
+      selectedFragment: undefined as AnnotatedFragment | undefined,
+      selectedResidue: undefined as number | undefined,
       fragmentTableTitle: '' as string,
       residueCleavagePercentage: 0 as number,
       sequenceObjects: [] as SequenceObject[],
@@ -476,6 +544,43 @@ export default defineComponent({
         key = 0
       }
       return this.streamlitDataStore.sequenceData?.[key]?.modifications ?? []
+    },
+    // null/undefined: results without FLASHAnnotator -> fragments are matched here
+    annotatedFragments(): AnnotatedFragment[] | undefined {
+      const key = this.selectedSequence ?? 0
+      return this.streamlitDataStore.sequenceData?.[key]?.annotated_fragments ?? undefined
+    },
+    usesAnnotator(): boolean {
+      return this.annotatedFragments !== undefined
+    },
+    annotationSummary(): AnnotationSummary | undefined {
+      const key = this.selectedSequence ?? 0
+      return this.streamlitDataStore.sequenceData?.[key]?.annotation_summary ?? undefined
+    },
+    annotationSummaryItems(): string[] {
+      const s = this.annotationSummary
+      if (s === undefined || !this.showFragments) return []
+      const items: string[] = []
+      if (s.fa_score !== null) items.push(`FAScore : ${s.fa_score.toFixed(2)}`)
+      if (s.coverage !== null) items.push(`Bond coverage : ${s.coverage.toFixed(1)}%`)
+      if (s.coverage_with_internal !== null) items.push(`With internal : ${s.coverage_with_internal.toFixed(1)}%`)
+      if (s.internal_matched !== null && s.internal_hypotheses !== null) {
+        items.push(`Internal pieces : ${s.internal_matched} / ${s.internal_hypotheses}`)
+      }
+      if (s.calibration_ppm !== null) items.push(`Calibration : ${s.calibration_ppm.toFixed(2)} ppm`)
+      return items
+    },
+    hasInternalFragments(): boolean {
+      return (this.annotatedFragments ?? []).some((f) => f.kind === 'I')
+    },
+    showInternal(): boolean {
+      if (!this.hasInternalFragments) {
+        return false
+      }
+      return this.visibilityOptions.find(option => option.text === 'Internal fragments')?.selected ?? false
+    },
+    maxInternalDepth(): number {
+      return this.sequenceObjects.reduce((m, o) => Math.max(m, o.internalDepth ?? 0), 0)
     },
     coverage(): number[] {
       const key = this.selectedSequence;
@@ -662,6 +767,11 @@ export default defineComponent({
       },
       deep: true,
     },
+    // Internal fragments toggled in the visibility menu: their residue marks
+    // and table rows are built in prepareAnnotatedFragmentTable.
+    showInternal() {
+      this.recomputeFragments()
+    },
     // KEPT — FLASHDeconv variable modifications (local store; inert in FLASHTnT).
     variableModifications() {
       this.recomputeFragments()
@@ -750,6 +860,7 @@ export default defineComponent({
         if (!this.visibilityOptions.some(option => option.text === 'Tags')) {
           this.visibilityOptions.push({ text: 'Truncations', selected: true })
           this.visibilityOptions.push({ text: 'Tags', selected: true })
+          this.visibilityOptions.push({ text: 'Internal fragments', selected: true })
           this.updateSettings()
           
         }
@@ -787,6 +898,13 @@ export default defineComponent({
       ]
     },
     prepareFragmentTable(): void {
+      this.selectedFragment = undefined
+      this.selectedResidue = undefined
+      if (this.usesAnnotator) {
+        this.prepareAnnotatedFragmentTable()
+        return
+      }
+      this.fragmentTableSource = []
 
       if (this.sequence.length <= 0) {
         this.fragmentTableTitle = '' // if no sequence is selected, nothing to show
@@ -898,6 +1016,90 @@ export default defineComponent({
       this.fragmentTableData = matching_fragments
       this.fragmentTableTitle = `Matching fragments (# ${matching_fragments.length})`
     },
+    // Fragment ions from FLASHAnnotator: the envelopes it accepted on the raw
+    // spectrum, no matching against the deconvolved masses here.
+    prepareAnnotatedFragmentTable(): void {
+      if (this.sequence.length <= 0) {
+        this.fragmentTableTitle = ''
+        return
+      }
+      const selectedTypes = new Set(
+        this.ionTypes.filter((iontype) => iontype.selected).map((iontype) => iontype.text)
+      )
+      const rows: Record<string, unknown>[] = []
+      const source: AnnotatedFragment[] = []
+      let terminalCount = 0
+      let internalCount = 0
+      ;(this.annotatedFragments ?? []).forEach((fragment) => {
+        const objects = this.sequenceObjects
+        if (fragment.start < 0 || fragment.end >= objects.length) {
+          return
+        }
+        if (fragment.kind === 'I') {
+          if (!this.showInternal) return
+          for (let r = fragment.start; r <= fragment.end; r++) {
+            objects[r].internalDepth = (objects[r].internalDepth ?? 0) + 1
+          }
+          objects[fragment.start].internalStart = true
+          objects[fragment.end].internalEnd = true
+          internalCount++
+        } else {
+          // z+1 / z+2 are drawn as z
+          const base = fragment.ion_type.charAt(0) as 'a' | 'b' | 'c' | 'x' | 'y' | 'z'
+          if (!selectedTypes.has(base)) return
+          const residue = fragment.kind === 'N' ? fragment.end : fragment.start
+          objects[residue][`${base}Ion`] = true
+          if (fragment.ion_type.length > 1) {
+            objects[residue].extraTypes.push(fragment.ion_type)
+          }
+          terminalCount++
+        }
+        source.push(fragment)
+        rows.push({
+          Name: fragment.name,
+          IonType: fragment.ion_type,
+          Charge: fragment.charge,
+          TheoreticalMass: fragment.mono_mass.toFixed(3),
+          ObservedMass: fragment.observed_mass,
+          Mz: fragment.mz.toFixed(4),
+          MassDiffPpm: fragment.ppm_error.toFixed(2),
+          Cosine: fragment.cosine.toFixed(3),
+          Peaks: `${fragment.matched_peaks}/${fragment.predicted_peaks}`,
+          Intensity: fragment.intensity,
+        })
+      })
+      this.fragmentTableSource = source
+      this.residueCleavagePercentage = this.calculateCleavagePercentage
+      this.fragmentTableData = rows
+      this.fragmentTableTitle = this.hasInternalFragments
+        ? `Matched fragments (# ${terminalCount} terminal, ${internalCount} internal fragments)`
+        : `Matched fragments (# ${terminalCount})`
+    },
+    inSelectedInternalSpan(aaIndex: number): boolean {
+      const f = this.selectedFragment
+      return f !== undefined && f.kind === 'I' && this.showInternal && f.start <= aaIndex && aaIndex <= f.end
+    },
+    onInternalFragmentSelected(fragment: AnnotatedFragment) {
+      // the row of the most intense envelope of that piece (one row per charge)
+      let best = -1
+      this.fragmentTableSource.forEach((f, i) => {
+        if (f.kind === fragment.kind && f.ion_type === fragment.ion_type && f.start === fragment.start && f.end === fragment.end) {
+          if (best < 0 || f.intensity > this.fragmentTableSource[best].intensity) best = i
+        }
+      })
+      this.selectedFragment = fragment
+      if (best >= 0) {
+        this.selectedFragTableRowIndex = best
+      }
+    },
+    // Annotator masses are envelope masses, not the deconvolved masses: link
+    // them to the mass table within the fragment tolerance
+    massLinkTolerance(mass: number): number {
+      if (this.usesAnnotator) {
+        return mass * this.fragmentMassTolerance * 1e-6
+      }
+      return 0.001 // 0.001 Da tolerance for floating point precision
+    },
     fixedModification(aminoAcid: string): boolean {
       return this.fixedModificationSites.includes(aminoAcid)
     },
@@ -928,10 +1130,38 @@ export default defineComponent({
           modMass : '',
           modLabels : '',
           extraTypes: [],
+          internalDepth: 0,
+          internalStart: false,
+          internalEnd: false,
         })
       })
     },
     aminoAcidSelected(aaIndex: number) {
+      this.selectedResidue = aaIndex
+      if (this.usesAnnotator) {
+        // terminal fragment cleaving at this residue first, else the most
+        // intense internal piece covering it
+        const objects = this.sequenceObjects
+        const terminal = this.fragmentTableSource.findIndex((f) =>
+          (f.kind === 'N' && f.end === aaIndex) || (f.kind === 'C' && f.start === aaIndex))
+        let row = terminal
+        if (row < 0 || !(objects[aaIndex].aIon || objects[aaIndex].bIon || objects[aaIndex].cIon
+          || objects[aaIndex].xIon || objects[aaIndex].yIon || objects[aaIndex].zIon)) {
+          row = -1
+          this.fragmentTableSource.forEach((f, i) => {
+            if (f.kind === 'I' && f.start <= aaIndex && aaIndex <= f.end) {
+              if (row < 0 || f.intensity > this.fragmentTableSource[row].intensity) row = i
+            }
+          })
+        }
+        if (row < 0) row = terminal
+        if (row >= 0) {
+          this.selectedFragment = this.fragmentTableSource[row]
+          this.selectedFragTableRowIndex = row
+          this.updateMassTableFromFragmentMass(this.fragmentTableSource[row].observed_mass)
+        }
+        return
+      }
       let ionName = ''
       const this_seqObj = this.sequenceObjects[aaIndex]
       if (this_seqObj.aIon) {
@@ -957,6 +1187,9 @@ export default defineComponent({
       }
     },
     onFragmentTableRowSelected(rowIndex?: number) {
+      if (rowIndex !== undefined && this.fragmentTableSource[rowIndex]) {
+        this.selectedFragment = this.fragmentTableSource[rowIndex]
+      }
       if (rowIndex !== undefined && this.fragmentTableData[rowIndex]) {
         const observedMass = this.fragmentTableData[rowIndex].ObservedMass as number
         this.updateMassTableFromFragmentMass(observedMass)
@@ -1007,7 +1240,7 @@ export default defineComponent({
       
       // If no exact match, find the closest match within tolerance (floating point precision issue)
       if (massIndex < 0) {
-        const tolerance = 0.001 // 0.001 Da tolerance for floating point precision
+        const tolerance = this.massLinkTolerance(observedMass)
         const closeMatches = massArray.map((mass, index) => ({
           index,
           mass,
@@ -1074,7 +1307,7 @@ export default defineComponent({
       }
       
       // Find matching fragment in the fragment table data using tolerance-based matching
-      const tolerance = 0.001 // 0.001 Da tolerance for floating point precision
+      const tolerance = this.massLinkTolerance(selectedMass)
       let bestMatch: { index: number; diff: number } | null = null
       
       for (let i = 0; i < this.fragmentTableData.length; i++) {
@@ -1274,6 +1507,7 @@ export default defineComponent({
 
   #sequence-part {
     flex-grow: 1;
+    min-width: 0;
   }
 
   .scale {

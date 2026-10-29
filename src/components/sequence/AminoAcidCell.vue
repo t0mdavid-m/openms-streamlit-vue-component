@@ -2,7 +2,7 @@
   <div
    :id="id"
    class="d-flex justify-center align-center rounded-lg"
-   :class="[aminoAcidCellClass, { highlighted: isHighlighted }, { 'regex-highlighted': isRegexHighlighted }, { truncated: isTruncated }]"
+   :class="[aminoAcidCellClass, { highlighted: isHighlighted }, { 'regex-highlighted': isRegexHighlighted }, { truncated: isTruncated }, { 'internal-span': inInternalSpan }]"
    :style="aminoAcidCellStyles"
    @click="selectCell"
    @contextmenu.prevent="toggleMenuOpen"
@@ -37,6 +37,10 @@
         <path stroke="red" d="M1, 3 L1, 7 L6, 9 L1, 7 L1, 3 z" stroke-width="1.5" />
       </svg>
     </div>
+    <!-- internal fragments: depth strip along the bottom, brackets where pieces start/end -->
+    <div v-if="showInternal && internalDepth > 0" class="internal-depth" :style="internalDepthStyles"></div>
+    <div v-if="showInternal && sequenceObject.internalStart" class="internal-bracket internal-bracket-start"></div>
+    <div v-if="showInternal && sequenceObject.internalEnd" class="internal-bracket internal-bracket-end"></div>
     <div v-if="showTags && sequenceObject.tagStart" class="rounded-lg tag-marker tag-start"></div>
     <div v-if="showTags && sequenceObject.tagEnd" class="rounded-lg tag-marker tag-end"></div>
     <div v-if="showModifications && (sequenceObject.modStart||isThisAAmodified)" class="rounded-lg mod-marker mod-start"></div>
@@ -124,6 +128,9 @@
       <div v-if="DoesThisAAHaveExtraFragTypes">
         {{ sequenceObject.extraTypes.join(', ') }}
       </div>
+      <div v-if="showInternal && internalDepth > 0">
+        {{ `Internal fragments covering: ${internalDepth}` }}
+      </div>
     </v-tooltip>
   </div>
 </template>
@@ -178,6 +185,20 @@ export default defineComponent({
       default: 12,
     },
     isRegexHighlighted: {
+      type: Boolean,
+      default: false,
+    },
+    showInternal: {
+      type: Boolean,
+      default: false,
+    },
+    // largest internalDepth of the sequence, scales the depth strip
+    maxInternalDepth: {
+      type: Number,
+      default: 0,
+    },
+    // residue lies in the selected internal fragment
+    inInternalSpan: {
       type: Boolean,
       default: false,
     },
@@ -331,6 +352,13 @@ export default defineComponent({
         this.sequenceObject.zIon
       )
     },
+    internalDepth(): number {
+      return this.sequenceObject.internalDepth ?? 0
+    },
+    internalDepthStyles(): Record<string, string> {
+      const alpha = this.maxInternalDepth > 0 ? 0.25 + 0.75 * (this.internalDepth / this.maxInternalDepth) : 0
+      return { background: `rgba(142, 68, 173, ${alpha})` }
+    },
     DoesThisAAHaveExtraFragTypes(): boolean {
       return this.sequenceObject.extraTypes.length > 0
     },
@@ -391,7 +419,7 @@ export default defineComponent({
           this.selectionStore.updateSelectedAA(this.index)
         }
       }
-      if (this.DoesThisAAHaveMatchingFragments) {
+      if (this.DoesThisAAHaveMatchingFragments || (this.showInternal && this.internalDepth > 0)) {
         this.$emit('selected', this.index)
       }
     },
@@ -641,6 +669,40 @@ export default defineComponent({
   font-size: 0.7em;
   padding: 0.0em 0.2em 0.0em 0.2em;
   color: rgba(0, 0, 0, 0);
+}
+
+.internal-depth {
+  position: absolute;
+  left: 6%;
+  bottom: 4%;
+  width: 88%;
+  height: 12%;
+  border-radius: 2px;
+  z-index: 900;
+}
+
+/* a piece starts left of / ends right of this residue */
+.internal-bracket {
+  position: absolute;
+  bottom: 2%;
+  width: 22%;
+  height: 34%;
+  border-bottom: 2px solid #8E44AD;
+  z-index: 950;
+}
+
+.internal-bracket-start {
+  left: -4%;
+  border-left: 2px solid #8E44AD;
+}
+
+.internal-bracket-end {
+  right: -4%;
+  border-right: 2px solid #8E44AD;
+}
+
+.sequence-amino-acid.internal-span {
+  outline: 2px dashed #8E44AD;
 }
 
 .mod-start {

@@ -55,8 +55,12 @@ export default defineComponent({
           headerTooltip: 'The position in the protein sequence where the sequence tag ends.'
         },
         { 
-          title: 'Sequence', field: 'TagSequence', sorter: 'number',
-          headerTooltip: 'The amino acid sequence of the identified tag.'
+          title: 'Sequence', field: 'TagSequence', sorter: 'string',
+          headerTooltip: 'The amino acid sequence of the identified tag.',
+          // FLASHTnT also reports long de novo tags (hundreds of residues); an
+          // unbounded column sends the collapse layout into an endless loop.
+          maxWidth: 240,
+          tooltip: true,
         },
         { 
           title: 'Length', field: 'Length' , sorter: 'number',
