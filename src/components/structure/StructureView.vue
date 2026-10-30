@@ -4,15 +4,10 @@
   </div>
 
   <v-sheet class="pa-4 rounded-lg" style="max-width: 97%" :theme="theme?.base ?? 'light'" border>
-    <div class="d-flex flex-wrap align-center justify-space-between mb-2">
-      <v-btn-toggle v-model="colorMode" mandatory density="compact" variant="outlined" divided>
-        <v-btn value="coverage" size="small">Tag coverage</v-btn>
-        <v-btn value="fragments" size="small">Fragment ions</v-btn>
-        <v-btn value="plddt" size="small" :disabled="!hasConfidence">Confidence</v-btn>
-      </v-btn-toggle>
+    <div class="d-flex flex-wrap align-center justify-end mb-2">
       <div class="d-flex align-center">
         <v-checkbox
-          v-if="colorMode === 'fragments' && sites.internalCount > 0"
+          v-if="sites.internalCount > 0"
           v-model="showInternal"
           label="Internal fragments"
           hide-details
@@ -80,25 +75,22 @@ import { useSelectionStore } from '@/stores/selection'
 import type { SequenceData } from '@/types/sequence-data'
 import {
   bestChainMapping,
-  coverageColor,
   fragmentSites,
   internalColor,
-  plddtColor,
+  ionColor,
+  ION_COLORS,
   type FragmentSites,
   residuesByChain,
   type ChainMapping,
   type StructureData,
 } from './structure-mapping'
 
-type ColorMode = 'coverage' | 'fragments' | 'plddt'
-
+// Colours of the sequence view: fragment markers (ION_COLORS), internal
+// fragment depth, modification marker, selected residue
 const UNCOVERED = '#d9d9d9'
 const UNOBSERVED = '#f0f0f0'
 const OTHER_CHAIN = '#9e9e9e'
-const N_TERMINAL = '#1f5fd6'
-const C_TERMINAL = '#d62728'
-const BOTH_TERMINI = '#2ca02c'
-const MODIFICATION = '#c2185b'
+const MODIFICATION = '#444cf7'
 const SELECTED = '#F3A712'
 
 // The 3Dmol viewer and model live outside Vue's reactivity
@@ -120,8 +112,6 @@ export default defineComponent({
   },
   data() {
     return {
-      // Same default as the sequence view, which shows the fragment ions first
-      colorMode: 'fragments' as ColorMode,
       showInternal: true,
       showModifications: true,
       showUnobserved: true,
@@ -130,7 +120,6 @@ export default defineComponent({
       loadError: '' as string,
       hoverText: '' as string,
       mappingLabel: '' as string,
-      hasConfidence: false,
       viewer: undefined as Viewer | undefined,
       model: undefined as Model | undefined,
       mapping: undefined as ChainMapping | undefined,
@@ -166,7 +155,10 @@ export default defineComponent({
     },
     sites(): FragmentSites {
       if (this.entry === undefined) {
-        return { nTerminal: new Set(), cTerminal: new Set(), internalDepth: [], maxInternalDepth: 0, internalCount: 0 }
+        return {
+          nTerminal: new Set(), cTerminal: new Set(), ionTypes: new Map(),
+          internalDepth: [], maxInternalDepth: 0, internalCount: 0,
+        }
       }
       const settings = this.streamlitDataStore.settings
       return fragmentSites(
@@ -205,26 +197,18 @@ export default defineComponent({
     },
     legend(): { label: string; color: string }[] {
       const items: { label: string; color: string }[] = []
-      if (this.colorMode === 'coverage') {
-        items.push({ label: 'Not covered by tags', color: UNCOVERED })
-        items.push({ label: `Tag coverage (up to ${this.entry?.maxCoverage ?? 0}x)`, color: coverageColor(1) })
-      } else if (this.colorMode === 'fragments') {
-        items.push({ label: 'N-terminal ion (a/b/c)', color: N_TERMINAL })
-        items.push({ label: 'C-terminal ion (x/y/z)', color: C_TERMINAL })
-        items.push({ label: 'Both', color: BOTH_TERMINI })
-        if (this.showInternal && this.sites.internalCount > 0) {
-          items.push({
-            label: `Internal fragments (${this.sites.internalCount}, up to ${this.sites.maxInternalDepth} per residue)`,
-            color: internalColor(this.sites.maxInternalDepth, this.sites.maxInternalDepth),
-          })
+      ION_COLORS.forEach((c) => {
+        if (c.types.some((t) => [...this.sites.ionTypes.values()].some((types) => types.has(t)))) {
+          items.push({ label: c.label, color: c.color })
         }
-        items.push({ label: 'No fragment', color: UNCOVERED })
-      } else {
-        items.push({ label: 'pLDDT > 90', color: plddtColor(95) })
-        items.push({ label: '70-90', color: plddtColor(80) })
-        items.push({ label: '50-70', color: plddtColor(60) })
-        items.push({ label: '< 50', color: plddtColor(40) })
+      })
+      if (this.showInternal && this.sites.internalCount > 0) {
+        items.push({
+          label: `Internal fragments (${this.sites.internalCount}, up to ${this.sites.maxInternalDepth} per residue)`,
+          color: internalColor(this.sites.maxInternalDepth, this.sites.maxInternalDepth),
+        })
       }
+      items.push({ label: 'No fragment', color: UNCOVERED })
       if (this.showUnobserved && this.hasTruncation) {
         items.push({ label: 'Cleaved off', color: UNOBSERVED })
       }
@@ -245,9 +229,6 @@ export default defineComponent({
     },
     dbSequence() {
       this.loadStructure()
-    },
-    colorMode() {
-      this.applyStyle()
     },
     showModifications() {
       this.applyStyle()
@@ -323,9 +304,6 @@ export default defineComponent({
         }
         this.mapping = markRaw(mapping)
         this.mappingLabel = this.describeMapping(mapping, chains.size)
-        // Confidence colouring only makes sense for predicted models
-        this.hasConfidence = structure.source === 'alphafold'
-        if (!this.hasConfidence && this.colorMode === 'plddt') this.colorMode = 'coverage'
         model.setHoverable({}, true, this.onHover, this.onUnhover)
         model.setClickable({}, true, this.onClick)
         this.loadedKey = key
@@ -352,22 +330,14 @@ export default defineComponent({
       if (mapping === undefined || atom.chain !== mapping.chain) return -1
       return mapping.dbOfResidue.get(atom.resi ?? NaN) ?? -1
     },
-    residueColor(pos: number, plddt: number): string {
+    residueColor(pos: number): string {
       const [start, end] = this.proteoformRange
       if (pos < start || pos > end) return UNOBSERVED
-      if (this.colorMode === 'plddt') return plddtColor(plddt)
-      if (this.colorMode === 'fragments') {
-        const n = this.sites.nTerminal.has(pos)
-        const c = this.sites.cTerminal.has(pos)
-        if (n && c) return BOTH_TERMINI
-        if (n) return N_TERMINAL
-        if (c) return C_TERMINAL
-        const depth = this.sites.internalDepth[pos] ?? 0
-        if (this.showInternal && depth > 0) return internalColor(depth, this.sites.maxInternalDepth)
-        return UNCOVERED
-      }
-      const coverage = this.entry?.coverage?.[pos] ?? 0
-      return coverage > 0 ? coverageColor(coverage) : UNCOVERED
+      const ion = ionColor(this.sites.ionTypes.get(pos))
+      if (ion !== undefined) return ion
+      const depth = this.sites.internalDepth[pos] ?? 0
+      if (this.showInternal && depth > 0) return internalColor(depth, this.sites.maxInternalDepth)
+      return UNCOVERED
     },
     applyStyle(): void {
       const viewer = this.viewer
@@ -377,10 +347,10 @@ export default defineComponent({
       viewer.removeAllLabels()
       viewer.setStyle({}, {
         cartoon: {
-          colorfunc: (atom: { chain?: string; resi?: number; b?: number }) => {
+          colorfunc: (atom: { chain?: string; resi?: number }) => {
             const pos = this.positionOf(atom)
             if (pos < 0) return OTHER_CHAIN
-            return this.residueColor(pos, atom.b ?? 0)
+            return this.residueColor(pos)
           },
         },
       })
@@ -401,8 +371,8 @@ export default defineComponent({
             { sphere: { color: MODIFICATION, radius: ranged ? 1.2 : 1.6 } }
           )
           const shift = `${mod.mass_diff >= 0 ? '+' : ''}${mod.mass_diff.toFixed(2)} Da`
-          const where = ranged ? ` in ${mod.start + 1}-${mod.end + 1}` : ''
-          viewer.addLabel(`${mod.labels ? `${this.shortLabel(mod.labels)} ` : ''}${shift}${where}`, {
+          // The range of an unlocalized shift is in the hover text
+          viewer.addLabel(`${mod.labels ? `${this.shortLabel(mod.labels)} ` : ''}${shift}`, {
             fontSize: 11,
             fontColor: textColor,
             backgroundColor: this.theme?.backgroundColor ?? '#ffffff',
@@ -458,17 +428,21 @@ export default defineComponent({
       if (pos < start || pos > end) {
         parts.push('cleaved off')
       } else {
-        const maxCoverage = this.entry?.maxCoverage ?? 0
-        const coverage = (this.entry?.coverage?.[pos] ?? 0) * maxCoverage
-        parts.push(`tag coverage ${Math.round(coverage)}x`)
         const ions = []
-        if (this.sites.nTerminal.has(pos)) ions.push(`N-terminal ion ${pos - start + 1}`)
-        if (this.sites.cTerminal.has(pos)) ions.push(`C-terminal ion ${end - pos + 1}`)
+        const types = [...(this.sites.ionTypes.get(pos) ?? [])].sort()
+        types.forEach((t) => {
+          const n = ['a', 'b', 'c'].includes(t)
+          ions.push(`${t}${n ? pos - start + 1 : end - pos + 1}`)
+        })
         const depth = this.sites.internalDepth[pos] ?? 0
         if (depth > 0) ions.push(`in ${depth} internal fragment${depth > 1 ? 's' : ''}`)
         if (ions.length > 0) parts.push(ions.join(', '))
         const mods = (this.entry?.modifications ?? []).filter((m) => pos >= m.start && pos <= m.end)
-        mods.forEach((m) => parts.push(m.labels || `${m.mass_diff >= 0 ? '+' : ''}${m.mass_diff.toFixed(2)} Da`))
+        mods.forEach((m) => {
+          const shift = `${m.mass_diff >= 0 ? '+' : ''}${m.mass_diff.toFixed(2)} Da`
+          const range = m.end > m.start ? ` (residues ${m.start + 1}-${m.end + 1})` : ''
+          parts.push(`${m.labels ? this.shortLabel(m.labels) + ' ' : ''}${shift}${range}`)
+        })
       }
       return parts.join(' · ')
     },
@@ -478,8 +452,7 @@ export default defineComponent({
         this.hoverText = `${atom.resn ?? ''} ${atom.resi ?? ''} (chain ${atom.chain}, not in the protein sequence)`
         return
       }
-      const plddt = this.hasConfidence ? ` · pLDDT ${(atom.b ?? 0).toFixed(0)}` : ''
-      this.hoverText = this.describe(pos) + plddt
+      this.hoverText = this.describe(pos)
     },
     onUnhover(): void {
       this.hoverText = ''

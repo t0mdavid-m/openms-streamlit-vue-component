@@ -199,6 +199,8 @@ export function bestChainMapping(
 export type FragmentSites = {
   nTerminal: Set<number>
   cTerminal: Set<number>
+  // Ion types (a, b, c, x, y, z) matched at each residue
+  ionTypes: Map<number, Set<string>>
   internalDepth: number[]
   maxInternalDepth: number
   internalCount: number
@@ -217,14 +219,24 @@ export function fragmentSites(
   const cTerminal = new Set<number>()
   // Internal fragments covering each residue (FLASHAnnotator only)
   const internalDepth = new Array<number>(entry.sequence.length).fill(0)
-  const sites = { nTerminal, cTerminal, internalDepth, maxInternalDepth: 0, internalCount: 0 }
+  const ionsAt = new Map<number, Set<string>>()
+  const addIon = (pos: number, ion: string) => {
+    if (!ionsAt.has(pos)) ionsAt.set(pos, new Set())
+    ionsAt.get(pos)!.add(ion)
+  }
+  const sites = { nTerminal, cTerminal, ionTypes: ionsAt, internalDepth, maxInternalDepth: 0, internalCount: 0 }
   if (Array.isArray(entry.annotated_fragments)) {
     // FLASHAnnotator accepted these envelopes on the raw spectrum
     const internal = new Set<string>()
     entry.annotated_fragments.forEach((f) => {
-      if (f.kind === 'N') nTerminal.add(f.end)
-      else if (f.kind === 'C') cTerminal.add(f.start)
-      else if (f.kind === 'I') {
+      // z+1 / z+2 count as z, as in the sequence view
+      if (f.kind === 'N') {
+        nTerminal.add(f.end)
+        addIon(f.end, f.ion_type.charAt(0))
+      } else if (f.kind === 'C') {
+        cTerminal.add(f.start)
+        addIon(f.start, f.ion_type.charAt(0))
+      } else if (f.kind === 'I') {
         // One piece can be reported at several charges: count it once
         const key = `${f.start}-${f.end}`
         if (internal.has(key) || f.start < 0 || f.end >= internalDepth.length) return
@@ -266,11 +278,30 @@ export function fragmentSites(
     if (!masses) return
     masses.forEach((candidates, theoIndex) => {
       if (!candidates.some(hit)) return
-      if (prefix) nTerminal.add(start + theoIndex)
-      if (suffix) cTerminal.add(end - theoIndex)
+      if (prefix) {
+        nTerminal.add(start + theoIndex)
+        addIon(start + theoIndex, ion)
+      }
+      if (suffix) {
+        cTerminal.add(end - theoIndex)
+        addIon(end - theoIndex, ion)
+      }
     })
   })
   return sites
+}
+
+// Fragment marker colours of the sequence view (AminoAcidCell): a/x green,
+// b/y blue, c/z red. A residue with several types shows b/y over c/z over a/x.
+export const ION_COLORS: { types: string[]; label: string; color: string }[] = [
+  { types: ['b', 'y'], label: 'b/y ions', color: '#0000ff' },
+  { types: ['c', 'z'], label: 'c/z ions', color: '#ff0000' },
+  { types: ['a', 'x'], label: 'a/x ions', color: '#008000' },
+]
+
+export function ionColor(types: Set<string> | undefined): string | undefined {
+  if (types === undefined) return undefined
+  return ION_COLORS.find((c) => c.types.some((t) => types.has(t)))?.color
 }
 
 // Internal fragments on the sequence view's scale: rgba(142, 68, 173, 0.25 .. 1) on white
@@ -278,19 +309,4 @@ export function internalColor(depth: number, maxDepth: number): string {
   const alpha = maxDepth > 0 ? 0.25 + 0.75 * (depth / maxDepth) : 0
   const mix = (c: number) => Math.round(255 + (c - 255) * alpha)
   return `rgb(${mix(142)}, ${mix(68)}, ${mix(173)})`
-}
-
-// AlphaFold's confidence bands
-export function plddtColor(plddt: number): string {
-  if (plddt > 90) return '#0053D6'
-  if (plddt > 70) return '#65CBF3'
-  if (plddt > 50) return '#FFDB13'
-  return '#FF7D45'
-}
-
-// Coverage on the sequence view's scale: rgba(228, 87, 46, 0.1 .. 1) on white
-export function coverageColor(coverage: number): string {
-  const alpha = coverage * 0.9 + 0.1
-  const mix = (c: number) => Math.round(255 + (c - 255) * alpha)
-  return `rgb(${mix(228)}, ${mix(87)}, ${mix(46)})`
 }

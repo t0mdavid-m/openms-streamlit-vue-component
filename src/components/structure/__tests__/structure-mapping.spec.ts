@@ -4,6 +4,7 @@ import {
   alignSequences,
   bestChainMapping,
   fragmentSites,
+  ionColor,
   mapChain,
   residuesByChain,
   type StructureResidue,
@@ -93,8 +94,8 @@ describe('fragmentSites', () => {
       {
         ...entry,
         annotated_fragments: [
-          { kind: 'N', start: 1, end: 3 },
-          { kind: 'C', start: 4, end: 5 },
+          { kind: 'N', start: 1, end: 3, ion_type: 'b' },
+          { kind: 'C', start: 4, end: 5, ion_type: 'z+1' },
           { kind: 'I', start: 2, end: 3 },
         ] as SequenceData['annotated_fragments'],
       },
@@ -104,6 +105,9 @@ describe('fragmentSites', () => {
     )
     expect([...sites.nTerminal]).toEqual([3])
     expect([...sites.cTerminal]).toEqual([4])
+    expect(ionColor(sites.ionTypes.get(3))).toBe('#0000ff')
+    expect(ionColor(sites.ionTypes.get(4))).toBe('#ff0000')
+    expect(ionColor(sites.ionTypes.get(2))).toBeUndefined()
     expect(sites.internalDepth).toEqual([0, 0, 1, 1, 0, 0])
     expect(sites.internalCount).toBe(1)
   })
