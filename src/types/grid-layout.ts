@@ -4,6 +4,7 @@ import type { PlotlyLineArguments } from '@/components/plotly/lineplot/plotly-li
 import type { Plotly3DplotArguments } from '@/components/plotly/3Dplot/plotly-3Dplot'
 import type { SequenceViewArgs } from '@/components/sequence/sequence-view'
 import type { InternalFragmentMapArgs } from '@/components/sequence/internal-fragment-map'
+import type { StructureViewArgs } from '@/components/structure/structure-mapping'
 import type { ArrowTable } from 'streamlit-component-lib'
 
 export type DATAFRAMES =
@@ -16,6 +17,7 @@ export type DATAFRAMES =
   | 'protein_table'
   | 'tag_table'
   | 'settings'
+  | 'structure'
   //| 'ecdf_target'
   //| 'ecdf_decoy'
 // 🔴 REPLACED WITH:
@@ -31,6 +33,7 @@ export type FlashViewerComponent = {
     | Plotly3DplotArguments
     | SequenceViewArgs
     | InternalFragmentMapArgs
+    | StructureViewArgs
 }
 
 export type StreamlitData = {
@@ -43,6 +46,7 @@ export type StreamlitData = {
   protein_table?: ArrowTable
   tag_table?: ArrowTable
   settings?: any
+  structure?: any
   //ecdf_target?: ArrowTable
   //ecdf_decoy?: ArrowTable
   density_target?: ArrowTable
