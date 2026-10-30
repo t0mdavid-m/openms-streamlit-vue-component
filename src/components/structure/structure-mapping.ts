@@ -201,14 +201,16 @@ export type FragmentSites = {
   cTerminal: Set<number>
   // Ion types (a, b, c, x, y, z) matched at each residue
   ionTypes: Map<number, Set<string>>
-  internalDepth: number[]
-  maxInternalDepth: number
+  // Internal pieces [first, last] (FLASHAnnotator only), each counted once
+  internalPieces: [number, number][]
+  // Their first and last residues: the two cleavage sites of each piece
+  internalEnds: Set<number>
   internalCount: number
 }
 
 // Residues (database coordinates) at which an N-terminal (a/b/c) fragment ends
 // and at which a C-terminal (x/y/z) fragment starts, i.e. the cleavage sites
-// the spectrum explains.
+// the spectrum explains: one residue per terminal ion, two per internal ion.
 export function fragmentSites(
   entry: SequenceData,
   observedMasses: number[] | undefined,
@@ -217,14 +219,14 @@ export function fragmentSites(
 ): FragmentSites {
   const nTerminal = new Set<number>()
   const cTerminal = new Set<number>()
-  // Internal fragments covering each residue (FLASHAnnotator only)
-  const internalDepth = new Array<number>(entry.sequence.length).fill(0)
   const ionsAt = new Map<number, Set<string>>()
   const addIon = (pos: number, ion: string) => {
     if (!ionsAt.has(pos)) ionsAt.set(pos, new Set())
     ionsAt.get(pos)!.add(ion)
   }
-  const sites = { nTerminal, cTerminal, ionTypes: ionsAt, internalDepth, maxInternalDepth: 0, internalCount: 0 }
+  const internalEnds = new Set<number>()
+  const internalPieces: [number, number][] = []
+  const sites = { nTerminal, cTerminal, ionTypes: ionsAt, internalPieces, internalEnds, internalCount: 0 }
   if (Array.isArray(entry.annotated_fragments)) {
     // FLASHAnnotator accepted these envelopes on the raw spectrum
     const internal = new Set<string>()
@@ -239,13 +241,14 @@ export function fragmentSites(
       } else if (f.kind === 'I') {
         // One piece can be reported at several charges: count it once
         const key = `${f.start}-${f.end}`
-        if (internal.has(key) || f.start < 0 || f.end >= internalDepth.length) return
+        if (internal.has(key) || f.start < 0 || f.end >= entry.sequence.length) return
         internal.add(key)
-        for (let r = f.start; r <= f.end; r++) internalDepth[r]++
+        internalPieces.push([f.start, f.end])
+        internalEnds.add(f.start)
+        internalEnds.add(f.end)
       }
     })
     sites.internalCount = internal.size
-    sites.maxInternalDepth = internalDepth.reduce((m, d) => Math.max(m, d), 0)
     return sites
   }
   if (observedMasses === undefined || observedMasses.length === 0) {
@@ -302,11 +305,4 @@ export const ION_COLORS: { types: string[]; label: string; color: string }[] = [
 export function ionColor(types: Set<string> | undefined): string | undefined {
   if (types === undefined) return undefined
   return ION_COLORS.find((c) => c.types.some((t) => types.has(t)))?.color
-}
-
-// Internal fragments on the sequence view's scale: rgba(142, 68, 173, 0.25 .. 1) on white
-export function internalColor(depth: number, maxDepth: number): string {
-  const alpha = maxDepth > 0 ? 0.25 + 0.75 * (depth / maxDepth) : 0
-  const mix = (c: number) => Math.round(255 + (c - 255) * alpha)
-  return `rgb(${mix(142)}, ${mix(68)}, ${mix(173)})`
 }

@@ -108,11 +108,12 @@ describe('fragmentSites', () => {
     expect(ionColor(sites.ionTypes.get(3))).toBe('#0000ff')
     expect(ionColor(sites.ionTypes.get(4))).toBe('#ff0000')
     expect(ionColor(sites.ionTypes.get(2))).toBeUndefined()
-    expect(sites.internalDepth).toEqual([0, 0, 1, 1, 0, 0])
+    expect(sites.internalPieces).toEqual([[2, 3]])
+    expect([...sites.internalEnds].sort()).toEqual([2, 3])
     expect(sites.internalCount).toBe(1)
   })
 
-  it('counts each internal piece once and stacks overlapping ones', () => {
+  it('counts each internal piece once and marks both of its cleavage sites', () => {
     const sites = fragmentSites(
       {
         ...entry,
@@ -127,8 +128,8 @@ describe('fragmentSites', () => {
       ['b', 'y'],
       10
     )
-    expect(sites.internalDepth).toEqual([0, 1, 2, 2, 1, 0])
-    expect(sites.maxInternalDepth).toBe(2)
+    expect(sites.internalPieces).toEqual([[1, 3], [2, 4]])
+    expect([...sites.internalEnds].sort()).toEqual([1, 2, 3, 4])
     expect(sites.internalCount).toBe(2)
   })
 

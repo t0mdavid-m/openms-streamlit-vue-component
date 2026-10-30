@@ -52,7 +52,7 @@
       <div class="d-flex flex-wrap align-center">
         <template v-for="item in legend" :key="item.label">
           <span class="d-flex align-center mr-3">
-            <span class="legend-chip" :style="{ background: item.color }"></span>{{ item.label }}
+            <span class="legend-chip" :class="item.chipClass" :style="item.color ? { background: item.color } : {}"></span>{{ item.label }}
           </span>
         </template>
       </div>
@@ -76,7 +76,6 @@ import type { SequenceData } from '@/types/sequence-data'
 import {
   bestChainMapping,
   fragmentSites,
-  internalColor,
   ionColor,
   ION_COLORS,
   type FragmentSites,
@@ -90,8 +89,12 @@ import {
 const UNCOVERED = '#d9d9d9'
 const UNOBSERVED = '#f0f0f0'
 const OTHER_CHAIN = '#9e9e9e'
-const MODIFICATION = '#444cf7'
+// The sequence view's modification marker: #444cf7 dots on #e5e5f7
+const MODIFICATION_DOT = '#444cf7'
+const MODIFICATION_BACKGROUND = '#e5e5f7'
+const INTERNAL_BRACKET = '#8E44AD'
 const SELECTED = '#F3A712'
+const CLEAVAGE_RADIUS = 0.9
 
 // The 3Dmol viewer and model live outside Vue's reactivity
 type Viewer = any
@@ -121,6 +124,7 @@ export default defineComponent({
       hoverText: '' as string,
       mappingLabel: '' as string,
       viewer: undefined as Viewer | undefined,
+      viewerPromise: undefined as Promise<Viewer> | undefined,
       model: undefined as Model | undefined,
       mapping: undefined as ChainMapping | undefined,
       loadedKey: '' as string,
@@ -157,7 +161,7 @@ export default defineComponent({
       if (this.entry === undefined) {
         return {
           nTerminal: new Set(), cTerminal: new Set(), ionTypes: new Map(),
-          internalDepth: [], maxInternalDepth: 0, internalCount: 0,
+          internalPieces: [], internalEnds: new Set(), internalCount: 0,
         }
       }
       const settings = this.streamlitDataStore.settings
@@ -195,8 +199,8 @@ export default defineComponent({
       if (s.source === 'alphafold') return `AlphaFold DB model ${s.name ?? s.accession}`
       return `Uploaded structure ${s.name ?? ''}`.trim()
     },
-    legend(): { label: string; color: string }[] {
-      const items: { label: string; color: string }[] = []
+    legend(): { label: string; color?: string; chipClass?: string }[] {
+      const items: { label: string; color?: string; chipClass?: string }[] = []
       ION_COLORS.forEach((c) => {
         if (c.types.some((t) => [...this.sites.ionTypes.values()].some((types) => types.has(t)))) {
           items.push({ label: c.label, color: c.color })
@@ -204,8 +208,8 @@ export default defineComponent({
       })
       if (this.showInternal && this.sites.internalCount > 0) {
         items.push({
-          label: `Internal fragments (${this.sites.internalCount}, up to ${this.sites.maxInternalDepth} per residue)`,
-          color: internalColor(this.sites.maxInternalDepth, this.sites.maxInternalDepth),
+          label: `Internal fragments (${this.sites.internalCount}, both cleavage sites)`,
+          color: INTERNAL_BRACKET,
         })
       }
       items.push({ label: 'No fragment', color: UNCOVERED })
@@ -213,7 +217,7 @@ export default defineComponent({
         items.push({ label: 'Cleaved off', color: UNOBSERVED })
       }
       if (this.showModifications && (this.entry?.modifications?.length ?? 0) > 0) {
-        items.push({ label: 'Modification', color: MODIFICATION })
+        items.push({ label: 'Modification', chipClass: 'legend-modification' })
       }
       items.push({ label: 'Selected residue', color: SELECTED })
       return items
@@ -257,18 +261,24 @@ export default defineComponent({
     this.viewer?.clear()
   },
   methods: {
-    async ensureViewer(): Promise<Viewer> {
-      if (this.viewer !== undefined) return this.viewer
-      // Loaded on first use, so the bundle only grows for pages that show a structure
-      const $3Dmol = await import('3dmol')
-      // Transparent, so the card's background shows in either theme
-      const viewer = $3Dmol.createViewer(this.$refs.viewer as HTMLElement, {
-        backgroundColor: 'white',
-        backgroundAlpha: 0,
-        antialias: true,
-      })
-      this.viewer = markRaw(viewer)
-      return viewer
+    ensureViewer(): Promise<Viewer> {
+      // One promise, so updates that arrive while 3Dmol loads share one viewer
+      // (two viewers stack their canvases and the stale one stays visible)
+      if (this.viewerPromise === undefined) {
+        this.viewerPromise = (async () => {
+          // Loaded on first use, so the bundle only grows for pages that show a structure
+          const $3Dmol = await import('3dmol')
+          // Transparent, so the card's background shows in either theme
+          const viewer = $3Dmol.createViewer(this.$refs.viewer as HTMLElement, {
+            backgroundColor: 'white',
+            backgroundAlpha: 0,
+            antialias: true,
+          })
+          this.viewer = markRaw(viewer)
+          return viewer
+        })()
+      }
+      return this.viewerPromise
     },
     async loadStructure(): Promise<void> {
       const key = this.structureKey
@@ -335,8 +345,8 @@ export default defineComponent({
       if (pos < start || pos > end) return UNOBSERVED
       const ion = ionColor(this.sites.ionTypes.get(pos))
       if (ion !== undefined) return ion
-      const depth = this.sites.internalDepth[pos] ?? 0
-      if (this.showInternal && depth > 0) return internalColor(depth, this.sites.maxInternalDepth)
+      if (this.showInternal && this.sites.internalEnds.has(pos)) return INTERNAL_BRACKET
+      if (this.showModifications && this.isModified(pos)) return MODIFICATION_BACKGROUND
       return UNCOVERED
     },
     applyStyle(): void {
@@ -363,12 +373,12 @@ export default defineComponent({
         ;(this.entry?.modifications ?? []).forEach((mod) => {
           const residues = this.residuesOf((pos) => pos >= mod.start && pos <= mod.end)
           if (residues.length === 0) return
-          // A mass shift FLASHTnT could not localize spans a range: mark its ends
-          const ranged = residues.length > 3
-          const marked = ranged ? [residues[0], residues[residues.length - 1]] : residues
+          // The sequence view's dotted pattern: the residues' cartoon in the pattern's
+          // background colour (residueColor), their atoms as its dots. An
+          // unlocalized mass shift covers its whole range, as in the sequence view.
           viewer.addStyle(
-            { chain: mapping.chain, resi: marked, atom: 'CA' },
-            { sphere: { color: MODIFICATION, radius: ranged ? 1.2 : 1.6 } }
+            { chain: mapping.chain, resi: residues },
+            { sphere: { color: MODIFICATION_DOT, radius: 0.3 } }
           )
           const shift = `${mod.mass_diff >= 0 ? '+' : ''}${mod.mass_diff.toFixed(2)} Da`
           // The range of an unlocalized shift is in the hover text
@@ -378,8 +388,30 @@ export default defineComponent({
             backgroundColor: this.theme?.backgroundColor ?? '#ffffff',
             backgroundOpacity: 0.7,
             showBackground: true,
-          }, { chain: mapping.chain, resi: marked[0], atom: 'CA' })
+          }, { chain: mapping.chain, resi: residues[0], atom: 'CA' })
         })
+      }
+      // The fragmentation points: a sphere on the residue at which each terminal
+      // ion ends (in its colour) and on both ends of each internal ion
+      ION_COLORS.forEach((c) => {
+        const sites = this.residuesOf((pos) => ionColor(this.sites.ionTypes.get(pos)) === c.color)
+        if (sites.length > 0) {
+          viewer.addStyle(
+            { chain: mapping.chain, resi: sites, atom: 'CA' },
+            { sphere: { color: c.color, radius: CLEAVAGE_RADIUS } }
+          )
+        }
+      })
+      if (this.showInternal && this.sites.internalEnds.size > 0) {
+        const ends = this.residuesOf(
+          (pos) => this.sites.internalEnds.has(pos) && ionColor(this.sites.ionTypes.get(pos)) === undefined
+        )
+        if (ends.length > 0) {
+          viewer.addStyle(
+            { chain: mapping.chain, resi: ends, atom: 'CA' },
+            { sphere: { color: INTERNAL_BRACKET, radius: CLEAVAGE_RADIUS } }
+          )
+        }
       }
       const selected = this.selectionStore.selectedAApos
       if (selected !== undefined) {
@@ -398,6 +430,9 @@ export default defineComponent({
         }
       }
       viewer.render()
+    },
+    isModified(pos: number): boolean {
+      return (this.entry?.modifications ?? []).some((m) => pos >= m.start && pos <= m.end)
     },
     // FLASHTnT lists every explanation of a mass shift; the label shows the first
     shortLabel(labels: string): string {
@@ -428,14 +463,15 @@ export default defineComponent({
       if (pos < start || pos > end) {
         parts.push('cleaved off')
       } else {
-        const ions = []
+        const ions: string[] = []
         const types = [...(this.sites.ionTypes.get(pos) ?? [])].sort()
         types.forEach((t) => {
           const n = ['a', 'b', 'c'].includes(t)
           ions.push(`${t}${n ? pos - start + 1 : end - pos + 1}`)
         })
-        const depth = this.sites.internalDepth[pos] ?? 0
-        if (depth > 0) ions.push(`in ${depth} internal fragment${depth > 1 ? 's' : ''}`)
+        this.sites.internalPieces
+          .filter(([first, last]) => pos === first || pos === last)
+          .forEach(([first, last]) => ions.push(`internal ${this.dbSequence.slice(first, last + 1)} (${first + 1}-${last + 1})`))
         if (ions.length > 0) parts.push(ions.join(', '))
         const mods = (this.entry?.modifications ?? []).filter((m) => pos >= m.start && pos <= m.end)
         mods.forEach((m) => {
@@ -515,6 +551,12 @@ export default defineComponent({
   background: rgba(0, 0, 0, 0.65);
   color: #ffffff;
   pointer-events: none;
+}
+
+.legend-modification {
+  background-image: radial-gradient(#676a9c 0.5px, transparent 0.5px), radial-gradient(#444cf7 0.5px, #e5e5f7 0.5px);
+  background-size: 4px 4px;
+  background-position: 0 0, 2px 2px;
 }
 
 .legend-chip {
