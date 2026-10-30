@@ -1457,6 +1457,16 @@ export default defineComponent({
   font-size: 14px;
 }
 
+/* Dark theme selected row: the bootstrap4 theme keeps its light-mode blue,
+   which leaves the white row text unreadable */
+.tabulator.table-dark .tabulator-row.tabulator-selected {
+  background-color: #2b4c7e;
+}
+
+.tabulator.table-dark .tabulator-row.tabulator-selected:hover {
+  background-color: #355d99;
+}
+
 .filter-badge {
   position: absolute;
   top: -4px;

@@ -68,10 +68,10 @@ export default defineComponent({
           rangemode: 'nonnegative',
           fixedrange: true,
         },
-        paper_bgcolor: 'white',
-        plot_bgcolor: 'white',
+        paper_bgcolor: this.streamlitDataStore.theme?.backgroundColor ?? 'white',
+        plot_bgcolor: this.streamlitDataStore.theme?.backgroundColor ?? 'white',
         font: {
-          color: 'black',
+          color: this.streamlitDataStore.theme?.textColor ?? 'black',
           family: 'Arial',
         },
       }
