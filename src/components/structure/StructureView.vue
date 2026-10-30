@@ -131,6 +131,7 @@ export default defineComponent({
       mappingLabel: '' as string,
       viewer: undefined as Viewer | undefined,
       viewerPromise: undefined as Promise<Viewer> | undefined,
+      resizeObserver: undefined as ResizeObserver | undefined,
       model: undefined as Model | undefined,
       mapping: undefined as ChainMapping | undefined,
       loadedKey: '' as string,
@@ -226,7 +227,7 @@ export default defineComponent({
         items.push({ label: 'Modification', chipClass: 'legend-modification' })
       }
       if (this.fragment !== undefined) {
-        items.push({ label: `Selected fragment ${this.fragment.name} (rest faded)`, color: this.fragmentColor })
+        items.push({ label: `Selected fragment ${this.fragment.name} (residues ${this.fragment.start + 1}-${this.fragment.end + 1})`, color: this.fragmentColor })
       }
       items.push({ label: 'Selected residue', color: SELECTED })
       return items
@@ -284,9 +285,12 @@ export default defineComponent({
       this.applyStyle()
       const mapping = this.mapping
       if (fragment === undefined || mapping === undefined || this.viewer === undefined) return
-      // Centre on the piece the fragment covers
+      // Fit the view to the piece the fragment covers
       const span = this.residuesOf((pos) => pos >= fragment.start && pos <= fragment.end)
-      if (span.length > 0) this.viewer.center({ chain: mapping.chain, resi: span }, 400)
+      if (span.length > 0) {
+        this.viewer.zoomTo({ chain: mapping.chain, resi: span })
+        this.viewer.render()
+      }
     },
     theme() {
       this.applyStyle()
@@ -296,6 +300,7 @@ export default defineComponent({
     this.loadStructure()
   },
   beforeUnmount() {
+    this.resizeObserver?.disconnect()
     this.viewer?.clear()
   },
   methods: {
@@ -313,6 +318,14 @@ export default defineComponent({
             antialias: true,
           })
           this.viewer = markRaw(viewer)
+          // 3Dmol only follows window resizes: keep its viewport in step with the
+          // element when the card around it changes size (e.g. a longer legend)
+          const observer = new ResizeObserver(() => {
+            viewer.resize()
+            viewer.render()
+          })
+          observer.observe(this.$refs.viewer as HTMLElement)
+          this.resizeObserver = markRaw(observer)
           return viewer
         })()
       }
@@ -379,11 +392,13 @@ export default defineComponent({
       return mapping.dbOfResidue.get(atom.resi ?? NaN) ?? -1
     },
     residueColor(pos: number): string {
-      const color = this.baseColor(pos)
-      // A selected fragment stands out: the rest of the protein is faded
+      // A selected fragment stands out: the residues it covers (the part of the
+      // sequence the spectrum shows) in its colour, the rest faded
       const f = this.fragment
-      if (f !== undefined && (pos < f.start || pos > f.end)) return fade(color)
-      return color
+      if (f !== undefined) {
+        return pos >= f.start && pos <= f.end ? this.fragmentColor : fade(this.baseColor(pos))
+      }
+      return this.baseColor(pos)
     },
     baseColor(pos: number): string {
       const [start, end] = this.proteoformRange
