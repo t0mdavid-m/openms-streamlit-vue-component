@@ -94,7 +94,6 @@ const MODIFICATION_DOT = '#444cf7'
 const MODIFICATION_BACKGROUND = '#e5e5f7'
 const INTERNAL_BRACKET = '#8E44AD'
 const SELECTED = '#F3A712'
-const CLEAVAGE_RADIUS = 0.9
 
 // The 3Dmol viewer and model live outside Vue's reactivity
 type Viewer = any
@@ -391,28 +390,6 @@ export default defineComponent({
           }, { chain: mapping.chain, resi: residues[0], atom: 'CA' })
         })
       }
-      // The fragmentation points: a sphere on the residue at which each terminal
-      // ion ends (in its colour) and on both ends of each internal ion
-      ION_COLORS.forEach((c) => {
-        const sites = this.residuesOf((pos) => ionColor(this.sites.ionTypes.get(pos)) === c.color)
-        if (sites.length > 0) {
-          viewer.addStyle(
-            { chain: mapping.chain, resi: sites, atom: 'CA' },
-            { sphere: { color: c.color, radius: CLEAVAGE_RADIUS } }
-          )
-        }
-      })
-      if (this.showInternal && this.sites.internalEnds.size > 0) {
-        const ends = this.residuesOf(
-          (pos) => this.sites.internalEnds.has(pos) && ionColor(this.sites.ionTypes.get(pos)) === undefined
-        )
-        if (ends.length > 0) {
-          viewer.addStyle(
-            { chain: mapping.chain, resi: ends, atom: 'CA' },
-            { sphere: { color: INTERNAL_BRACKET, radius: CLEAVAGE_RADIUS } }
-          )
-        }
-      }
       const selected = this.selectionStore.selectedAApos
       if (selected !== undefined) {
         const r = mapping.dbToResidue[selected]
@@ -420,7 +397,6 @@ export default defineComponent({
           const residue = mapping.residues[r]
           const selection = { chain: mapping.chain, resi: residue.resi }
           viewer.addStyle(selection, { stick: { color: SELECTED, radius: 0.3 } })
-          viewer.addStyle({ ...selection, atom: 'CA' }, { sphere: { color: SELECTED, radius: 1.8 } })
           viewer.addLabel(`${this.dbSequence[selected]}${selected + 1}`, {
             fontSize: 13,
             fontColor: '#000000',
