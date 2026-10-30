@@ -21,12 +21,15 @@
           density="compact"
           class="mr-2"
         ></v-checkbox>
-        <v-checkbox
-          v-model="showUnobserved"
-          label="Cleaved termini"
-          hide-details
-          density="compact"
-        ></v-checkbox>
+        <v-btn variant="text" icon="mdi-upload" size="small" :disabled="!canUpload" :loading="uploading" @click="chooseFile">
+          <v-icon>mdi-upload</v-icon>
+          <v-tooltip activator="parent" location="bottom">Upload a structure (PDB or mmCIF) for this protein</v-tooltip>
+        </v-btn>
+        <v-btn v-if="structure?.source === 'upload'" variant="text" icon="mdi-delete-outline" size="small" @click="removeUpload">
+          <v-icon>mdi-delete-outline</v-icon>
+          <v-tooltip activator="parent" location="bottom">Remove the uploaded structure</v-tooltip>
+        </v-btn>
+        <input ref="fileInput" type="file" accept=".pdb,.ent,.cif,.mmcif" class="d-none" @change="onFileChosen" />
         <v-btn variant="text" icon="mdi-fit-to-screen-outline" size="small" :disabled="!loaded" @click="resetView">
           <v-icon>mdi-fit-to-screen-outline</v-icon>
           <v-tooltip activator="parent" location="bottom">Reset view</v-tooltip>
@@ -43,10 +46,17 @@
       <div v-if="!loaded" class="structure-placeholder">
         <v-alert :type="placeholderType" variant="tonal" density="comfortable" max-width="560">
           {{ placeholderText }}
+          <div v-if="canUpload" class="mt-2">
+            <v-btn size="small" variant="flat" prepend-icon="mdi-upload" :loading="uploading" @click="chooseFile">
+              Upload PDB or mmCIF
+            </v-btn>
+          </div>
         </v-alert>
       </div>
       <div v-if="loaded && hoverText" class="structure-hover">{{ hoverText }}</div>
     </div>
+
+    <v-alert v-if="uploadError" type="error" variant="tonal" density="compact" class="mt-2">{{ uploadError }}</v-alert>
 
     <div v-if="loaded" class="d-flex flex-wrap align-center justify-space-between mt-2 text-caption">
       <div class="d-flex flex-wrap align-center">
@@ -68,10 +78,10 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, markRaw } from 'vue'
-import type { Theme } from 'streamlit-component-lib'
+import { defineComponent, markRaw, toRaw } from 'vue'
+import { Streamlit, type Theme } from 'streamlit-component-lib'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
-import { useSelectionStore } from '@/stores/selection'
+import { useSelectionStore, selectionPayload, type FragmentSelection } from '@/stores/selection'
 import type { SequenceData } from '@/types/sequence-data'
 import {
   bestChainMapping,
@@ -94,6 +104,14 @@ const MODIFICATION_DOT = '#444cf7'
 const MODIFICATION_BACKGROUND = '#e5e5f7'
 const INTERNAL_BRACKET = '#8E44AD'
 const SELECTED = '#F3A712'
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+
+// A hex colour mixed 70 % with white
+function fade(hex: string): string {
+  const n = parseInt(hex.slice(1), 16)
+  const mix = (c: number) => Math.round(c + (255 - c) * 0.7)
+  return `rgb(${mix((n >> 16) & 255)}, ${mix((n >> 8) & 255)}, ${mix(n & 255)})`
+}
 
 // The 3Dmol viewer and model live outside Vue's reactivity
 type Viewer = any
@@ -116,7 +134,8 @@ export default defineComponent({
     return {
       showInternal: true,
       showModifications: true,
-      showUnobserved: true,
+      uploading: false,
+      fileError: '',
       loaded: false,
       loading: false,
       loadError: '' as string,
@@ -124,6 +143,7 @@ export default defineComponent({
       mappingLabel: '' as string,
       viewer: undefined as Viewer | undefined,
       viewerPromise: undefined as Promise<Viewer> | undefined,
+      resizeObserver: undefined as ResizeObserver | undefined,
       model: undefined as Model | undefined,
       mapping: undefined as ChainMapping | undefined,
       loadedKey: '' as string,
@@ -143,6 +163,12 @@ export default defineComponent({
     },
     structure(): StructureData | undefined {
       return this.streamlitDataStore.allDataForDrawing.structure as unknown as StructureData | undefined
+    },
+    canUpload(): boolean {
+      return this.entry !== undefined && !!this.structure?.accession
+    },
+    uploadError(): string {
+      return this.fileError || (this.structure?.upload_error ?? '')
     },
     structureKey(): string {
       const s = this.structure
@@ -212,21 +238,42 @@ export default defineComponent({
         })
       }
       items.push({ label: 'No fragment', color: UNCOVERED })
-      if (this.showUnobserved && this.hasTruncation) {
-        items.push({ label: 'Cleaved off', color: UNOBSERVED })
-      }
       if (this.showModifications && (this.entry?.modifications?.length ?? 0) > 0) {
         items.push({ label: 'Modification', chipClass: 'legend-modification' })
+      }
+      if (this.fragment !== undefined) {
+        items.push({ label: `Selected fragment ${this.fragment.name} (residues ${this.fragment.start + 1}-${this.fragment.end + 1})`, color: this.fragmentColor })
       }
       items.push({ label: 'Selected residue', color: SELECTED })
       return items
     },
-    hasTruncation(): boolean {
-      const [start, end] = this.proteoformRange
-      return start > 0 || end < (this.entry?.sequence.length ?? 0) - 1
+    // Fragment selected in the sequence view, if it lies on this protein
+    fragment(): FragmentSelection | undefined {
+      const f = this.selectionStore.selectedFragment
+      if (f === undefined || f === null) return undefined
+      if (f.start < 0 || f.end >= this.dbSequence.length || f.start > f.end) return undefined
+      return f
+    },
+    // Where the selected fragment was cleaved off: one residue for a terminal
+    // ion, both ends for an internal one
+    cleavageSites(): number[] {
+      const f = this.fragment
+      if (f === undefined) return []
+      if (f.kind === 'N') return [f.end]
+      if (f.kind === 'C') return [f.start]
+      return f.start === f.end ? [f.start] : [f.start, f.end]
+    },
+    fragmentColor(): string {
+      const f = this.fragment
+      if (f === undefined || f.kind === 'I') return INTERNAL_BRACKET
+      return ionColor(new Set([f.name.charAt(0)])) ?? INTERNAL_BRACKET
     },
   },
   watch: {
+    structure() {
+      // Python answered the upload or removal
+      this.uploading = false
+    },
     structureKey() {
       this.loadStructure()
     },
@@ -234,9 +281,6 @@ export default defineComponent({
       this.loadStructure()
     },
     showModifications() {
-      this.applyStyle()
-    },
-    showUnobserved() {
       this.applyStyle()
     },
     showInternal() {
@@ -249,6 +293,17 @@ export default defineComponent({
       this.applyStyle()
       this.centerOn(pos)
     },
+    fragment(fragment: FragmentSelection | undefined) {
+      this.applyStyle()
+      const mapping = this.mapping
+      if (fragment === undefined || mapping === undefined || this.viewer === undefined) return
+      // Fit the view to the piece the fragment covers
+      const span = this.residuesOf((pos) => pos >= fragment.start && pos <= fragment.end)
+      if (span.length > 0) {
+        this.viewer.zoomTo({ chain: mapping.chain, resi: span })
+        this.viewer.render()
+      }
+    },
     theme() {
       this.applyStyle()
     },
@@ -257,6 +312,7 @@ export default defineComponent({
     this.loadStructure()
   },
   beforeUnmount() {
+    this.resizeObserver?.disconnect()
     this.viewer?.clear()
   },
   methods: {
@@ -274,6 +330,14 @@ export default defineComponent({
             antialias: true,
           })
           this.viewer = markRaw(viewer)
+          // 3Dmol only follows window resizes: keep its viewport in step with the
+          // element when the card around it changes size (e.g. a longer legend)
+          const observer = new ResizeObserver(() => {
+            viewer.resize()
+            viewer.render()
+          })
+          observer.observe(this.$refs.viewer as HTMLElement)
+          this.resizeObserver = markRaw(observer)
           return viewer
         })()
       }
@@ -327,6 +391,41 @@ export default defineComponent({
         this.loadError = `The structure could not be read: ${error}`
       }
     },
+    chooseFile(): void {
+      ;(this.$refs.fileInput as HTMLInputElement | undefined)?.click()
+    },
+    async onFileChosen(event: Event): Promise<void> {
+      const input = event.target as HTMLInputElement
+      const file = input.files?.[0]
+      input.value = ''
+      if (file === undefined) return
+      this.fileError = ''
+      if (file.size > MAX_UPLOAD_BYTES) {
+        this.fileError = `${file.name} is larger than 50 MB.`
+        return
+      }
+      this.sendAction({ op: 'upload', name: file.name, data: await file.text() })
+    },
+    removeUpload(): void {
+      this.sendAction({ op: 'remove' })
+    },
+    // FLASHApp stores the file in the workspace (next to the AlphaFold DB
+    // models it downloaded), so it is shown again in later sessions
+    sendAction(action: Record<string, unknown>): void {
+      const accession = this.structure?.accession
+      if (!accession) return
+      this.uploading = true
+      try {
+        // Raw objects: reactive proxies cannot be posted to the Streamlit host
+        Streamlit.setComponentValue({
+          ...selectionPayload(toRaw(this.selectionStore.$state) as unknown as Record<string, unknown>),
+          structure_action: { ...action, accession, nonce: `${Date.now()}-${Math.random()}` },
+        })
+      } catch (error) {
+        this.uploading = false
+        this.fileError = `The structure could not be sent: ${error}`
+      }
+    },
     describeMapping(mapping: ChainMapping, chainCount: number): string {
       const length = this.dbSequence.length
       const identity = mapping.mapped > 0 ? (100 * mapping.identical) / mapping.mapped : 0
@@ -340,6 +439,15 @@ export default defineComponent({
       return mapping.dbOfResidue.get(atom.resi ?? NaN) ?? -1
     },
     residueColor(pos: number): string {
+      // A selected fragment stands out: the residues it covers (the part of the
+      // sequence the spectrum shows) in its colour, the rest faded
+      const f = this.fragment
+      if (f !== undefined) {
+        return pos >= f.start && pos <= f.end ? this.fragmentColor : fade(this.baseColor(pos))
+      }
+      return this.baseColor(pos)
+    },
+    baseColor(pos: number): string {
       const [start, end] = this.proteoformRange
       if (pos < start || pos > end) return UNOBSERVED
       const ion = ionColor(this.sites.ionTypes.get(pos))
@@ -363,10 +471,9 @@ export default defineComponent({
           },
         },
       })
-      if (!this.showUnobserved) {
-        const hidden = this.residuesOf((pos) => pos < start || pos > end)
-        if (hidden.length > 0) viewer.setStyle({ chain: mapping.chain, resi: hidden }, {})
-      }
+      // Termini cleaved off the proteoform are not shown
+      const hidden = this.residuesOf((pos) => pos < start || pos > end)
+      if (hidden.length > 0) viewer.setStyle({ chain: mapping.chain, resi: hidden }, {})
       if (this.showModifications) {
         const textColor = this.theme?.textColor ?? '#000000'
         ;(this.entry?.modifications ?? []).forEach((mod) => {
@@ -404,6 +511,22 @@ export default defineComponent({
             backgroundOpacity: 0.9,
           }, { ...selection, atom: 'CA' })
         }
+      }
+      const f = this.fragment
+      if (f !== undefined) {
+        this.cleavageSites.forEach((pos) => {
+          const r = mapping.dbToResidue[pos]
+          if (r === undefined || r < 0) return
+          const selection = { chain: mapping.chain, resi: mapping.residues[r].resi }
+          viewer.addStyle(selection, { stick: { color: this.fragmentColor, radius: 0.25 } })
+          const side = f.kind === 'I' ? (pos === f.start ? ' (start)' : ' (end)') : ''
+          viewer.addLabel(`${f.name} · ${this.dbSequence[pos]}${pos + 1}${side}`, {
+            fontSize: 12,
+            fontColor: '#ffffff',
+            backgroundColor: this.fragmentColor,
+            backgroundOpacity: 0.9,
+          }, { ...selection, atom: 'CA' })
+        })
       }
       viewer.render()
     },
@@ -477,7 +600,9 @@ export default defineComponent({
     },
     resetView(): void {
       if (this.viewer === undefined) return
-      this.viewer.zoomTo(this.mapping ? { chain: this.mapping.chain } : {})
+      const [start, end] = this.proteoformRange
+      const shown = this.residuesOf((pos) => pos >= start && pos <= end)
+      this.viewer.zoomTo(this.mapping ? { chain: this.mapping.chain, ...(shown.length > 0 ? { resi: shown } : {}) } : {})
       // zoomTo fits the bounding sphere, which leaves a wide margin
       this.viewer.zoom(1.4)
       this.viewer.render()
