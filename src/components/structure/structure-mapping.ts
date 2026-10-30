@@ -196,6 +196,14 @@ export function bestChainMapping(
   return best
 }
 
+export type FragmentSites = {
+  nTerminal: Set<number>
+  cTerminal: Set<number>
+  internalDepth: number[]
+  maxInternalDepth: number
+  internalCount: number
+}
+
 // Residues (database coordinates) at which an N-terminal (a/b/c) fragment ends
 // and at which a C-terminal (x/y/z) fragment starts, i.e. the cleavage sites
 // the spectrum explains.
@@ -204,19 +212,32 @@ export function fragmentSites(
   observedMasses: number[] | undefined,
   ionTypes: string[],
   tolerancePpm: number
-): { nTerminal: Set<number>; cTerminal: Set<number> } {
+): FragmentSites {
   const nTerminal = new Set<number>()
   const cTerminal = new Set<number>()
+  // Internal fragments covering each residue (FLASHAnnotator only)
+  const internalDepth = new Array<number>(entry.sequence.length).fill(0)
+  const sites = { nTerminal, cTerminal, internalDepth, maxInternalDepth: 0, internalCount: 0 }
   if (Array.isArray(entry.annotated_fragments)) {
     // FLASHAnnotator accepted these envelopes on the raw spectrum
+    const internal = new Set<string>()
     entry.annotated_fragments.forEach((f) => {
       if (f.kind === 'N') nTerminal.add(f.end)
       else if (f.kind === 'C') cTerminal.add(f.start)
+      else if (f.kind === 'I') {
+        // One piece can be reported at several charges: count it once
+        const key = `${f.start}-${f.end}`
+        if (internal.has(key) || f.start < 0 || f.end >= internalDepth.length) return
+        internal.add(key)
+        for (let r = f.start; r <= f.end; r++) internalDepth[r]++
+      }
     })
-    return { nTerminal, cTerminal }
+    sites.internalCount = internal.size
+    sites.maxInternalDepth = internalDepth.reduce((m, d) => Math.max(m, d), 0)
+    return sites
   }
   if (observedMasses === undefined || observedMasses.length === 0) {
-    return { nTerminal, cTerminal }
+    return sites
   }
   // Older results: match theoretical fragment masses against the deconvolved
   // masses, as the sequence view does
@@ -249,7 +270,14 @@ export function fragmentSites(
       if (suffix) cTerminal.add(end - theoIndex)
     })
   })
-  return { nTerminal, cTerminal }
+  return sites
+}
+
+// Internal fragments on the sequence view's scale: rgba(142, 68, 173, 0.25 .. 1) on white
+export function internalColor(depth: number, maxDepth: number): string {
+  const alpha = maxDepth > 0 ? 0.25 + 0.75 * (depth / maxDepth) : 0
+  const mix = (c: number) => Math.round(255 + (c - 255) * alpha)
+  return `rgb(${mix(142)}, ${mix(68)}, ${mix(173)})`
 }
 
 // AlphaFold's confidence bands

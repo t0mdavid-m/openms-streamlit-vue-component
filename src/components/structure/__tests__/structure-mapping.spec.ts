@@ -104,6 +104,28 @@ describe('fragmentSites', () => {
     )
     expect([...sites.nTerminal]).toEqual([3])
     expect([...sites.cTerminal]).toEqual([4])
+    expect(sites.internalDepth).toEqual([0, 0, 1, 1, 0, 0])
+    expect(sites.internalCount).toBe(1)
+  })
+
+  it('counts each internal piece once and stacks overlapping ones', () => {
+    const sites = fragmentSites(
+      {
+        ...entry,
+        annotated_fragments: [
+          { kind: 'I', start: 1, end: 3, charge: 1 },
+          { kind: 'I', start: 1, end: 3, charge: 2 },
+          { kind: 'I', start: 2, end: 4, charge: 1 },
+          { kind: 'I', start: 4, end: 9, charge: 1 },
+        ] as SequenceData['annotated_fragments'],
+      },
+      undefined,
+      ['b', 'y'],
+      10
+    )
+    expect(sites.internalDepth).toEqual([0, 1, 2, 2, 1, 0])
+    expect(sites.maxInternalDepth).toBe(2)
+    expect(sites.internalCount).toBe(2)
   })
 
   it('matches theoretical masses within the tolerance otherwise', () => {

@@ -12,6 +12,14 @@
       </v-btn-toggle>
       <div class="d-flex align-center">
         <v-checkbox
+          v-if="colorMode === 'fragments' && sites.internalCount > 0"
+          v-model="showInternal"
+          label="Internal fragments"
+          hide-details
+          density="compact"
+          class="mr-2"
+        ></v-checkbox>
+        <v-checkbox
           v-model="showModifications"
           label="Modifications"
           hide-details
@@ -74,7 +82,9 @@ import {
   bestChainMapping,
   coverageColor,
   fragmentSites,
+  internalColor,
   plddtColor,
+  type FragmentSites,
   residuesByChain,
   type ChainMapping,
   type StructureData,
@@ -87,7 +97,7 @@ const UNOBSERVED = '#f0f0f0'
 const OTHER_CHAIN = '#9e9e9e'
 const N_TERMINAL = '#1f5fd6'
 const C_TERMINAL = '#d62728'
-const BOTH_TERMINI = '#8e44ad'
+const BOTH_TERMINI = '#2ca02c'
 const MODIFICATION = '#c2185b'
 const SELECTED = '#F3A712'
 
@@ -110,7 +120,9 @@ export default defineComponent({
   },
   data() {
     return {
-      colorMode: 'coverage' as ColorMode,
+      // Same default as the sequence view, which shows the fragment ions first
+      colorMode: 'fragments' as ColorMode,
+      showInternal: true,
       showModifications: true,
       showUnobserved: true,
       loaded: false,
@@ -152,8 +164,10 @@ export default defineComponent({
       const scan = this.streamlitDataStore.allDataForDrawing.per_scan_data?.[0]
       return scan?.MonoMass as number[] | undefined
     },
-    sites(): { nTerminal: Set<number>; cTerminal: Set<number> } {
-      if (this.entry === undefined) return { nTerminal: new Set(), cTerminal: new Set() }
+    sites(): FragmentSites {
+      if (this.entry === undefined) {
+        return { nTerminal: new Set(), cTerminal: new Set(), internalDepth: [], maxInternalDepth: 0, internalCount: 0 }
+      }
       const settings = this.streamlitDataStore.settings
       return fragmentSites(
         this.entry,
@@ -198,6 +212,12 @@ export default defineComponent({
         items.push({ label: 'N-terminal ion (a/b/c)', color: N_TERMINAL })
         items.push({ label: 'C-terminal ion (x/y/z)', color: C_TERMINAL })
         items.push({ label: 'Both', color: BOTH_TERMINI })
+        if (this.showInternal && this.sites.internalCount > 0) {
+          items.push({
+            label: `Internal fragments (${this.sites.internalCount}, up to ${this.sites.maxInternalDepth} per residue)`,
+            color: internalColor(this.sites.maxInternalDepth, this.sites.maxInternalDepth),
+          })
+        }
         items.push({ label: 'No fragment', color: UNCOVERED })
       } else {
         items.push({ label: 'pLDDT > 90', color: plddtColor(95) })
@@ -233,6 +253,9 @@ export default defineComponent({
       this.applyStyle()
     },
     showUnobserved() {
+      this.applyStyle()
+    },
+    showInternal() {
       this.applyStyle()
     },
     sites() {
@@ -339,6 +362,8 @@ export default defineComponent({
         if (n && c) return BOTH_TERMINI
         if (n) return N_TERMINAL
         if (c) return C_TERMINAL
+        const depth = this.sites.internalDepth[pos] ?? 0
+        if (this.showInternal && depth > 0) return internalColor(depth, this.sites.maxInternalDepth)
         return UNCOVERED
       }
       const coverage = this.entry?.coverage?.[pos] ?? 0
@@ -439,6 +464,8 @@ export default defineComponent({
         const ions = []
         if (this.sites.nTerminal.has(pos)) ions.push(`N-terminal ion ${pos - start + 1}`)
         if (this.sites.cTerminal.has(pos)) ions.push(`C-terminal ion ${end - pos + 1}`)
+        const depth = this.sites.internalDepth[pos] ?? 0
+        if (depth > 0) ions.push(`in ${depth} internal fragment${depth > 1 ? 's' : ''}`)
         if (ions.length > 0) parts.push(ions.join(', '))
         const mods = (this.entry?.modifications ?? []).filter((m) => pos >= m.start && pos <= m.end)
         mods.forEach((m) => parts.push(m.labels || `${m.mass_diff >= 0 ? '+' : ''}${m.mass_diff.toFixed(2)} Da`))
