@@ -10,6 +10,16 @@ export type TagData = {
   endPos: number
 }
 
+// Residues (database positions) of the fragment ion selected in the sequence
+// view: N-terminal ions end at `end`, C-terminal ions start at `start`, internal
+// ions are cleaved at both
+export type FragmentSelection = {
+  name: string
+  kind: 'N' | 'C' | 'I'
+  start: number
+  end: number
+}
+
 // Stores selection data for heatmaps
 export type HeatmapData = {
   xRange: number[],
@@ -44,6 +54,7 @@ export const useSelectionStore = defineStore('selection', {
     heatmap_raw: undefined as HeatmapData | undefined,
     heatmap_raw2: undefined as HeatmapData | undefined,
     sequenceOut: undefined as string | undefined,
+    fragment: undefined as FragmentSelection | undefined,
   }),
   getters: {
     selectedScanIndex: (state): number | undefined => state.scanIndex,
@@ -57,6 +68,7 @@ export const useSelectionStore = defineStore('selection', {
     selectedRawHeatmap: (state): HeatmapData | undefined => state.heatmap_raw,
     selectedRawMS2Heatmap: (state): HeatmapData | undefined => state.heatmap_raw2,
     selectedSequenceOut: (state): string | undefined => state.sequenceOut,
+    selectedFragment: (state): FragmentSelection | undefined => state.fragment,
   },
   actions: {
     updateSelectedScan(rowIndex: number) {
@@ -91,6 +103,9 @@ export const useSelectionStore = defineStore('selection', {
     },
     updateSequenceOut(sequence?: string) {
       this.sequenceOut = sequence
+    },
+    updateSelectedFragment(fragment?: FragmentSelection) {
+      this.fragment = fragment
     },
   },
 })

@@ -322,7 +322,7 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 import { useStreamlitDataStore } from '@/stores/streamlit-data'
-import { useSelectionStore, type TagData } from '@/stores/selection'
+import { useSelectionStore, type TagData, type FragmentSelection } from '@/stores/selection'
 import { useModificationStore } from '@/stores/variable-modification'
 import type { Theme } from 'streamlit-component-lib'
 import type { ModificationData } from '@/types/sequence-data'
@@ -777,6 +777,10 @@ export default defineComponent({
       this.recomputeFragments()
     },
     // KEPT — mass-table selection -> highlight the matching fragment row (loop-guarded).
+    // Rows selected from the sequence (residue click, internal track, mass table)
+    selectedFragTableRowIndex(rowIndex?: number) {
+      this.publishSelectedFragment(rowIndex)
+    },
     'selectionStore.selectedMassIndex': {
       handler(newMassIndex: number | null) {
         if (newMassIndex !== null) {
@@ -900,6 +904,9 @@ export default defineComponent({
     prepareFragmentTable(): void {
       this.selectedFragment = undefined
       this.selectedResidue = undefined
+      if (this.selectionStore.selectedFragment !== undefined) {
+        this.selectionStore.updateSelectedFragment(undefined)
+      }
       if (this.usesAnnotator) {
         this.prepareAnnotatedFragmentTable()
         return
@@ -1186,7 +1193,32 @@ export default defineComponent({
         )
       }
     },
+    // Bounds of a fragment table row, for the views linked to this one
+    // (Structure View)
+    fragmentSelectionOf(rowIndex?: number): FragmentSelection | undefined {
+      if (rowIndex === undefined || rowIndex < 0) return undefined
+      if (this.usesAnnotator) {
+        const f = this.fragmentTableSource[rowIndex]
+        return f === undefined ? undefined : { name: f.name, kind: f.kind, start: f.start, end: f.end }
+      }
+      const row = this.fragmentTableData[rowIndex]
+      if (row === undefined) return undefined
+      const ion = String(row.IonType).charAt(0)
+      const n = row.IonNumber as number
+      if (['a', 'b', 'c'].includes(ion)) {
+        return { name: row.Name as string, kind: 'N', start: this.sequence_start, end: this.sequence_start + n - 1 }
+      }
+      return { name: row.Name as string, kind: 'C', start: this.sequence_end - n + 1, end: this.sequence_end }
+    },
+    publishSelectedFragment(rowIndex?: number) {
+      const next = this.fragmentSelectionOf(rowIndex)
+      const current = this.selectionStore.selectedFragment
+      if (JSON.stringify(next) !== JSON.stringify(current)) {
+        this.selectionStore.updateSelectedFragment(next)
+      }
+    },
     onFragmentTableRowSelected(rowIndex?: number) {
+      this.publishSelectedFragment(rowIndex)
       if (rowIndex !== undefined && this.fragmentTableSource[rowIndex]) {
         this.selectedFragment = this.fragmentTableSource[rowIndex]
       }

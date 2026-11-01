@@ -15,6 +15,8 @@ export type StructureData = {
   source?: 'alphafold' | 'upload'
   name?: string
   url?: string
+  // Why the last upload for this protein was rejected
+  upload_error?: string
 }
 
 // One residue of the structure, read from its CA atom
