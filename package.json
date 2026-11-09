@@ -19,7 +19,7 @@
     "streamlit-component-lib": "^2.0.0",
     "tabulator-tables": "^5.6.1",
     "uuid": "^9.0.0",
-    "vue": "^3.2.47",
+    "vue": "^3.5.45",
     "vue-router": "^4.1.6",
     "vuetify": "^3.3.16"
   },

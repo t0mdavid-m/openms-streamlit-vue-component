@@ -94,7 +94,7 @@
               label="Monoisotopic mass in Da"
               type="number"
             />
-            <v-btn type="submit" block=true class="mt-2" @click="updateCustomModification"
+            <v-btn type="submit" block class="mt-2" @click="updateCustomModification"
               >Submit</v-btn
             >
           </v-form>
